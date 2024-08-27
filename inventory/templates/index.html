@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sunpeaks Inventory</title>
+    {% load static %}
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .top-right-buttons {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .top-right-buttons .btn {
+            margin-left: 10px;
+        }
+        .search-form-container {
+            margin-top: 60px; /* Add space so that the search form doesn't overlap the buttons */
+        }      
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .item-tile {
+            position: relative;
+            width: 22%;
+            max-width: 300px;
+            margin: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            overflow: hidden;
+        }
+        .item-tile img {
+            width: 100%;
+            height: auto;
+            max-height: 200px;
+            object-fit: contain;
+        }
+        .item-name {
+            padding: 10px;
+            font-size: 16px;
+            color: #343a40;
+        }
+        .item-description {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            width: 90%;
+            max-width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            z-index: 1;
+        }
+        .item-tile:hover .item-description {
+            display: block;
+        }
+        @media (max-width: 1200px) {
+            .item-tile {
+                width: 30%;
+            }
+        }
+        @media (max-width: 768px) {
+            .item-tile {
+                width: 90%;
+            }
+        }
+        @media (max-width: 576px) {
+            .item-tile {
+                width: 90%;
+            }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;  /* Adjust margin for more flexibility */
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+            max-height: 80vh;  /* Constrain height of the modal */
+            overflow-y: auto;  /* Add scroll if content exceeds modal height */
+        }
+        .modal-item-title {
+            margin-bottom: 75px;
+            color: #343a40;
+        }
+        .modal-item-image {
+            margin-top: 40px;
+            max-width: 80%;
+            max-height: 500px;
+            margin: 0 auto 20px auto;
+            display: block;
+            object-fit: contain;
+        }
+        .modal-item-description {
+            text-align: left;
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #343a40;
+        }
+        .model-item-qrcode {
+            text-align: center;
+            margin-top: 100px;
+            margin-bottom: 20px;
+        }
+        .modal-edit-button {
+            margin-top: 20px;
+            text-align: right;
+        }        
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #aaa;
+            font-size: 50px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-right-buttons">
+        {% if user.is_authenticated and user.is_staff %}
+        <a href="{% url 'add_item' %}" class="btn btn-primary">Add Item</a>
+        <a href="{% url 'logout' %}" class="btn btn-secondary">Logout</a>
+        {% else %}
+        <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+        {% endif %}
+    </div>
+
+    <div class="search-form-container">
+        <form method="get" action="{% url 'inventory' %}" class="input-group mb-3">
+            <input type="text" class="form-control" name="keyword" placeholder="Search items..." value="{{ keyword }}">
+            <div class="input-group-append">
+                <button class="btn btn-primary" type="submit">Search</button>
+                {% if keyword %}
+                <button type="button" class="clear-btn" onclick="clearSearch()">&#10005;</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="container">
+        {% for item in items %}
+        <div class="item-tile">
+            <a href="#" onclick="openModal('{{ item.id }}'); return false;">
+                {% if item.picture %}
+                <img src="{{ item.picture.url }}" alt="{{ item.name }}">
+                {% else %}
+                <img src="{{ MEDIA_URL }}default-image.jpg" alt="Default Image"> <!-- Provide a default image if no picture is available -->
+                {% endif %}
+                <div class="item-name">{{ item.name }}</div>
+                <div class="item-description">{{ item.description }}</div>
+            </a>
+        </div>
+        {% empty %}
+        <p>No items found.</p>
+        {% endfor %}
+    </div>
+    
+    
+
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modal-body">
+                <!-- Item details will be dynamically loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <div id="edit-modal-body">
+                <!-- Edit form will be dynamically loaded here -->
+            </div>
+        </div>
+    </div>    
+
+    <script>
+        function openModal(itemId) {
+            console.log("Modal is opening for item ID:", itemId);
+            const itemUrl = `{% url 'item_detail' 0 %}`.replace('0', itemId);
+
+            fetch(itemUrl)
+                .then(response => response.text())
+                .then(data => {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = data;
+
+                    const titleElement = tempDiv.querySelector('h1');
+                    if (titleElement) {
+                        titleElement.className = 'modal-item-title';
+                    }
+                    const title = titleElement ? titleElement.outerHTML : '';
+
+                    const imageElement = tempDiv.querySelector('.item-image');
+                    if (imageElement) {
+                        imageElement.className = 'modal-item-image';
+                    }
+                    const image = imageElement ? imageElement.outerHTML : '';
+
+                    const descriptionElement = tempDiv.querySelector('.item-description');
+                    if (descriptionElement) {
+                        descriptionElement.className = 'modal-item-description';
+                    }
+                    const description = descriptionElement ? descriptionElement.outerHTML : '';
+
+                    const qrCodeElement = tempDiv.querySelector('.qr-code');
+                    if (qrCodeElement) {
+                        qrCodeElement.className = 'model-item-qrcode';
+                        const qrCodeImg = qrCodeElement.querySelector('img');
+                        if (qrCodeImg) {
+                            qrCodeImg.style.width = '150px';
+                            qrCodeImg.style.height = 'auto';
+                        }
+                    }
+                    const qrCode = qrCodeElement ? qrCodeElement.outerHTML : '';
+
+                    let modalContent = title + image + description + qrCode;
+
+                    const editButtonElement = tempDiv.querySelector('.edit-button');
+                    if (editButtonElement) {
+                        editButtonElement.className = 'modal-edit-button';
+                        const editButton = editButtonElement.querySelector('a');
+                        if (editButton) {
+                            editButton.href = '#';
+                            editButton.setAttribute('onclick', `openEditModal(${itemId}); return false;`);
+                        }
+                        modalContent += editButtonElement.outerHTML;
+                        console.log(editButtonElement.outerHTML);
+                    }
+
+                    document.getElementById('modal-body').innerHTML = modalContent;
+                    document.getElementById('itemModal').style.display = "block";
+                })
+                .catch(error => console.error('Error fetching item details:', error));
+        }
+
+        function closeModal() {
+            document.getElementById('itemModal').style.display = "none";
+        }
+
+        function openEditModal(itemId) {
+            const editItemUrl = `{% url 'edit_item' 0 %}`.replace('0', itemId);            
+            fetch(editItemUrl)
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = data;
+
+                    const formContainerElement = tempDiv.querySelector('.form-container');
+                    if (formContainerElement) {
+                        formContainerElement.className = 'modal-edit-form-container';
+                        const updateItemButtonElement = formContainerElement.querySelector('.update-item-button');
+                        if (updateItemButtonElement) {
+                            updateItemButtonElement.href = '#';
+                            updateItemButtonElement.setAttribute('onclick', `submitEditForm(); return false;`);
+                        }
+                        const cancelButtonElement = formContainerElement.querySelector('.cancel-button');
+                        if (cancelButtonElement) {
+                            cancelButtonElement.href = '#';
+                            cancelButtonElement.setAttribute('onclick', `closeEditModal(); return false;`);
+                        }
+                    }
+                    document.getElementById('edit-modal-body').innerHTML = formContainerElement.outerHTML;
+                    document.getElementById('itemModal').style.display = "none";
+                    document.getElementById('editModal').style.display = "block";
+                })
+                .catch(error => console.error('Error fetching edit form:', error));
+        }
+
+        function closeEditModal(reopenItemModal = true) {
+            console.log("Close edit modal");
+            document.getElementById('editModal').style.display = "none";
+            if (reopenItemModal) {
+                const itemId = document.getElementById('item-id').value;
+                console.log("Reopening item modal for item ID:", itemId);
+                openModal(itemId);
+            }
+        }
+
+        function submitEditForm() {
+            const form = document.querySelector('#editModal form');
+            const formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                closeEditModal(true);
+            })
+            .catch(error => console.error('Error submitting form:', error));
+            return false;
+        }
+
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('itemModal')) {
+                document.getElementById('itemModal').style.display = "none";
+            } else if (event.target == document.getElementById('editModal')) {
+                document.getElementById('editModal').style.display = "none";
+            }
+        }
+
+        function clearSearch() {
+            document.querySelector('input[name="keyword"]').value = '';
+            document.querySelector('form').submit();
+        }
+    </script>
+</body>
+</html>
