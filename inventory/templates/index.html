@@ -37,17 +37,31 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
             overflow: hidden;
+            min-height: 300px; 
+            padding-top: 20px; 
+            padding-bottom: 50px;
+            box-sizing: border-box;
+            flex-direction: column;
+            justify-content: space-between; /* Adjusted to space elements evenly */
+            align-items: center; 
         }
         .item-tile img {
-            width: 100%;
+            max-width: 100%;
             height: auto;
             max-height: 200px;
             object-fit: contain;
+            margin-bottom: 0; /* Ensure no extra space below the image */
         }
         .item-name {
             padding: 10px;
             font-size: 16px;
             color: #343a40;
+            width: 100%; /* Ensure it spans the entire width */
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.9); /* Optional: Add a background color for better visibility */
+            box-sizing: border-box; 
+            position: absolute; /* Position it at the bottom */
+            bottom: 0;
         }
         .item-description {
             display: none;
@@ -313,11 +327,9 @@
         }
 
         function closeEditModal(reopenItemModal = true) {
-            console.log("Close edit modal");
             document.getElementById('editModal').style.display = "none";
             if (reopenItemModal) {
                 const itemId = document.getElementById('item-id').value;
-                console.log("Reopening item modal for item ID:", itemId);
                 openModal(itemId);
             }
         }

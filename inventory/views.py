@@ -37,6 +37,8 @@ def edit_item(request, id):
     # Get the item object or return 404 if not found
     item = get_object_or_404(Item, pk=id)
     
+    print(f"Editing item: {item}, request method: {request.method}")
+    
     # If the request is POST, it means the form was submitted
     if request.method == 'POST':
         # Bind the form to the POST data and the current item instance
@@ -44,8 +46,11 @@ def edit_item(request, id):
         
         if form.is_valid():
             # Save the form and redirect to the inventory view
+            print("Form is valid. Saving...")
             form.save()
             return redirect('inventory')
+        else:
+            print(f"Form is invalid. Errors: {form.errors}")
     else:
         # If the request is GET, populate the form with the item data
         form = ItemForm(instance=item)
