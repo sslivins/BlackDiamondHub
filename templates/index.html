@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Sunpeaks Hub</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .top-right-buttons {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }        
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .main-container {
+            text-align: center;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #343a40;
+        }
+        .btn-container {
+            margin-top: 20px;
+        }
+        .btn {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-right-buttons">
+        {% if user.is_authenticated and user.is_staff %}
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">Logout</button>
+        </form>
+        {% else %}
+        <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+        {% endif %}
+    </div>    
+    <div class="main-container">
+        <h1>Welcome to Sunpeaks Hub</h1>
+        <p>Manage your home with ease. Choose an option below to get started:</p>
+        <div class="btn-container">
+            <a href="{% url 'inventory' %}" class="btn btn-primary btn-lg">Go to Inventory</a>
+            <!-- Add more buttons here for other features -->
+            <a href="#" class="btn btn-secondary btn-lg">Another Feature</a>
+        </div>
+    </div>
+</body>
+</html>
