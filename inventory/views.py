@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
+from django.db.models import Q
 from .forms import ItemForm  # Ensure you have an ItemForm in forms.py
 from .models import Item
 
@@ -9,8 +10,24 @@ import qrcode
 import io
 
 def index(request):
-    items = Item.objects.all().order_by('id')
-    return render(request, 'index.html', {'items': items})
+    keyword = request.GET.get('keyword', '')
+    
+    if keyword:
+        items = Item.objects.filter(
+            Q(name__icontains=keyword) |
+            Q(description__icontains=keyword) |
+            Q(room__icontains=keyword) |
+            Q(desc_long__icontains=keyword)
+        ).order_by('id')
+    else:
+        items = Item.objects.all().order_by('id')
+    
+    context = {
+        'items': items,
+        'keyword': keyword
+    }
+    
+    return render(request, 'index.html', context)
 
 def item_detail(request, id):
     item = get_object_or_404(Item, pk=id)
