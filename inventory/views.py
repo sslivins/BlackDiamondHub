@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 from django.urls import reverse
 from django.db.models import Q
 from .forms import ItemForm  # Ensure you have an ItemForm in forms.py
@@ -88,4 +89,4 @@ def add_item(request):
   
 @login_required
 def profile(request):
-    return render(request, 'profile.html')  
+    return render(request, 'profile.html')

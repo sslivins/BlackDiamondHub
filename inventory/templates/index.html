@@ -176,11 +176,15 @@
     <div class="top-right-buttons">
         {% if user.is_authenticated and user.is_staff %}
         <a href="{% url 'add_item' %}" class="btn btn-primary">Add Item</a>
-        <a href="{% url 'logout' %}" class="btn btn-secondary">Logout</a>
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">Logout</button>
+        </form>
         {% else %}
         <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
         {% endif %}
     </div>
+    
 
     <div class="search-form-container">
         <form method="get" action="{% url 'inventory' %}" class="input-group mb-3">
