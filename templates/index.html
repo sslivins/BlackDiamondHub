@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Sunpeaks Hub</title>
+    <title>Welcome to Black Diamond Hub</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .top-right-buttons {
@@ -37,6 +37,64 @@
         .btn {
             margin: 10px;
         }
+        .external_weather {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        /* Ensure the parent container behaves as a flex container */
+        li {
+            display: flex;
+            justify-content: space-between; /* Space between the two main sections */
+            align-items: center; /* Align items vertically centered */
+        }
+        
+        /* Left column: .cell containing h3 and p */
+        li .cell:first-of-type {
+            flex-grow: 1; /* Allow this section to take more space */
+            display: flex;
+            flex-direction: column; /* Aligns h3 and p vertically */
+        }
+
+        .cell h3 {
+            font-size: 18px;
+            font-weight: bold;
+            color: #3C6090;
+        }
+        
+        .cell p {
+            font-size: 14px;
+            color: #7a7a7a;
+        }
+        
+        /* Right column: .cell containing weather-value and weather-unit */
+        li .cell:last-of-type {
+            display: flex;
+            align-items: top; /* Align the temperature and unit baseline */
+            justify-content: flex-end; /* Align content to the right */
+        }
+        
+        /* Adjust spacing between weather-value and weather-unit */
+        .weather-value {
+            margin-right: 5px; /* Adjust to control spacing between the value and unit */
+            margin-top: -30px; /* Adjust to control spacing between the value and unit */
+            font-size: 48px; /* Adjust font size for the unit (°C) */
+            color: #4a4a4a; /* Dark gray for the unit */
+        }
+        
+        /* Optional: control spacing between left and right columns */
+        li .cell {
+            margin-right: 50px; /* Adds space between the two columns */
+        }
+        
+        li .weather-unit {
+            margin-left: 5px; /* Adds a bit more space between the value and the unit */
+            margin-top: -10px; /* Adjust to control spacing between the value and unit */
+            color: #4a4a4a; /* Dark gray for the unit */
+        }
+        
+               
     </style>
 </head>
 <body>
@@ -50,8 +108,11 @@
         <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
         {% endif %}
     </div>    
+    <div class="external_weather">
+        {{ external_content|safe }}
+    </div>     
     <div class="main-container">
-        <h1>Welcome to Sunpeaks Hub</h1>
+        <h1>Welcome to Black Diamond Hub</h1>
         <p>Manage your home with ease. Choose an option below to get started:</p>
         <div class="btn-container">
             <a href="{% url 'inventory' %}" class="btn btn-primary btn-lg">Go to Inventory</a>
