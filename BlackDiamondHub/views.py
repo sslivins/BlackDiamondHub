@@ -8,8 +8,6 @@ def landing_page(request):
     url = 'https://www.sunpeaksresort.com/bike-hike/weather-webcams/weather'  # Replace with the URL you want to fetch
     response = requests.get(url)
     
-    print(f"Status code: {response.status_code}")
-
     # Parse the HTML content
     soup = BeautifulSoup(response.content, 'html.parser')
 
