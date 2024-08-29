@@ -8,10 +8,19 @@
     <style>
         /* Ensure the home button stays left-aligned */
         .home-button-container {
-            display: flex;
-            justify-content: left;
-            margin-bottom: 20px; /* Add some space below the button if needed */
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            margin-bottom: 20px;
+            z-index: 1000;
         }
+
+        .login-logout-buttons {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }          
     </style>
 </head>
 <body>
@@ -22,6 +31,17 @@
             <a href="{% url 'landing_page' %}" class="btn btn-primary">Home</a>
         </div>
     </div>
+
+    <div class="login-logout-buttons">
+        {% if user.is_authenticated and user.is_staff %}
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">Logout</button>
+        </form>
+        {% else %}
+        <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+        {% endif %}
+    </div>     
 
     <!-- Content Block -->
     <div class="container">

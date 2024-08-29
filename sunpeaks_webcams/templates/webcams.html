@@ -11,34 +11,60 @@
     <title>SunPeaks Webcams</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .top-right-buttons {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }        
-        body {
-            background-color: #f8f9fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .main-container {
-            text-align: center;
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
+      #webcams {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr); /* 4 columns */
+        gap: 20px;
+        padding: 20px;
+        margin-top: 70px; /* Adjust this based on the height of your button */
+        margin-left: 0; /* Ensures no additional left margin */
+        max-width: 100%; /* Ensures it doesn't exceed the screen width */
+      }
+      .container {
+        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+        margin-left: 0;
+      }      
+      .cam {
+          background-color: #f8f9fa;
+          padding: 15px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          text-align: center;
+      }
+
+      .cam img {
+          max-width: 100%;
+          height: auto;
+          max-height: 400px;
+          object-fit: contain;
+          margin-bottom: 10px;
+      }
+
+      @media (max-width: 1200px) {
+          #webcams {
+              grid-template-columns: repeat(3, 1fr); /* 3 columns for large screens */
+          }
+      }
+
+      @media (max-width: 768px) {
+          #webcams {
+              grid-template-columns: repeat(2, 1fr); /* 2 columns for medium screens */
+          }
+      }
+
+      @media (max-width: 576px) {
+          #webcams {
+              grid-template-columns: 1fr; /* 1 column for small screens */
+          }
+      }
     </style>
 </head>
 <body>
-  Webcams
-<div class="sunpeaks_webcams">
-    {{ external_webcams|safe }}
-</div> 
+  <div class="webcams">
+      {{ external_webcams|safe }}
+  </div> 
 </body>
 </html>
 {% endblock %}
