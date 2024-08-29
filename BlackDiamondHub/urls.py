@@ -26,6 +26,7 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('', views.landing_page, name='landing_page'),
     path('inventory/', include('inventory.urls')),
+    path('sunpeaks_webcams/', include('sunpeaks_webcams.urls')),
 ]
 
 if settings.DEBUG:
