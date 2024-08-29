@@ -28,7 +28,7 @@ def index(request):
         'keyword': keyword
     }
     
-    return render(request, 'index.html', context)
+    return render(request, 'inventory.html', context)
 
 def item_detail(request, id):
     item = get_object_or_404(Item, pk=id)
