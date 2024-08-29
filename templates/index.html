@@ -1,3 +1,8 @@
+{% extends 'base.html' %}
+
+{% block title %}Black Diamond Hub{% endblock %}
+
+{% block content %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,9 +38,9 @@
         }
         .external_weather {
             position: fixed;
-            top: 20px;
+            top: 100px;
             left: 20px;
-            z-index: 1000;
+            z-index: 500;
         }
         /* Ensure the parent container behaves as a flex container */
         li {
@@ -108,3 +113,4 @@
     </div>
 </body>
 </html>
+{% endblock %}

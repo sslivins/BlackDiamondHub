@@ -20,51 +20,205 @@
         margin-left: 0; /* Ensures no additional left margin */
         max-width: 100%; /* Ensures it doesn't exceed the screen width */
       }
+      
       .container {
-        max-width: 100%;
-        padding-left: 0;
-        padding-right: 0;
-        margin-left: 0;
-      }      
+          max-width: 100%;
+          padding-left: 0;
+          padding-right: 0;
+          margin-left: 0;
+      }
+      
       .cam {
           background-color: #f8f9fa;
           padding: 15px;
           border: 1px solid #ddd;
           border-radius: 8px;
           text-align: center;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Added shadow for a subtle 3D effect */
       }
-
+      
       .cam img {
           max-width: 100%;
           height: auto;
           max-height: 400px;
           object-fit: contain;
           margin-bottom: 10px;
+          border-radius: 8px;
       }
-
+      
+      .cam h2 {
+          font-size: 1.5rem;
+          margin-bottom: 15px;
+          color: #1a2e48; /* Slightly lighter shade of dark blue */
+      }
+      
+      .cam table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+      }
+      
+      .cam td {
+          padding: 8px;
+          vertical-align: top;
+          color: #333;
+      }
+      
+      .cam td:first-child {
+          font-weight: bold;
+          color: #1a2e48; /* Slightly lighter shade of dark blue */
+      }
+      
+      .cam td:nth-child(2) {
+          text-align: right;
+          color: #666; /* A softer grey color for the text */
+      }
+      
+      .cam tr {
+          border-bottom: 1px solid #ddd;
+      }
+      
+      .cam tr:last-child {
+          border-bottom: none;
+      }
+      
+      .cam table tbody tr:hover {
+          background-color: #f5f5f5; /* Light background on hover */
+      }
+      
+      .cam .template.table.simple {
+          margin-top: 15px;
+      }
+      
+      .cam .template.table.simple td {
+          font-size: 0.9rem;
+          line-height: 1.4;
+      }
+      
       @media (max-width: 1200px) {
           #webcams {
               grid-template-columns: repeat(3, 1fr); /* 3 columns for large screens */
           }
       }
-
+      
       @media (max-width: 768px) {
           #webcams {
               grid-template-columns: repeat(2, 1fr); /* 2 columns for medium screens */
           }
       }
-
+      
       @media (max-width: 576px) {
           #webcams {
               grid-template-columns: 1fr; /* 1 column for small screens */
           }
       }
+
+      /* The Modal (background) */
+      .modal {
+          display: none; /* Hidden by default */
+          position: fixed; /* Stay in place */
+          z-index: 1000; /* Sit on top */
+          padding-top: 50px; /* Location of the box */
+          left: 0;
+          top: 0;
+          width: 100%; /* Full width */
+          height: 100%; /* Full height */
+          overflow: auto; /* Enable scroll if needed */
+          background-color: rgb(0, 0, 0); /* Fallback color */
+          background-color: rgba(0, 0, 0, 0.9); /* Black w/ opacity */
+      }
+      
+      /* Modal Content (Image) */
+      .modal-content {
+          margin: auto;
+          display: block;
+          width: 75%; /* 75% of the screen width */
+          max-width: none; /* Remove max-width limit */
+          max-height: 75vh; /* 75% of the viewport height */
+          object-fit: contain; /* Maintain aspect ratio */
+      }
+      
+      /* Caption of Modal Image */
+      #caption {
+          margin: auto;
+          display: block;
+          width: 75%;
+          max-width: 700px;
+          text-align: center;
+          color: #ccc;
+          padding: 10px 0;
+      }
+      
+      /* Add Animation - Zoom in the Modal */
+      .modal-content, #caption {
+          animation-name: zoom;
+          animation-duration: 0.6s;
+      }
+      
+      @keyframes zoom {
+          from {
+              transform: scale(0)
+          }
+          to {
+              transform: scale(1)
+          }
+      }
+      
+      /* The Close Button */
+      .close {
+          position: absolute;
+          top: 15px;
+          right: 35px;
+          color: #f1f1f1;
+          font-size: 40px;
+          font-weight: bold;
+          transition: 0.3s;
+      }
+      
+      .close:hover,
+      .close:focus {
+          color: #bbb;
+          text-decoration: none;
+          cursor: pointer;
+      }
+      
+          
     </style>
 </head>
 <body>
   <div class="webcams">
       {{ external_webcams|safe }}
-  </div> 
+  </div>
+
+  <div id="imageModal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <img class="modal-content" id="modalImage">
+    <div id="caption"></div>
+  </div>
+
+  <script>
+    // Get the modal
+    var modal = document.getElementById("imageModal");
+
+    // Get the modal image element
+    var modalImg = document.getElementById("modalImage");
+
+    // Get the caption text
+    var captionText = document.getElementById("caption");
+
+    // Function to open the modal with the clicked image
+    function openModal(src, alt) {
+        modal.style.display = "block";
+        modalImg.src = src;
+        captionText.innerHTML = alt;
+    }
+
+    // Function to close the modal
+    function closeModal() {
+        modal.style.display = "none";
+    }
+  </script>
+
 </body>
 </html>
 {% endblock %}
