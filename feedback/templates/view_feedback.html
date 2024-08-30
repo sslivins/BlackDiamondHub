@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+
+{% block title %}View Feedback{% endblock %}
+
+{% block content %}
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    /* Style the container */
+    .container {
+        margin-top: 50px;
+        display: flex;
+        flex-direction: column; /* Arrange items vertically */
+        align-items: center; /* Center the content */
+    }
+
+    /* Heading style */
+    h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        width: 100%; /* Ensure the heading takes up full width */
+        color: #1a2e48; /* Darker color for the heading */
+    }
+
+    /* Table styles */
+    .table {
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        max-width: 800px; /* Set a maximum width for the table */
+        width: 100%; /* Make the table take up the full width of its container */
+    }
+
+    .table thead th {
+        background-color: #1a2e48;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .table tbody tr {
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f1f1f1;
+        cursor: pointer;
+    }
+
+    .badge {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+        border-radius: 12px;
+    }
+
+    .modal-header {
+        background-color: #1a2e48;
+        color: white;
+    }
+
+    .modal-content {
+        border-radius: 8px;
+    }
+
+    .modal-footer {
+        border-top: none;
+    }
+
+    .close {
+        color: white;
+        opacity: 1;
+    }
+
+    .close:hover {
+        color: #ccc;
+    }
+</style>
+
+<div class="container">
+    <h1>Feedback Messages</h1>
+    {% if feedbacks %}
+        <form id="bulk-actions-form" method="POST" action="{% url 'bulk_feedback_action' %}">
+            {% csrf_token %}
+            <div class="bulk-actions mb-3">
+                <button type="button" class="btn btn-danger" id="bulk-delete-btn">Delete Selected</button>
+                <button type="button" class="btn btn-secondary" id="bulk-mark-read-btn">Mark as Read</button>
+                <button type="button" class="btn btn-warning" id="bulk-mark-unread-btn">Mark as Unread</button>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for feedback in feedbacks %}
+                    <tr class="feedback-row" 
+                        data-toggle="modal" 
+                        data-target="#feedbackModal" 
+                        data-feedback-id="{{ feedback.id }}" 
+                        data-feedback-date="{{ feedback.submitted_at|date:'c' }}"
+                        data-feedback-name="{{ feedback.name }}" 
+                        data-feedback-email="{{ feedback.email }}" 
+                        data-feedback-page-url="{{ feedback.page_url }}" 
+                        data-feedback-message="{{ feedback.message }}">
+                        <td><input type="checkbox" name="feedback_ids" value="{{ feedback.id }}" class="feedback-checkbox"></td>
+                        <td class="text-center">{{ feedback.name }}</td>
+                        <td class="text-center feedback-date"></td>
+                        <td class="text-center">
+                            {% if feedback.is_read %}
+                                <span class="badge badge-success">Read</span>
+                            {% else %}
+                                <span class="badge badge-danger">Unread</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm delete-feedback-btn" data-feedback-id="{{ feedback.id }}">Delete</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </form>
+        <!-- Pagination -->
+        <div class="pagination">
+            {% if feedbacks.has_previous %}
+                <a href="?page={{ feedbacks.previous_page_number }}">Previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ feedbacks.number }} of {{ feedbacks.paginator.num_pages }}
+            </span>
+
+            {% if feedbacks.has_next %}
+                <a href="?page={{ feedbacks.next_page_number }}">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+        <p>No feedback messages</p>
+    {% endif %}
+
+<!-- Modal (same as before) -->
+<!-- Add the modal code here as before -->
+
+
+<!-- Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="feedbackModalLabel">Feedback Message</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Date:</strong> <span id="feedbackDate"></span></p>
+                <p><strong>From:</strong> <span id="feedbackName"></span></p>
+                <p><strong>Email:</strong> <span id="feedbackEmail"></span></p>
+                <p><strong>From Page:</strong> <span id="feedbackPageUrl"></span></p>
+                <p><strong>Message:</strong></p>
+                <p id="feedbackMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const feedbackRows = document.querySelectorAll('.feedback-row');
+        feedbackRows.forEach(row => {
+
+            // Get the feedback date from the data attribute
+            const feedbackDateStr = row.dataset.feedbackDate;
+
+            // Convert to local timezone using JavaScript
+            const feedbackDate = new Date(feedbackDateStr);
+            const localDateString = feedbackDate.toLocaleString();
+
+            // Display the local date string in the appropriate cell
+            row.querySelector('.feedback-date').textContent = localDateString;
+
+            row.addEventListener('click', function(e) {
+
+                if (e.target.type === 'checkbox') {
+                    e.stopPropagation();
+                    return;
+                }                
+
+                const feedbackId = this.dataset.feedbackId;
+                const feedbackName = this.dataset.feedbackName;
+                const feedbackEmail = this.dataset.feedbackEmail;
+                const feedbackPageUrl = this.dataset.feedbackPageUrl;
+                const feedbackMessage = this.dataset.feedbackMessage;
+    
+                const modal = document.getElementById('feedbackModal');
+                modal.querySelector('#feedbackDate').textContent = localDateString;
+                modal.querySelector('#feedbackName').textContent = feedbackName;
+                modal.querySelector('#feedbackEmail').textContent = feedbackEmail;
+                modal.querySelector('#feedbackPageUrl').textContent = feedbackPageUrl;
+                modal.querySelector('#feedbackMessage').textContent = feedbackMessage;
+    
+                // Mark the feedback as read
+                fetch(`/feedback/mark_as_read/${feedbackId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        this.querySelector('.badge').classList.remove('badge-danger');
+                        this.querySelector('.badge').classList.add('badge-success');
+                        this.querySelector('.badge').textContent = 'Read';
+                    }
+                });
+    
+                $('#feedbackModal').modal('show');
+            });
+        });
+
+        document.getElementById('bulk-delete-btn').addEventListener('click', function () {
+            handleBulkAction('delete');
+        });
+    
+        // Handle bulk mark as read
+        document.getElementById('bulk-mark-read-btn').addEventListener('click', function () {
+            handleBulkAction('mark_read');
+        });
+    
+        // Handle bulk mark as unread
+        document.getElementById('bulk-mark-unread-btn').addEventListener('click', function () {
+            handleBulkAction('mark_unread');
+        });
+    
+        // Function to handle bulk actions
+        function handleBulkAction(action) {
+            const selectedFeedback = [];
+            const checkboxes = document.querySelectorAll('.feedback-checkbox:checked');
+            
+            checkboxes.forEach(checkbox => {
+                selectedFeedback.push(checkbox.value);
+            });
+    
+            if (selectedFeedback.length > 0) {
+                fetch('/feedback/bulk-action/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        'feedback_ids': selectedFeedback,
+                        'action': action
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        selectedFeedback.forEach(id => {
+                            const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
+                            const badge = row.querySelector('.badge');
+    
+                            if (action === 'delete') {
+                                row.remove();
+                            } else if (action === 'mark_read') {
+                                badge.classList.remove('badge-danger');
+                                badge.classList.add('badge-success');
+                                badge.textContent = 'Read';
+                            } else if (action === 'mark_unread') {
+                                badge.classList.remove('badge-success');
+                                badge.classList.add('badge-danger');
+                                badge.textContent = 'Unread';
+                            }
+                        });
+    
+                        // Uncheck all checkboxes
+                        checkboxes.forEach(checkbox => checkbox.checked = false);
+                    } else {
+                        console.error('Bulk action failed:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+    
+        // Handle individual delete
+        document.querySelectorAll('.delete-feedback-btn').forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.stopPropagation(); // Prevent the row click from firing
+                const feedbackId = this.dataset.feedbackId;
+                if (confirm('Are you sure you want to delete this message?')) {
+                    fetch(`/feedback/delete/${feedbackId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            this.closest('tr').remove(); // Remove the row from the table
+                        } else {
+                            alert('Failed to delete the message.');
+                        }
+                    });
+                }
+            });
+        });
+    
+        // Select all checkboxes
+        document.getElementById('select-all').addEventListener('change', function () {
+            const checkboxes = document.querySelectorAll('input[name="feedback_ids"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    });    
+</script>
+
+{% endblock %}

@@ -27,6 +27,7 @@ urlpatterns = [
     path('', views.landing_page, name='landing_page'),
     path('inventory/', include('inventory.urls')),
     path('sunpeaks_webcams/', include('sunpeaks_webcams.urls')),
+    path('feedback/', include('feedback.urls')),
 ]
 
 if settings.DEBUG:
