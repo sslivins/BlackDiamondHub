@@ -243,8 +243,8 @@
           .catch(error => console.error('Error checking for new images:', error));
     }
     
-    // Check for new images every 5 minutes (300000 ms)
-    setInterval(checkForNewImages, 15000);
+    // Check for new images every 60 seconds
+    setInterval(checkForNewImages, 60000);
 
     // Get the modal
     var modal = document.getElementById("imageModal");
