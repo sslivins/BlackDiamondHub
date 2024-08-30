@@ -10,6 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SunPeaks Webcams</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+     
     <style>
       #webcams {
         display: grid;
@@ -181,7 +182,6 @@
           text-decoration: none;
           cursor: pointer;
       }
-      
           
     </style>
 </head>
@@ -196,7 +196,46 @@
     <div id="caption"></div>
   </div>
 
+  {{ image_timestamps|json_script:"initial-timestamps" }}
+
   <script>
+    const initialTimestamps = JSON.parse(document.getElementById('initial-timestamps').textContent);
+
+    // Function to check for new images
+    function checkForNewImages() {
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newImages = doc.querySelectorAll('#webcams img');
+
+                newImages.forEach(img => {
+                    const newSrc = decodeURIComponent(img.src);
+                    const baseSrc = newSrc.split('?')[0]; // Decode URL before comparison
+                    const currentTimestamp = newSrc.split('timestamp=')[1];
+                    const oldTimestamp = initialTimestamps[baseSrc];
+
+                    if (currentTimestamp !== oldTimestamp) {
+                        const imgElement = document.querySelector(`img[src^="${baseSrc}"]`);
+                        
+                        // Check if the image element exists before updating its src
+                        if (imgElement) {
+                            imgElement.src = newSrc;
+                            initialTimestamps[baseSrc] = currentTimestamp;
+                            console.log('Updated image: ' + baseSrc + ' to timestamp:', currentTimestamp);
+                        } else {
+                            console.error('Error: No matching image element found for', baseSrc);
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error checking for new images:', error));
+    }
+    
+    // Check for new images every 5 minutes (300000 ms)
+    setInterval(checkForNewImages, 15000);
+
     // Get the modal
     var modal = document.getElementById("imageModal");
 
@@ -208,16 +247,29 @@
 
     // Function to open the modal with the clicked image
     function openModal(src, alt) {
+        console.log("Opening modal with src:", src, "alt:", alt);
         modal.style.display = "block";
         modalImg.src = src;
         captionText.innerHTML = alt;
     }
 
+    // Attach the onclick handler to each image
+    document.addEventListener("DOMContentLoaded", function() {
+        const images = document.querySelectorAll("#webcams img");
+        console.log("Attaching click events to images");
+        images.forEach(function(img) {
+            img.setAttribute("onclick", "openModal(this.src, this.alt)");
+            console.log("image src is: " + img.getAttribute("src"));
+        });
+    });
+
     // Function to close the modal
     function closeModal() {
+        console.log("Closing modal");
         modal.style.display = "none";
     }
   </script>
+
 
 </body>
 </html>
