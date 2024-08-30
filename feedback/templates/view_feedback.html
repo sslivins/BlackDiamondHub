@@ -78,67 +78,71 @@
 
 <div class="container">
     <h1>Feedback Messages</h1>
-    <form id="bulk-actions-form" method="POST" action="{% url 'bulk_feedback_action' %}">
-        {% csrf_token %}
-        <div class="bulk-actions mb-3">
-            <button type="button" class="btn btn-danger" id="bulk-delete-btn">Delete Selected</button>
-            <button type="button" class="btn btn-secondary" id="bulk-mark-read-btn">Mark as Read</button>
-            <button type="button" class="btn btn-warning" id="bulk-mark-unread-btn">Mark as Unread</button>
-        </div>
-        <table class="table table-hover">
-            <thead>
-            <tr>
-                <th><input type="checkbox" id="select-all"></th>
-                <th>Name</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Action</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for feedback in feedbacks %}
-                <tr class="feedback-row" 
-                    data-toggle="modal" 
-                    data-target="#feedbackModal" 
-                    data-feedback-id="{{ feedback.id }}" 
-                    data-feedback-date="{{ feedback.submitted_at|date:'c' }}"
-                    data-feedback-name="{{ feedback.name }}" 
-                    data-feedback-email="{{ feedback.email }}" 
-                    data-feedback-page-url="{{ feedback.page_url }}" 
-                    data-feedback-message="{{ feedback.message }}">
-                    <td><input type="checkbox" name="feedback_ids" value="{{ feedback.id }}" class="feedback-checkbox"></td>
-                    <td class="text-center">{{ feedback.name }}</td>
-                    <td class="text-center feedback-date"></td>
-                    <td class="text-center">
-                        {% if feedback.is_read %}
-                            <span class="badge badge-success">Read</span>
-                        {% else %}
-                            <span class="badge badge-danger">Unread</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm delete-feedback-btn" data-feedback-id="{{ feedback.id }}">Delete</button>
-                    </td>
+    {% if feedbacks %}
+        <form id="bulk-actions-form" method="POST" action="{% url 'bulk_feedback_action' %}">
+            {% csrf_token %}
+            <div class="bulk-actions mb-3">
+                <button type="button" class="btn btn-danger" id="bulk-delete-btn">Delete Selected</button>
+                <button type="button" class="btn btn-secondary" id="bulk-mark-read-btn">Mark as Read</button>
+                <button type="button" class="btn btn-warning" id="bulk-mark-unread-btn">Mark as Unread</button>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
                 </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </form>
-    <!-- Pagination -->
-    <div class="pagination">
-        {% if feedbacks.has_previous %}
-            <a href="?page={{ feedbacks.previous_page_number }}">Previous</a>
-        {% endif %}
+                </thead>
+                <tbody>
+                {% for feedback in feedbacks %}
+                    <tr class="feedback-row" 
+                        data-toggle="modal" 
+                        data-target="#feedbackModal" 
+                        data-feedback-id="{{ feedback.id }}" 
+                        data-feedback-date="{{ feedback.submitted_at|date:'c' }}"
+                        data-feedback-name="{{ feedback.name }}" 
+                        data-feedback-email="{{ feedback.email }}" 
+                        data-feedback-page-url="{{ feedback.page_url }}" 
+                        data-feedback-message="{{ feedback.message }}">
+                        <td><input type="checkbox" name="feedback_ids" value="{{ feedback.id }}" class="feedback-checkbox"></td>
+                        <td class="text-center">{{ feedback.name }}</td>
+                        <td class="text-center feedback-date"></td>
+                        <td class="text-center">
+                            {% if feedback.is_read %}
+                                <span class="badge badge-success">Read</span>
+                            {% else %}
+                                <span class="badge badge-danger">Unread</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm delete-feedback-btn" data-feedback-id="{{ feedback.id }}">Delete</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </form>
+        <!-- Pagination -->
+        <div class="pagination">
+            {% if feedbacks.has_previous %}
+                <a href="?page={{ feedbacks.previous_page_number }}">Previous</a>
+            {% endif %}
 
-        <span class="current">
-            Page {{ feedbacks.number }} of {{ feedbacks.paginator.num_pages }}
-        </span>
+            <span class="current">
+                Page {{ feedbacks.number }} of {{ feedbacks.paginator.num_pages }}
+            </span>
 
-        {% if feedbacks.has_next %}
-            <a href="?page={{ feedbacks.next_page_number }}">Next</a>
-        {% endif %}
+            {% if feedbacks.has_next %}
+                <a href="?page={{ feedbacks.next_page_number }}">Next</a>
+            {% endif %}
+        </div>
     </div>
-</div>
+    {% else %}
+        <p>No feedback messages</p>
+    {% endif %}
 
 <!-- Modal (same as before) -->
 <!-- Add the modal code here as before -->
@@ -223,129 +227,71 @@
             });
         });
 
-        // Handle bulk delete
         document.getElementById('bulk-delete-btn').addEventListener('click', function () {
-            const selectedFeedback = [];
-            const checkboxes = document.querySelectorAll('.feedback-checkbox:checked');
-            
-            checkboxes.forEach(checkbox => {
-                selectedFeedback.push(checkbox.value);
-            });
-
-            if (selectedFeedback.length > 0) {
-                if (confirm('Are you sure you want to delete the selected messages?')) {
-                    fetch('/feedback/bulk-action/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                        },
-                        body: JSON.stringify({ 
-                            'feedback_ids': selectedFeedback,
-                            'action': 'delete' 
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            selectedFeedback.forEach(id => {
-                                document.querySelector(`tr[data-feedback-id="${id}"]`).remove();
-                            });
-                        } else {
-                            console.error('Bulk delete failed:', data.error);
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-                }
-            } else {
-                alert('No messages selected.');
-            }
+            handleBulkAction('delete');
         });
-
+    
         // Handle bulk mark as read
         document.getElementById('bulk-mark-read-btn').addEventListener('click', function () {
-            const selectedFeedback = [];
-            const checkboxes = document.querySelectorAll('.feedback-checkbox:checked');
-            
-            checkboxes.forEach(checkbox => {
-                selectedFeedback.push(checkbox.value);
-            });
-
-            if (selectedFeedback.length > 0) {
-                if (confirm('Are you sure you want to mark the selected messages as read?')) {
-                    fetch('/feedback/bulk-action/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                        },
-                        body: JSON.stringify({ 
-                            'feedback_ids': selectedFeedback,
-                            'action': 'mark_read' 
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            selectedFeedback.forEach(id => {
-                                const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
-                                row.querySelector('.badge').classList.remove('badge-danger');
-                                row.querySelector('.badge').classList.add('badge-success');
-                                row.querySelector('.badge').textContent = 'Read';
-                            });
-                        } else {
-                            console.error('Bulk mark as read failed:', data.error);
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-                }
-            } else {
-                alert('No messages selected.');
-            }
+            handleBulkAction('mark_read');
         });
-
+    
         // Handle bulk mark as unread
         document.getElementById('bulk-mark-unread-btn').addEventListener('click', function () {
+            handleBulkAction('mark_unread');
+        });
+    
+        // Function to handle bulk actions
+        function handleBulkAction(action) {
             const selectedFeedback = [];
             const checkboxes = document.querySelectorAll('.feedback-checkbox:checked');
             
             checkboxes.forEach(checkbox => {
                 selectedFeedback.push(checkbox.value);
             });
-
+    
             if (selectedFeedback.length > 0) {
-                if (confirm('Are you sure you want to mark the selected messages as unread?')) {
-                    fetch('/feedback/bulk-action/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                        },
-                        body: JSON.stringify({ 
-                            'feedback_ids': selectedFeedback,
-                            'action': 'mark_unread' 
-                        })
+                fetch('/feedback/bulk-action/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        'feedback_ids': selectedFeedback,
+                        'action': action
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            selectedFeedback.forEach(id => {
-                                const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
-                                row.querySelector('.badge').classList.remove('badge-success');
-                                row.querySelector('.badge').classList.add('badge-danger');
-                                row.querySelector('.badge').textContent = 'Unread';
-                            });
-                        } else {
-                            console.error('Bulk mark as unread failed:', data.error);
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-                }
-            } else {
-                alert('No messages selected.');
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        selectedFeedback.forEach(id => {
+                            const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
+                            const badge = row.querySelector('.badge');
+    
+                            if (action === 'delete') {
+                                row.remove();
+                            } else if (action === 'mark_read') {
+                                badge.classList.remove('badge-danger');
+                                badge.classList.add('badge-success');
+                                badge.textContent = 'Read';
+                            } else if (action === 'mark_unread') {
+                                badge.classList.remove('badge-success');
+                                badge.classList.add('badge-danger');
+                                badge.textContent = 'Unread';
+                            }
+                        });
+    
+                        // Uncheck all checkboxes
+                        checkboxes.forEach(checkbox => checkbox.checked = false);
+                    } else {
+                        console.error('Bulk action failed:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
             }
-        });
-
+        }
+    
         // Handle individual delete
         document.querySelectorAll('.delete-feedback-btn').forEach(button => {
             button.addEventListener('click', function (e) {
@@ -369,7 +315,7 @@
                 }
             });
         });
-
+    
         // Select all checkboxes
         document.getElementById('select-all').addEventListener('change', function () {
             const checkboxes = document.querySelectorAll('input[name="feedback_ids"]');
