@@ -67,6 +67,7 @@
       
       .cam td:first-child {
           font-weight: bold;
+          text-align: left;
           color: #1a2e48; /* Slightly lighter shade of dark blue */
       }
       
@@ -201,36 +202,45 @@
   <script>
     const initialTimestamps = JSON.parse(document.getElementById('initial-timestamps').textContent);
 
-    // Function to check for new images
     function checkForNewImages() {
-        fetch(window.location.href)
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newImages = doc.querySelectorAll('#webcams img');
-
-                newImages.forEach(img => {
-                    const newSrc = decodeURIComponent(img.src);
-                    const baseSrc = newSrc.split('?')[0]; // Decode URL before comparison
-                    const currentTimestamp = newSrc.split('timestamp=')[1];
-                    const oldTimestamp = initialTimestamps[baseSrc];
-
-                    if (currentTimestamp !== oldTimestamp) {
-                        const imgElement = document.querySelector(`img[src^="${baseSrc}"]`);
-                        
-                        // Check if the image element exists before updating its src
-                        if (imgElement) {
-                            imgElement.src = newSrc;
-                            initialTimestamps[baseSrc] = currentTimestamp;
-                            console.log('Updated image: ' + baseSrc + ' to timestamp:', currentTimestamp);
-                        } else {
-                            console.error('Error: No matching image element found for', baseSrc);
-                        }
-                    }
-                });
-            })
-            .catch(error => console.error('Error checking for new images:', error));
+      fetch(window.location.href)
+          .then(response => response.text())
+          .then(html => {
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, 'text/html');
+              const newCams = doc.querySelectorAll('.cam');
+  
+              newCams.forEach(newCam => {
+                  const newImg = newCam.querySelector('img');
+                  const newSrc = decodeURIComponent(newImg.src);
+                  const baseSrc = newSrc.split('?')[0]; // Decode URL before comparison
+                  const currentTimestamp = newSrc.split('timestamp=')[1];
+                  const oldTimestamp = initialTimestamps[baseSrc];
+  
+                  if (currentTimestamp !== oldTimestamp) {
+                      const imgElement = document.querySelector(`img[src^="${baseSrc}"]`);
+                      
+                      // Check if the image element exists before updating its src
+                      if (imgElement) {
+                          imgElement.src = newSrc;
+                          initialTimestamps[baseSrc] = currentTimestamp;
+                          console.log('Updated image: ' + baseSrc + ' to timestamp:', currentTimestamp);
+                          
+                          // Update the table data
+                          const newTable = newCam.querySelector('table').innerHTML;
+                          const currentCam = imgElement.closest('.cam');
+                          if (currentCam) {
+                              currentCam.querySelector('table').innerHTML = newTable;
+                          } else {
+                              console.error('Error: No matching .cam element found for', baseSrc);
+                          }
+                      } else {
+                          console.error('Error: No matching image element found for', baseSrc);
+                      }
+                  }
+              });
+          })
+          .catch(error => console.error('Error checking for new images:', error));
     }
     
     // Check for new images every 5 minutes (300000 ms)
