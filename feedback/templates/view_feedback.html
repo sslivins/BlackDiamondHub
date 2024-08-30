@@ -88,9 +88,17 @@
         </thead>
         <tbody>
         {% for feedback in feedbacks %}
-            <tr class="feedback-row" data-toggle="modal" data-target="#feedbackModal" data-feedback-id="{{ feedback.id }}" data-feedback-name="{{ feedback.name }}" data-feedback-email="{{ feedback.email }}" data-feedback-message="{{ feedback.message }}">
+            <tr class="feedback-row" 
+                data-toggle="modal" 
+                data-target="#feedbackModal" 
+                data-feedback-id="{{ feedback.id }}" 
+                data-feedback-date="{{ feedback.submitted_at|date:'c' }}"
+                data-feedback-name="{{ feedback.name }}" 
+                data-feedback-email="{{ feedback.email }}" 
+                data-feedback-page-url="{{ feedback.page_url }}" 
+                data-feedback-message="{{ feedback.message }}">
                 <td class="text-center">{{ feedback.name }}</td>
-                <td class="text-center">{{ feedback.submitted_at }}</td>
+                <td class="text-center feedback-date"></td>
                 <td class="text-center">
                     {% if feedback.is_read %}
                         <span class="badge badge-success">Read</span>
@@ -115,8 +123,10 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p><strong>Name:</strong> <span id="feedbackName"></span></p>
+                <p><strong>Date:</strong> <span id="feedbackDate"></span></p>
+                <p><strong>From:</strong> <span id="feedbackName"></span></p>
                 <p><strong>Email:</strong> <span id="feedbackEmail"></span></p>
+                <p><strong>From Page:</strong> <span id="feedbackPageUrl"></span></p>
                 <p><strong>Message:</strong></p>
                 <p id="feedbackMessage"></p>
             </div>
@@ -131,17 +141,33 @@
     document.addEventListener('DOMContentLoaded', function () {
         const feedbackRows = document.querySelectorAll('.feedback-row');
         feedbackRows.forEach(row => {
+
+            // Get the feedback date from the data attribute
+            const feedbackDateStr = row.dataset.feedbackDate;
+
+            console.log("feedbackDateStr: ", feedbackDateStr);
+
+            // Convert to local timezone using JavaScript
+            const feedbackDate = new Date(feedbackDateStr);
+            const localDateString = feedbackDate.toLocaleString();
+
+            // Display the local date string in the appropriate cell
+            row.querySelector('.feedback-date').textContent = localDateString;
+
             row.addEventListener('click', function() {
                 const feedbackId = this.dataset.feedbackId;
                 const feedbackName = this.dataset.feedbackName;
                 const feedbackEmail = this.dataset.feedbackEmail;
+                const feedbackPageUrl = this.dataset.feedbackPageUrl;
                 const feedbackMessage = this.dataset.feedbackMessage;
-
+    
                 const modal = document.getElementById('feedbackModal');
+                modal.querySelector('#feedbackDate').textContent = localDateString;
                 modal.querySelector('#feedbackName').textContent = feedbackName;
                 modal.querySelector('#feedbackEmail').textContent = feedbackEmail;
+                modal.querySelector('#feedbackPageUrl').textContent = feedbackPageUrl;
                 modal.querySelector('#feedbackMessage').textContent = feedbackMessage;
-
+    
                 // Mark the feedback as read
                 fetch(`/feedback/feedback/mark_as_read/${feedbackId}/`, {
                     method: 'GET',
@@ -156,11 +182,13 @@
                         this.querySelector('.badge').textContent = 'Read';
                     }
                 });
-
+    
                 $('#feedbackModal').modal('show');
             });
         });
     });
+    
+    
 </script>
 
 {% endblock %}

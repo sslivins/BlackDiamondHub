@@ -8,8 +8,9 @@ def submit_feedback(request):
         name = request.POST.get('name')
         email = request.POST.get('email')
         message = request.POST.get('message')
-
-        Feedback.objects.create(name=name, email=email, message=message)
+        page_url = request.POST.get('page_url', '')
+        
+        Feedback.objects.create(name=name, email=email, page_url=page_url, message=message)
         return JsonResponse({'success': True})  # Return a JSON response indicating success
 
     return JsonResponse({'success': False})  # Return a JSON response indicating failure
@@ -19,6 +20,7 @@ def view_feedback(request):
         return redirect('landing_page')
 
     feedbacks = Feedback.objects.all().order_by('-submitted_at')
+        
     return render(request, 'view_feedback.html', {'feedbacks': feedbacks})
 
 def mark_as_read(request, feedback_id):
