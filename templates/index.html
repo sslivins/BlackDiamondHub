@@ -3,114 +3,103 @@
 {% block title %}Black Diamond Hub{% endblock %}
 
 {% block content %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Black Diamond Hub</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .main-container {
-            text-align: center;
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            margin-bottom: 20px;
-            color: #343a40;
-        }
-        .btn-container {
-            margin-top: 20px;
-        }
-        .btn {
-            margin: 10px;
-        }
-        .external_weather {
-            position: fixed;
-            top: 100px;
-            left: 20px;
-            z-index: 500;
-        }
-        /* Ensure the parent container behaves as a flex container */
-        li {
-            display: flex;
-            justify-content: space-between; /* Space between the two main sections */
-            align-items: center; /* Align items vertically centered */
-        }
-        
-        /* Left column: .cell containing h3 and p */
-        li .cell:first-of-type {
-            flex-grow: 1; /* Allow this section to take more space */
-            display: flex;
-            flex-direction: column; /* Aligns h3 and p vertically */
-        }
+<style>
+    body {
+        background-color: #f8f9fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+    .main-container {
+        text-align: center;
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+        margin-bottom: 20px;
+        color: #343a40;
+    }
+    .btn-container {
+        margin-top: 20px;
+    }
+    .btn {
+        margin: 10px;
+    }
+    .external_weather {
+        position: fixed;
+        top: 100px;
+        left: 20px;
+        z-index: 500;
+    }
+    /* Ensure the parent container behaves as a flex container */
+    li {
+        display: flex;
+        justify-content: space-between; /* Space between the two main sections */
+        align-items: center; /* Align items vertically centered */
+    }
+    
+    /* Left column: .cell containing h3 and p */
+    li .cell:first-of-type {
+        flex-grow: 1; /* Allow this section to take more space */
+        display: flex;
+        flex-direction: column; /* Aligns h3 and p vertically */
+    }
 
-        .cell h3 {
-            font-size: 18px;
-            font-weight: bold;
-            color: #3C6090;
-        }
-        
-        .cell p {
-            font-size: 14px;
-            color: #7a7a7a;
-        }
-        
-        /* Right column: .cell containing weather-value and weather-unit */
-        li .cell:last-of-type {
-            display: flex;
-            align-items: top; /* Align the temperature and unit baseline */
-            justify-content: flex-end; /* Align content to the right */
-        }
-        
-        /* Adjust spacing between weather-value and weather-unit */
-        .weather-value {
-            margin-right: 5px; /* Adjust to control spacing between the value and unit */
-            margin-top: -30px; /* Adjust to control spacing between the value and unit */
-            font-size: 48px; /* Adjust font size for the unit (°C) */
-            color: #4a4a4a; /* Dark gray for the unit */
-        }
-        
-        /* Optional: control spacing between left and right columns */
-        li .cell {
-            margin-right: 50px; /* Adds space between the two columns */
-        }
-        
-        li .weather-unit {
-            margin-left: 5px; /* Adds a bit more space between the value and the unit */
-            margin-top: -10px; /* Adjust to control spacing between the value and unit */
-            color: #4a4a4a; /* Dark gray for the unit */
-        }
-        
-               
-    </style>
-</head>
-<body>
- 
-    <div class="external_weather">
-        {{ external_content|safe }}
-    </div>     
-    <div class="main-container">
-        <h1>Welcome to Black Diamond Hub</h1>
-        <p>Manage your home with ease. Choose an option below to get started:</p>
-        <div class="btn-container">
-            <a href="{% url 'inventory' %}" class="btn btn-primary btn-lg">Black Diamond Lodge Inventory</a>
-            <a href="{% url 'webcams' %}" class="btn btn-primary btn-lg">SunPeaks Webcams</a>
-            <!-- Add more buttons here for other features -->
-            <a href="#" class="btn btn-secondary btn-lg">Another Feature</a>
-        </div>
+    .cell h3 {
+        font-size: 18px;
+        font-weight: bold;
+        color: #3C6090;
+    }
+    
+    .cell p {
+        font-size: 14px;
+        color: #7a7a7a;
+    }
+    
+    /* Right column: .cell containing weather-value and weather-unit */
+    li .cell:last-of-type {
+        display: flex;
+        align-items: top; /* Align the temperature and unit baseline */
+        justify-content: flex-end; /* Align content to the right */
+    }
+    
+    /* Adjust spacing between weather-value and weather-unit */
+    .weather-value {
+        margin-right: 5px; /* Adjust to control spacing between the value and unit */
+        margin-top: -30px; /* Adjust to control spacing between the value and unit */
+        font-size: 48px; /* Adjust font size for the unit (°C) */
+        color: #4a4a4a; /* Dark gray for the unit */
+    }
+    
+    /* Optional: control spacing between left and right columns */
+    li .cell {
+        margin-right: 50px; /* Adds space between the two columns */
+    }
+    
+    li .weather-unit {
+        margin-left: 5px; /* Adds a bit more space between the value and the unit */
+        margin-top: -10px; /* Adjust to control spacing between the value and unit */
+        color: #4a4a4a; /* Dark gray for the unit */
+    }
+    
+            
+</style>
+
+<div class="external_weather">
+    {{ external_content|safe }}
+</div>     
+<div class="main-container">
+    <h1>Welcome to Black Diamond Hub</h1>
+    <p>Manage your home with ease. Choose an option below to get started:</p>
+    <div class="btn-container">
+        <a href="{% url 'inventory' %}" class="btn btn-primary btn-lg">Black Diamond Lodge Inventory</a>
+        <a href="{% url 'webcams' %}" class="btn btn-primary btn-lg">SunPeaks Webcams</a>
+        <!-- Add more buttons here for other features -->
+        <a href="#" class="btn btn-secondary btn-lg">Another Feature</a>
     </div>
-</body>
-</html>
+</div>
 {% endblock %}

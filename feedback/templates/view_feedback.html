@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block title %}View Feedback{% endblock %}
+
+{% block content %}
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    /* Style the container */
+    .container {
+        margin-top: 50px;
+        display: flex;
+        flex-direction: column; /* Arrange items vertically */
+        align-items: center; /* Center the content */
+    }
+
+    /* Heading style */
+    h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        width: 100%; /* Ensure the heading takes up full width */
+        color: #1a2e48; /* Darker color for the heading */
+    }
+
+    /* Table styles */
+    .table {
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        max-width: 800px; /* Set a maximum width for the table */
+        width: 100%; /* Make the table take up the full width of its container */
+    }
+
+    .table thead th {
+        background-color: #1a2e48;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .table tbody tr {
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f1f1f1;
+        cursor: pointer;
+    }
+
+    .badge {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+        border-radius: 12px;
+    }
+
+    .modal-header {
+        background-color: #1a2e48;
+        color: white;
+    }
+
+    .modal-content {
+        border-radius: 8px;
+    }
+
+    .modal-footer {
+        border-top: none;
+    }
+
+    .close {
+        color: white;
+        opacity: 1;
+    }
+
+    .close:hover {
+        color: #ccc;
+    }
+</style>
+
+<div class="container">
+    <h1>Feedback Messages</h1>
+    <table class="table table-hover">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Date</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for feedback in feedbacks %}
+            <tr class="feedback-row" data-toggle="modal" data-target="#feedbackModal" data-feedback-id="{{ feedback.id }}" data-feedback-name="{{ feedback.name }}" data-feedback-email="{{ feedback.email }}" data-feedback-message="{{ feedback.message }}">
+                <td class="text-center">{{ feedback.name }}</td>
+                <td class="text-center">{{ feedback.submitted_at }}</td>
+                <td class="text-center">
+                    {% if feedback.is_read %}
+                        <span class="badge badge-success">Read</span>
+                    {% else %}
+                        <span class="badge badge-danger">Unread</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="feedbackModalLabel">Feedback Message</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Name:</strong> <span id="feedbackName"></span></p>
+                <p><strong>Email:</strong> <span id="feedbackEmail"></span></p>
+                <p><strong>Message:</strong></p>
+                <p id="feedbackMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const feedbackRows = document.querySelectorAll('.feedback-row');
+        feedbackRows.forEach(row => {
+            row.addEventListener('click', function() {
+                const feedbackId = this.dataset.feedbackId;
+                const feedbackName = this.dataset.feedbackName;
+                const feedbackEmail = this.dataset.feedbackEmail;
+                const feedbackMessage = this.dataset.feedbackMessage;
+
+                const modal = document.getElementById('feedbackModal');
+                modal.querySelector('#feedbackName').textContent = feedbackName;
+                modal.querySelector('#feedbackEmail').textContent = feedbackEmail;
+                modal.querySelector('#feedbackMessage').textContent = feedbackMessage;
+
+                // Mark the feedback as read
+                fetch(`/feedback/feedback/mark_as_read/${feedbackId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        this.querySelector('.badge').classList.remove('badge-danger');
+                        this.querySelector('.badge').classList.add('badge-success');
+                        this.querySelector('.badge').textContent = 'Read';
+                    }
+                });
+
+                $('#feedbackModal').modal('show');
+            });
+        });
+    });
+</script>
+
+{% endblock %}
