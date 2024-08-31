@@ -48,6 +48,14 @@
             max-width: 600px;
         }
 
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+
         .modal-content {
             border-radius: 8px;
         }
@@ -111,15 +119,15 @@
     </div>     
 
     <!-- Content Block -->
-    <div class="container">
+    <div class="container-fluid">
         {% block content %}
         <!-- Page-specific content goes here -->
         {% endblock %}
     </div>
 
     <footer>
-        <button type="button" class="btn btn-info" data-toggle="modal" data-target="#feedback-modal">Give Feedback</button>
-
+        <button type="button" class="btn btn-info feedback-button" data-toggle="modal" data-target="#feedback-modal">Give Feedback</button>
+    
         <!-- Feedback Modal -->
         <div class="modal fade" id="feedback-modal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalLabel" aria-hidden="true">
             <div class="modal-dialog" role="document">
@@ -156,6 +164,7 @@
             </div>
         </div>
     </footer>
+    
 
     <script>
         document.getElementById('feedback-form').addEventListener('submit', function(event) {
