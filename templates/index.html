@@ -1,105 +1,195 @@
 {% extends 'base.html' %}
 
-{% block title %}Black Diamond Hub{% endblock %}
+{% block title %}Black Diamond Lodge Hub{% endblock %}
 
 {% block content %}
-<style>
-    body {
-        background-color: #f8f9fa;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-    }
-    .main-container {
-        text-align: center;
-        background-color: white;
-        padding: 30px;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-        margin-bottom: 20px;
-        color: #343a40;
-    }
-    .btn-container {
-        margin-top: 20px;
-    }
-    .btn {
-        margin: 10px;
-    }
-    .external_weather {
-        position: fixed;
-        top: 100px;
-        left: 20px;
-        z-index: 500;
-    }
-    /* Ensure the parent container behaves as a flex container */
-    li {
-        display: flex;
-        justify-content: space-between; /* Space between the two main sections */
-        align-items: center; /* Align items vertically centered */
-    }
-    
-    /* Left column: .cell containing h3 and p */
-    li .cell:first-of-type {
-        flex-grow: 1; /* Allow this section to take more space */
-        display: flex;
-        flex-direction: column; /* Aligns h3 and p vertically */
-    }
-
-    .cell h3 {
-        font-size: 18px;
-        font-weight: bold;
-        color: #3C6090;
-    }
-    
-    .cell p {
-        font-size: 14px;
-        color: #7a7a7a;
-    }
-    
-    /* Right column: .cell containing weather-value and weather-unit */
-    li .cell:last-of-type {
-        display: flex;
-        align-items: top; /* Align the temperature and unit baseline */
-        justify-content: flex-end; /* Align content to the right */
-    }
-    
-    /* Adjust spacing between weather-value and weather-unit */
-    .weather-value {
-        margin-right: 5px; /* Adjust to control spacing between the value and unit */
-        margin-top: -30px; /* Adjust to control spacing between the value and unit */
-        font-size: 48px; /* Adjust font size for the unit (°C) */
-        color: #4a4a4a; /* Dark gray for the unit */
-    }
-    
-    /* Optional: control spacing between left and right columns */
-    li .cell {
-        margin-right: 50px; /* Adds space between the two columns */
-    }
-    
-    li .weather-unit {
-        margin-left: 5px; /* Adds a bit more space between the value and the unit */
-        margin-top: -10px; /* Adjust to control spacing between the value and unit */
-        color: #4a4a4a; /* Dark gray for the unit */
-    }
-    
-            
-</style>
-
-<div class="external_weather">
-    {{ external_content|safe }}
-</div>     
-<div class="main-container">
-    <h1>Welcome to Black Diamond Hub</h1>
-    <p>Manage your home with ease. Choose an option below to get started:</p>
-    <div class="btn-container">
-        <a href="{% url 'inventory' %}" class="btn btn-primary btn-lg">Black Diamond Lodge Inventory</a>
-        <a href="{% url 'webcams' %}" class="btn btn-primary btn-lg">SunPeaks Webcams</a>
-        <!-- Add more buttons here for other features -->
-        <a href="#" class="btn btn-secondary btn-lg">Another Feature</a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunPeaks Weather</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow-x: hidden;  /* Prevent horizontal scrolling */
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+        }
+        
+        .weather-container {
+            background-color: #ffffff;
+            width: 100%;  /* Use 100% to prevent horizontal overflow */
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .weather-grid {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            text-align: center;
+            margin: 0 20px;
+        }
+        
+        li {
+            list-style-type: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            margin: 0 10px;
+            flex: 1;  /* Ensures each item takes up equal space */
+            min-width: 150px;
+        }
+        
+        .location-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #3C6090;
+            margin-bottom: 5px;
+        }
+        
+        .elevation {
+            font-size: 14px;
+            color: #7a7a7a;
+            margin-bottom: 10px;
+        }
+        
+        .temperature {
+            font-size: 48px;
+            font-weight: bold;
+            color: #4a4a4a;
+        }
+        
+        .toggle-container {
+            margin: 0 20px;
+        }
+        
+        .toggle-button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        /* Ensure the main container takes up full height minus the weather container */
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            height: calc(100vh - 400px); /* Adjusted to account for padding and other elements */
+        }
+        
+        .btn-container {
+            background-color: #007bff;
+            padding: 15px 30px;  /* Adjusted padding */
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: inline-block; /* Ensures container only wraps around content */
+        }
+        
+        .btn {
+            margin: 10px;
+            padding: 10px 20px;
+            background-color: #ffffff;
+            color: #007bff;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="weather-container">
+        <div class="weather-grid">
+            {% for weather in sunpeaks_weather %}
+            <li>
+                <div class="location-name">{{ weather.location }}</div>
+                <div class="elevation" data-metric="{{ weather.elevation }}" data-unit="m">
+                    Elevation: {{ weather.elevation }} m
+                </div>
+                <div class="temperature" data-metric="{{ weather.temperature }}" data-unit="C">
+                    {{ weather.temperature }}°C
+                </div>
+            </li>
+            {% endfor %}
+        </div>
+        <div class="toggle-container">
+            <button class="toggle-button" onclick="toggleUnits()">C/F</button>
+        </div>
     </div>
-</div>
+
+    <div class="main-container">
+        <div class="btn-container">
+            <h2>Welcome to Black Diamond Hub</h2>
+            <p>Manage your home with ease. Choose an option below to get started:</p>
+            <a href="{% url 'inventory' %}" class="btn">Black Diamond Lodge Inventory</a>
+            <a href="{% url 'webcams' %}" class="btn">SunPeaks Webcams</a>
+            <a href="#" class="btn btn-secondary">Another Feature</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleUnits() {
+            var toggleButton = document.querySelector('.toggle-button');
+            var elevations = document.querySelectorAll('.elevation');
+            var temperatures = document.querySelectorAll('.temperature');
+
+            if (toggleButton.textContent === 'C/F') {
+                elevations.forEach(function (elevation) {
+                    var metricValue = parseFloat(elevation.getAttribute('data-metric'));
+                    var imperialValue = Math.round(metricValue * 3.28084); // Convert meters to feet and round
+                    elevation.textContent = 'Elevation: ' + imperialValue + ' ft';
+                    elevation.setAttribute('data-unit', 'ft');
+                });
+                temperatures.forEach(function (temperature) {
+                    var metricValue = parseFloat(temperature.getAttribute('data-metric'));
+                    var imperialValue = Math.round((metricValue * 9/5) + 32); // Convert Celsius to Fahrenheit and round
+                    temperature.textContent = imperialValue + '°F';
+                    temperature.setAttribute('data-unit', 'F');
+                });
+                toggleButton.textContent = 'F/C';
+            } else {
+                elevations.forEach(function (elevation) {
+                    var metricValue = elevation.getAttribute('data-metric');
+                    elevation.textContent = 'Elevation: ' + Math.round(metricValue) + ' m';
+                    elevation.setAttribute('data-unit', 'm');
+                });
+                temperatures.forEach(function (temperature) {
+                    var metricValue = temperature.getAttribute('data-metric');
+                    temperature.textContent = Math.round(metricValue) + '°C';
+                    temperature.setAttribute('data-unit', 'C');
+                });
+                toggleButton.textContent = 'C/F';
+            }
+        }
+    </script>
+</body>
+</html>
 {% endblock %}
