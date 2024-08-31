@@ -378,12 +378,20 @@
                 document.getElementById('feedback-success').style.display = 'none';
                 form.style.display = 'block'; // Show the form only after the modal has fully closed
             });
+
+            //dont show the mail icon on feedback page
+            if (window.location.href.indexOf('feedback') > -1) {
+                const notificationIcon = document.querySelector('.notification-icon');
+                if (notificationIcon) {
+                    notificationIcon.style.display = 'none'; // Hide the mail icon
+                }
+            }            
         });
 
         {% if user.is_authenticated and user.is_staff %}
         document.addEventListener('DOMContentLoaded', function () {
             function updateUnreadFeedbackCount() {
-                fetch('feedback/get_unread_feedback_count/')
+                fetch('{% url "get_unread_feedback_count" %}')
                     .then(response => response.json())
                     .then(data => {
                         const notificationIcon = document.querySelector('.notification-icon');

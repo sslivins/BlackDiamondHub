@@ -3,77 +3,154 @@
 {% block title %}View Feedback{% endblock %}
 
 {% block content %}
-<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 <style>
-    /* Style the container */
+    html, body {
+        background-color: #000000; /* Black background for the entire page */
+        color: #ffffff; /* White text color by default */
+        margin: 0;
+        padding: 0;
+        height: 100%;
+    }
+    
     .container {
         margin-top: 50px;
         display: flex;
-        flex-direction: column; /* Arrange items vertically */
-        align-items: center; /* Center the content */
+        flex-direction: column;
+        align-items: center;
+        color: #ffffff; /* White text for luxury theme */
     }
-
-    /* Heading style */
+    
     h1 {
         text-align: center;
         margin-bottom: 30px;
-        width: 100%; /* Ensure the heading takes up full width */
-        color: #1a2e48; /* Darker color for the heading */
+        width: 100%;
+        color: #ffffff; /* White heading text */
+        font-weight: bold;
     }
-
-    /* Table styles */
+    
     .table {
-        background-color: #ffffff;
+        background-color: #1a1a1a; /* Dark gray for table background to differentiate from the black page */
         border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        max-width: 800px; /* Set a maximum width for the table */
-        width: 100%; /* Make the table take up the full width of its container */
+        box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+        max-width: 800px;
+        width: 100%;
+        color: #ffffff; /* White text in the table */
     }
-
+    
     .table thead th {
-        background-color: #1a2e48;
-        color: white;
+        background-color: #ffffff;
+        color: #000000; /* Black text for the table headers */
         font-weight: bold;
         text-align: center;
     }
-
+    
     .table tbody tr {
         transition: background-color 0.2s ease-in-out;
     }
-
+    
     .table tbody tr:hover {
-        background-color: #f1f1f1;
+        background-color: #333333; /* Darker shade on hover */
+        color: #ffffff; /* Ensure text stays white on hover */
         cursor: pointer;
     }
-
-    .badge {
-        font-size: 0.9rem;
-        padding: 5px 10px;
-        border-radius: 12px;
+    
+    /* Ensure the text color for table cells remains consistent */
+    .table tbody tr:hover td {
+        color: #ffffff; /* Maintain white text color on hover */
     }
+    
+    /* Additional styling to prevent icons or buttons from changing color on hover */
+    .table tbody tr:hover .icon-read,
+    .table tbody tr:hover .icon-unread,
 
-    .modal-header {
-        background-color: #1a2e48;
-        color: white;
+    .table tbody tr .icon-delete {
+        color: #ffffff; /* White by default */
+        cursor: pointer;
+        transition: color 0.3s ease; /* Smooth transition for hover effect */
     }
-
+    
+    .table tbody tr:hover .icon-delete {
+        color: #ff0000; /* Red on hover */
+    }
+    
+    .icon-read {
+        color: #28a745; /* Green for read */
+    }
+    
+    .icon-unread {
+        color: #dc3545; /* Red for unread */
+    }
+      
     .modal-content {
+        background-color: #1a1a1a; /* Dark gray background for modal content */
+        color: #ffffff; /* White text */
         border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+        padding: 20px; /* Add padding for spacing */
     }
-
-    .modal-footer {
-        border-top: none;
+    
+    .modal-header {
+        border-bottom: 1px solid #333333; /* Subtle line between header and body */
+        background-color: #000000; /* Black background for the header */
+        color: #ffffff; /* Ensure the text is white */
     }
-
+    
+    .modal-title {
+        font-weight: bold;
+        font-size: 20px; /* Slightly larger font for the title */
+        color: #ffffff; /* Ensure the title text is white */
+    }
+    
     .close {
-        color: white;
+        color: #ffffff;
         opacity: 1;
+        font-size: 24px; /* Larger close button */
     }
-
+    
     .close:hover {
-        color: #ccc;
+        color: #cccccc; /* Slightly lighter on hover */
     }
+    
+    .modal-body p {
+        margin-bottom: 10px;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid #333333; /* Subtle line between body and footer */
+        background-color: #000000; /* Match footer background with header */
+        text-align: right; /* Align button to the right */
+    }
+    
+    hr {
+        border-top: 1px solid #555555; /* Subtle separator line */
+        margin: 20px 0; /* Spacing around the separator */
+    }
+    
+    
+    
+    /* Pagination Styling */
+    .pagination {
+        margin-top: 20px;
+        text-align: center;
+        color: #ffffff;
+    }
+    
+    .pagination a {
+        color: #ffffff;
+        margin: 0 10px;
+        text-decoration: none;
+    }
+    
+    .pagination a:hover {
+        color: #cccccc; /* Slightly lighter on hover */
+    }
+    
+    .pagination .current {
+        font-weight: bold;
+        color: #ffffff;
+    }
+    
 </style>
 
 <div class="container">
@@ -88,40 +165,40 @@
             </div>
             <table class="table table-hover">
                 <thead>
-                <tr>
-                    <th><input type="checkbox" id="select-all"></th>
-                    <th>Name</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
+                    <tr>
+                        <th><input type="checkbox" id="select-all"></th>
+                        <th>Name</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
                 </thead>
                 <tbody>
-                {% for feedback in feedbacks %}
-                    <tr class="feedback-row" 
-                        data-toggle="modal" 
-                        data-target="#feedbackModal" 
-                        data-feedback-id="{{ feedback.id }}" 
-                        data-feedback-date="{{ feedback.submitted_at|date:'c' }}"
-                        data-feedback-name="{{ feedback.name }}" 
-                        data-feedback-email="{{ feedback.email }}" 
-                        data-feedback-page-url="{{ feedback.page_url }}" 
-                        data-feedback-message="{{ feedback.message }}">
-                        <td><input type="checkbox" name="feedback_ids" value="{{ feedback.id }}" class="feedback-checkbox"></td>
-                        <td class="text-center">{{ feedback.name }}</td>
-                        <td class="text-center feedback-date"></td>
-                        <td class="text-center">
-                            {% if feedback.is_read %}
-                                <span class="badge badge-success">Read</span>
-                            {% else %}
-                                <span class="badge badge-danger">Unread</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-danger btn-sm delete-feedback-btn" data-feedback-id="{{ feedback.id }}">Delete</button>
-                        </td>
-                    </tr>
-                {% endfor %}
+                    {% for feedback in feedbacks %}
+                        <tr class="feedback-row" 
+                            data-toggle="modal" 
+                            data-target="#feedbackModal" 
+                            data-feedback-id="{{ feedback.id }}" 
+                            data-feedback-date="{{ feedback.submitted_at|date:'c' }}"
+                            data-feedback-name="{{ feedback.name }}" 
+                            data-feedback-email="{{ feedback.email }}" 
+                            data-feedback-page-url="{{ feedback.page_url }}" 
+                            data-feedback-message="{{ feedback.message }}">
+                            <td><input type="checkbox" name="feedback_ids" value="{{ feedback.id }}" class="feedback-checkbox"></td>
+                            <td class="text-center">{{ feedback.name }}</td>
+                            <td class="text-center feedback-date"></td>
+                            <td class="text-center">
+                                {% if feedback.is_read %}
+                                    <i class="fas fa-envelope-open icon-read"></i>
+                                {% else %}
+                                    <i class="fas fa-envelope icon-unread"></i>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <i class="fas fa-trash icon-delete delete-feedback-btn" data-feedback-id="{{ feedback.id }}"></i>
+                            </td>
+                        </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </form>
@@ -139,18 +216,14 @@
                 <a href="?page={{ feedbacks.next_page_number }}">Next</a>
             {% endif %}
         </div>
-    </div>
     {% else %}
         <p>No feedback messages</p>
     {% endif %}
-
-<!-- Modal (same as before) -->
-<!-- Add the modal code here as before -->
-
+</div>
 
 <!-- Modal -->
 <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered"> <!-- Center the modal vertically -->
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="feedbackModalLabel">Feedback Message</h5>
@@ -163,6 +236,7 @@
                 <p><strong>From:</strong> <span id="feedbackName"></span></p>
                 <p><strong>Email:</strong> <span id="feedbackEmail"></span></p>
                 <p><strong>From Page:</strong> <span id="feedbackPageUrl"></span></p>
+                <hr> <!-- Add a separator line for better visual structure -->
                 <p><strong>Message:</strong></p>
                 <p id="feedbackMessage"></p>
             </div>
@@ -172,6 +246,7 @@
         </div>
     </div>
 </div>
+
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
