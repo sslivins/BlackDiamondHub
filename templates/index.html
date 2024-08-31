@@ -93,23 +93,28 @@
             justify-content: center;
             align-items: center;
             text-align: center;
+            background-color: #000000;
             height: calc(100vh - 400px); /* Adjusted to account for padding and other elements */
         }
         
         .btn-container {
-            background-color: #007bff;
-            padding: 15px 30px;  /* Adjusted padding */
+            background-color: #ffffff; /* White background for the buttons container */
+            padding: 15px 30px;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            display: inline-block; /* Ensures container only wraps around content */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* Darker shadow for a more pronounced look */
+            display: inline-block;
+        }
+
+        .btn-container h2, .btn-container p {
+            color: #000000; /* Black text color for the heading and description */
         }
         
         .btn {
             margin: 10px;
             padding: 10px 20px;
-            background-color: #ffffff;
-            color: #007bff;
-            border: 2px solid #007bff;
+            background-color: #000000; /* Black background for the buttons */
+            color: #ffffff; /* White text for buttons */
+            border: 2px solid #ffffff; /* White border for buttons */
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
@@ -117,10 +122,16 @@
             font-weight: bold;
         }
         
+        .btn:hover {
+            background-color: #ffffff; /* Invert colors on hover for a sleek effect */
+            color: #000000;
+            border: 2px solid #000000;
+        }
+        
         .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-            border: none;
+            background-color: #ffffff; /* White background for secondary button */
+            color: #000000; /* Black text for secondary button */
+            border: 2px solid #000000;
         }
         
     </style>
