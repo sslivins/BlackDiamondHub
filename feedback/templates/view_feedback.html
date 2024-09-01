@@ -177,9 +177,12 @@
             <button type="button" class="btn btn-secondary" id="bulk-mark-read-btn">Mark as Read</button>
             <button type="button" class="btn btn-warning" id="bulk-mark-unread-btn">Mark as Unread</button>
         </div>
-        <div id="feedback-table-container">
-            {% include "partials/feedback_table.html" %}
-        </div>
+            <div id="feedback-table-container">
+                {% include "partials/feedback_table.html" %}
+            </div>
+        {% if not table.data %}
+            <p>No messages</p>
+        {% endif %}            
     </form>
 </div>
 
