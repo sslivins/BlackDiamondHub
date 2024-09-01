@@ -60,27 +60,29 @@
         color: #ffffff; /* Maintain white text color on hover */
     }
     
-    /* Additional styling to prevent icons or buttons from changing color on hover */
-    .table tbody tr:hover .icon-read,
-    .table tbody tr:hover .icon-unread,
-
-    .table tbody tr .icon-delete {
+    .icon-delete {
         color: #ffffff; /* White by default */
         cursor: pointer;
         transition: color 0.3s ease; /* Smooth transition for hover effect */
     }
     
-    .table tbody tr:hover .icon-delete {
+    .icon-delete:hover {
         color: #ff0000; /* Red on hover */
     }
     
     .icon-read {
-        color: #28a745; /* Green for read */
+        color: #ffffff;
     }
     
     .icon-unread {
-        color: #dc3545; /* Red for unread */
+        /*yellow color for unread icon*/
+        color: #ffff00;
     }
+
+    .unread-message {
+        font-weight: bold;
+    }
+    
       
     .modal-content {
         background-color: #1a1a1a; /* Dark gray background for modal content */
@@ -127,8 +129,6 @@
         margin: 20px 0; /* Spacing around the separator */
     }
     
-    
-    
     /* Pagination Styling */
     .pagination {
         margin-top: 20px;
@@ -155,11 +155,10 @@
 
 <div class="container">
     <h1>Feedback Messages</h1>
-    {% if feedbacks %}
         <form id="bulk-actions-form" method="POST" action="{% url 'bulk_feedback_action' %}">
             {% csrf_token %}
             <div class="bulk-actions mb-3">
-                <button type="button" class="btn btn-danger" id="bulk-delete-btn">Delete Selected</button>
+                <button type="button" class="btn btn-danger" id="bulk-delete-btn">Delete</button>
                 <button type="button" class="btn btn-secondary" id="bulk-mark-read-btn">Mark as Read</button>
                 <button type="button" class="btn btn-warning" id="bulk-mark-unread-btn">Mark as Unread</button>
             </div>
@@ -167,15 +166,16 @@
                 <thead>
                     <tr>
                         <th><input type="checkbox" id="select-all"></th>
-                        <th>Name</th>
+                        <th></th>
+                        <th>From</th>
                         <th>Date</th>
-                        <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
+                {% if feedbacks %}                
                 <tbody>
                     {% for feedback in feedbacks %}
-                        <tr class="feedback-row" 
+                        <tr class="feedback-row {% if not feedback.is_read %}unread-message{% endif %}" 
                             data-toggle="modal" 
                             data-target="#feedbackModal" 
                             data-feedback-id="{{ feedback.id }}" 
@@ -185,21 +185,24 @@
                             data-feedback-page-url="{{ feedback.page_url }}" 
                             data-feedback-message="{{ feedback.message }}">
                             <td><input type="checkbox" name="feedback_ids" value="{{ feedback.id }}" class="feedback-checkbox"></td>
-                            <td class="text-center">{{ feedback.name }}</td>
-                            <td class="text-center feedback-date"></td>
                             <td class="text-center">
                                 {% if feedback.is_read %}
                                     <i class="fas fa-envelope-open icon-read"></i>
                                 {% else %}
                                     <i class="fas fa-envelope icon-unread"></i>
                                 {% endif %}
-                            </td>
+                            </td>                            
+                            <td class="text-center">{{ feedback.name }}</td>
+                            <td class="text-center feedback-date"></td>
                             <td class="text-center">
                                 <i class="fas fa-trash icon-delete delete-feedback-btn" data-feedback-id="{{ feedback.id }}"></i>
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
+                {% else %}
+                    <p>No feedback messages</p>
+                {% endif %}                 
             </table>
         </form>
         <!-- Pagination -->
@@ -216,9 +219,6 @@
                 <a href="?page={{ feedbacks.next_page_number }}">Next</a>
             {% endif %}
         </div>
-    {% else %}
-        <p>No feedback messages</p>
-    {% endif %}
 </div>
 
 <!-- Modal -->
@@ -284,7 +284,7 @@
                 modal.querySelector('#feedbackMessage').textContent = feedbackMessage;
     
                 // Mark the feedback as read
-                fetch(`/feedback/mark_as_read/${feedbackId}/`, {
+                fetch(`mark_as_read/${feedbackId}/`, {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
@@ -292,9 +292,13 @@
                 })
                 .then(response => {
                     if (response.ok) {
-                        this.querySelector('.badge').classList.remove('badge-danger');
-                        this.querySelector('.badge').classList.add('badge-success');
-                        this.querySelector('.badge').textContent = 'Read';
+                        const icon = this.querySelector('.icon-unread');
+                        if (icon) {
+                            icon.classList.remove('fa-envelope', 'icon-unread');
+                            icon.classList.add('fa-envelope-open', 'icon-read');
+                        }
+                        // Remove bold styling by removing the 'unread-message' class
+                        this.classList.remove('unread-message');                        
                     }
                 });
     
@@ -324,9 +328,9 @@
             checkboxes.forEach(checkbox => {
                 selectedFeedback.push(checkbox.value);
             });
-    
+
             if (selectedFeedback.length > 0) {
-                fetch('/feedback/bulk-action/', {
+                fetch('bulk_action/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -342,18 +346,20 @@
                     if (data.success) {
                         selectedFeedback.forEach(id => {
                             const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
-                            const badge = row.querySelector('.badge');
-    
+                            const icon = row.querySelector('.icon-unread, .icon-read');
+
                             if (action === 'delete') {
                                 row.remove();
-                            } else if (action === 'mark_read') {
-                                badge.classList.remove('badge-danger');
-                                badge.classList.add('badge-success');
-                                badge.textContent = 'Read';
-                            } else if (action === 'mark_unread') {
-                                badge.classList.remove('badge-success');
-                                badge.classList.add('badge-danger');
-                                badge.textContent = 'Unread';
+                            } else if (action === 'mark_read' && icon) {
+                                icon.classList.remove('fa-envelope', 'icon-unread');
+                                icon.classList.add('fa-envelope-open', 'icon-read');
+                                //remove bold styling
+                                row.classList.remove('unread-message');
+                            } else if (action === 'mark_unread' && icon) {
+                                icon.classList.remove('fa-envelope-open', 'icon-read');
+                                icon.classList.add('fa-envelope', 'icon-unread');
+                                //add bold styling
+                                row.classList.add('unread-message');
                             }
                         });
     

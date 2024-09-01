@@ -2,6 +2,7 @@
 import json
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.dateparse import parse_datetime
 from .models import Feedback
 from django.http import JsonResponse
 
@@ -33,7 +34,25 @@ def view_feedback(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    return render(request, 'view_feedback.html', {'feedbacks': page_obj})  
+    return render(request, 'view_feedback.html', {'feedbacks': page_obj})
+
+def fetch_new_feedback(request, last_update):
+    if request.user.is_authenticated and request.user.is_staff:
+        last_update_dt = parse_datetime(last_update)
+        new_feedbacks = Feedback.objects.filter(submitted_at__gt=last_update_dt, is_read=False).order_by('submitted_at')
+        feedback_data = []
+        for feedback in new_feedbacks:
+            feedback_data.append({
+                'id': feedback.id,
+                'name': feedback.name,
+                'submitted_at': feedback.submitted_at.isoformat(),
+                'is_read': feedback.is_read,
+                'email': feedback.email,
+                'page_url': feedback.page_url,
+                'message': feedback.message,
+            })
+        return JsonResponse({'feedbacks': feedback_data})
+    return JsonResponse({'feedbacks': []})
 
 def mark_as_read(request, feedback_id):
     feedback = get_object_or_404(Feedback, id=feedback_id)
