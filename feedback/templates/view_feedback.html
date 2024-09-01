@@ -172,7 +172,7 @@
                 </tr>
             </thead>
             {% if feedbacks %}                
-            <tbody>
+            <tbody id="feedback-tbody">
                 {% for feedback in feedbacks %}
                     <tr class="feedback-row {% if not feedback.is_read %}unread-message{% endif %}" 
                         data-toggle="modal" 
@@ -249,17 +249,22 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const maxItemsPerPage = 20; // Maximum number of feedback messages per page
         let lastUpdate = new Date().toISOString(); // Store the timestamp of the last update
+        let totalFeedbackCount = {{ total_feedback_count }};
     
         function fetchNewFeedback() {
             fetch(`fetch_new_feedback/${lastUpdate}/`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.feedbacks.length > 0) {
-                        const tbody = document.querySelector('.table tbody');
-                        data.feedbacks.forEach(feedback => {
+                        const tbody = document.getElementById('feedback-tbody');
+    
+                        // Insert new feedback at the top
+                        for (let i = data.feedbacks.length - 1; i >= 0; i--) {
+                            const feedback = data.feedbacks[i];
                             const newRow = document.createElement('tr');
-                            newRow.classList.add('feedback-row', 'unread-message');
+                            newRow.classList.add('feedback-row', feedback.is_read ? '' : 'unread-message');
                             newRow.dataset.feedbackId = feedback.id;
                             newRow.dataset.feedbackDate = feedback.submitted_at;
                             newRow.dataset.feedbackName = feedback.name;
@@ -269,7 +274,7 @@
     
                             newRow.innerHTML = `
                                 <td><input type="checkbox" name="feedback_ids" value="${feedback.id}" class="feedback-checkbox"></td>
-                                <td class="text-center"><i class="fas fa-envelope icon-unread"></i></td>
+                                <td class="text-center"><i class="fas ${feedback.is_read ? 'fa-envelope-open icon-read' : 'fa-envelope icon-unread'}"></i></td>
                                 <td class="text-center">${feedback.name}</td>
                                 <td class="text-center feedback-date">${new Date(feedback.submitted_at).toLocaleString()}</td>
                                 <td class="text-center"><i class="fas fa-trash icon-delete" data-feedback-id="${feedback.id}"></i></td>
@@ -279,12 +284,82 @@
                             addRowEventListeners(newRow);
     
                             tbody.prepend(newRow); // Add new feedback to the top of the list
-                        });
+                        }
+    
+                        // Update the total feedback count and pagination
+                        totalFeedbackCount = data.total_feedback_count;
+                        updatePagination(totalFeedbackCount);
+    
+                        // Remove rows that exceed the maxItemsPerPage limit
+                        const currentRows = document.querySelectorAll('.feedback-row');
+                        if (currentRows.length > maxItemsPerPage) {
+                            for (let i = maxItemsPerPage; i < currentRows.length; i++) {
+                                currentRows[i].remove();
+                            }
+                        }
     
                         lastUpdate = new Date().toISOString(); // Update the lastUpdate timestamp
                     }
                 })
                 .catch(error => console.error('Error fetching new feedback:', error));
+        }
+    
+        function fetchAdditionalFeedback() {
+            const currentRowCount = document.querySelectorAll('.feedback-row').length;
+            const currentPage = 1; // Assuming you are always on the first page when fetching additional feedback
+            const maxItemsPerPage = 20; // Ensure this matches the one in your main script
+        
+            // Calculate how many items you need to fill up to maxItemsPerPage
+            const itemsToFetch = maxItemsPerPage - currentRowCount;
+        
+            if (itemsToFetch > 0) {
+                fetch(`fetch_additional_feedback/${currentPage}/${itemsToFetch}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.feedbacks.length > 0) {
+                            const tbody = document.getElementById('feedback-tbody');
+        
+                            // Add each new feedback to the end of the list
+                            data.feedbacks.forEach(feedback => {
+                                const newRow = document.createElement('tr');
+                                newRow.classList.add('feedback-row', feedback.is_read ? '' : 'unread-message');
+                                newRow.dataset.feedbackId = feedback.id;
+                                newRow.dataset.feedbackDate = feedback.submitted_at;
+                                newRow.dataset.feedbackName = feedback.name;
+                                newRow.dataset.feedbackEmail = feedback.email;
+                                newRow.dataset.feedbackPageUrl = feedback.page_url;
+                                newRow.dataset.feedbackMessage = feedback.message;
+        
+                                newRow.innerHTML = `
+                                    <td><input type="checkbox" name="feedback_ids" value="${feedback.id}" class="feedback-checkbox"></td>
+                                    <td class="text-center"><i class="fas ${feedback.is_read ? 'fa-envelope-open icon-read' : 'fa-envelope icon-unread'}"></i></td>
+                                    <td class="text-center">${feedback.name}</td>
+                                    <td class="text-center feedback-date">${new Date(feedback.submitted_at).toLocaleString()}</td>
+                                    <td class="text-center"><i class="fas fa-trash icon-delete" data-feedback-id="${feedback.id}"></i></td>
+                                `;
+        
+                                // Add event listener to the new row
+                                addRowEventListeners(newRow);
+        
+                                tbody.appendChild(newRow); // Add the new feedback to the bottom of the list
+                            });
+        
+                            // Update pagination after fetching additional feedback
+                            totalFeedbackCount += data.feedbacks.length;
+                            updatePagination(totalFeedbackCount);
+                        }
+                    })
+                    .catch(error => console.error('Error fetching additional feedback:', error));
+            }
+        }
+        
+    
+        function updatePagination(totalCount) {
+            const paginationElement = document.querySelector('.pagination .current');
+            const totalPages = Math.ceil(totalCount / maxItemsPerPage);
+    
+            // Update the pagination display
+            paginationElement.textContent = `Page 1 of ${totalPages}`;
         }
     
         function handleAction(feedbackIds, action) {
@@ -308,6 +383,8 @@
     
                         if (action === 'delete') {
                             row.remove();
+                            totalFeedbackCount--; // Decrease total count on delete
+                            fetchAdditionalFeedback(); // Fetch additional feedback to fill the gap
                         } else if (action === 'mark_read' && icon) {
                             icon.classList.remove('fa-envelope', 'icon-unread');
                             icon.classList.add('fa-envelope-open', 'icon-read');
@@ -318,6 +395,9 @@
                             row.classList.add('unread-message');
                         }
                     });
+    
+                    // Update pagination after an action
+                    updatePagination(totalFeedbackCount);
     
                     // Uncheck all checkboxes
                     const checkboxes = document.querySelectorAll('.feedback-checkbox:checked');
@@ -397,6 +477,7 @@
         });
     });
     
+         
 </script>
 
 {% endblock %}

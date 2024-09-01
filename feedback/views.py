@@ -34,15 +34,22 @@ def view_feedback(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    return render(request, 'view_feedback.html', {'feedbacks': page_obj})
+    context = {
+        'feedbacks': page_obj,
+        'total_feedback_count': Feedback.objects.count()
+    }
+    
+    return render(request, 'view_feedback.html', context)
 
 def fetch_new_feedback(request, last_update):
     if request.user.is_authenticated and request.user.is_staff:
         last_update_dt = parse_datetime(last_update)
-        new_feedbacks = Feedback.objects.filter(submitted_at__gt=last_update_dt, is_read=False).order_by('submitted_at')
-        feedback_data = []
-        for feedback in new_feedbacks:
-            feedback_data.append({
+        limit = int(request.GET.get('limit', 20))  # Default limit to 20 if not provided
+        feedback_list = Feedback.objects.filter(submitted_at__gt=last_update_dt).order_by('-submitted_at')
+        total_feedback_count = Feedback.objects.count()
+
+        feedback_data = [
+            {
                 'id': feedback.id,
                 'name': feedback.name,
                 'submitted_at': feedback.submitted_at.isoformat(),
@@ -50,9 +57,34 @@ def fetch_new_feedback(request, last_update):
                 'email': feedback.email,
                 'page_url': feedback.page_url,
                 'message': feedback.message,
-            })
-        return JsonResponse({'feedbacks': feedback_data})
-    return JsonResponse({'feedbacks': []})
+            }
+            for feedback in feedback_list[:limit]
+        ]
+        
+        print(f'feedback_data: {feedback_data}')
+        
+        return JsonResponse({
+            'feedbacks': feedback_data,
+            'total_feedback_count': total_feedback_count
+        })
+    return JsonResponse({'feedbacks': [], 'total_count': 0})
+
+def fetch_additional_feedback(request, current_count, items_to_fetch):
+    """
+    Fetch additional feedback messages when the number of displayed items is less than maxItemsPerPage.
+    :param current_count: The number of feedback items currently displayed.
+    :param items_to_fetch: The number of additional items needed to reach the maxItemsPerPage limit.
+    :return: JSON response with additional feedback messages.
+    """
+    # Get feedback messages ordered by submission date, skipping the already displayed items
+    feedbacks = Feedback.objects.all().order_by('-submitted_at')[current_count:current_count + items_to_fetch]
+
+    # Convert the feedback queryset to a list of dictionaries
+    feedback_list = list(feedbacks.values(
+        'id', 'submitted_at', 'name', 'email', 'page_url', 'message', 'is_read'
+    ))
+
+    return JsonResponse({'feedbacks': feedback_list})
 
 def bulk_feedback_action(request):
     if request.method == 'POST':
