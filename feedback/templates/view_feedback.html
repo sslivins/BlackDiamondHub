@@ -250,7 +250,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         let lastUpdate = new Date().toISOString(); // Store the timestamp of the last update
-
+    
         function fetchNewFeedback() {
             fetch(`fetch_new_feedback/${lastUpdate}/`)
                 .then(response => response.json())
@@ -266,213 +266,126 @@
                             newRow.dataset.feedbackEmail = feedback.email;
                             newRow.dataset.feedbackPageUrl = feedback.page_url;
                             newRow.dataset.feedbackMessage = feedback.message;
-
+    
                             newRow.innerHTML = `
                                 <td><input type="checkbox" name="feedback_ids" value="${feedback.id}" class="feedback-checkbox"></td>
                                 <td class="text-center"><i class="fas fa-envelope icon-unread"></i></td>
                                 <td class="text-center">${feedback.name}</td>
                                 <td class="text-center feedback-date">${new Date(feedback.submitted_at).toLocaleString()}</td>
-                                <td class="text-center"><i class="fas fa-trash icon-delete delete-feedback-btn" data-feedback-id="${feedback.id}"></i></td>
+                                <td class="text-center"><i class="fas fa-trash icon-delete" data-feedback-id="${feedback.id}"></i></td>
                             `;
-
+    
                             // Add event listener to the new row
-                            newRow.addEventListener('click', function(e) {
-                                if (e.target.type === 'checkbox') {
-                                    e.stopPropagation();
-                                    return;
-                                }
-                                
-                                const feedbackId = this.dataset.feedbackId;
-                                const feedbackName = this.dataset.feedbackName;
-                                const feedbackEmail = this.dataset.feedbackEmail;
-                                const feedbackPageUrl = this.dataset.feedbackPageUrl;
-                                const feedbackMessage = this.dataset.feedbackMessage;
-
-                                const modal = document.getElementById('feedbackModal');
-                                modal.querySelector('#feedbackDate').textContent = new Date(feedback.submitted_at).toLocaleString();
-                                modal.querySelector('#feedbackName').textContent = feedbackName;
-                                modal.querySelector('#feedbackEmail').textContent = feedbackEmail;
-                                modal.querySelector('#feedbackPageUrl').textContent = feedbackPageUrl;
-                                modal.querySelector('#feedbackMessage').textContent = feedbackMessage;
-
-                                // Mark the feedback as read
-                                fetch(`/feedback/mark_as_read/${feedbackId}/`, {
-                                    method: 'GET',
-                                    headers: {
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    }
-                                })
-                                .then(response => {
-                                    if (response.ok) {
-                                        const icon = this.querySelector('.icon-unread');
-                                        if (icon) {
-                                            icon.classList.remove('fa-envelope', 'icon-unread');
-                                            icon.classList.add('fa-envelope-open', 'icon-read');
-                                        }
-                                        this.classList.remove('unread-message');
-                                    }
-                                });
-
-                                $('#feedbackModal').modal('show');
-                            });
-
+                            addRowEventListeners(newRow);
+    
                             tbody.prepend(newRow); // Add new feedback to the top of the list
                         });
-
+    
                         lastUpdate = new Date().toISOString(); // Update the lastUpdate timestamp
                     }
                 })
                 .catch(error => console.error('Error fetching new feedback:', error));
         }
-
-        // Poll the server every 30 seconds (30000 milliseconds)
-        setInterval(fetchNewFeedback, 30000);
-
-        const feedbackRows = document.querySelectorAll('.feedback-row');
-        feedbackRows.forEach(row => {
-
-            // Get the feedback date from the data attribute
+    
+        function handleAction(feedbackIds, action) {
+            fetch('bulk_action/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    'feedback_ids': feedbackIds,
+                    'action': action
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    feedbackIds.forEach(id => {
+                        const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
+                        const icon = row.querySelector('.icon-unread, .icon-read');
+    
+                        if (action === 'delete') {
+                            row.remove();
+                        } else if (action === 'mark_read' && icon) {
+                            icon.classList.remove('fa-envelope', 'icon-unread');
+                            icon.classList.add('fa-envelope-open', 'icon-read');
+                            row.classList.remove('unread-message');
+                        } else if (action === 'mark_unread' && icon) {
+                            icon.classList.remove('fa-envelope-open', 'icon-read');
+                            icon.classList.add('fa-envelope', 'icon-unread');
+                            row.classList.add('unread-message');
+                        }
+                    });
+    
+                    // Uncheck all checkboxes
+                    const checkboxes = document.querySelectorAll('.feedback-checkbox:checked');
+                    checkboxes.forEach(checkbox => checkbox.checked = false);
+                } else {
+                    console.error('Action failed:', data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    
+        function addRowEventListeners(row) {
             const feedbackDateStr = row.dataset.feedbackDate;
-
-            // Convert to local timezone using JavaScript
             const feedbackDate = new Date(feedbackDateStr);
             const localDateString = feedbackDate.toLocaleString();
-
-            // Display the local date string in the appropriate cell
             row.querySelector('.feedback-date').textContent = localDateString;
-
-            row.addEventListener('click', function(e) {
-
+    
+            row.addEventListener('click', function (e) {
                 if (e.target.type === 'checkbox') {
                     e.stopPropagation();
                     return;
-                }                
-
+                }
+    
                 const feedbackId = this.dataset.feedbackId;
-                const feedbackName = this.dataset.feedbackName;
-                const feedbackEmail = this.dataset.feedbackEmail;
-                const feedbackPageUrl = this.dataset.feedbackPageUrl;
-                const feedbackMessage = this.dataset.feedbackMessage;
+    
+                // Mark the feedback as read when opening
+                handleAction([feedbackId], 'mark_read');
     
                 const modal = document.getElementById('feedbackModal');
                 modal.querySelector('#feedbackDate').textContent = localDateString;
-                modal.querySelector('#feedbackName').textContent = feedbackName;
-                modal.querySelector('#feedbackEmail').textContent = feedbackEmail;
-                modal.querySelector('#feedbackPageUrl').textContent = feedbackPageUrl;
-                modal.querySelector('#feedbackMessage').textContent = feedbackMessage;
-    
-                // Mark the feedback as read
-                fetch(`mark_as_read/${feedbackId}/`, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        const icon = this.querySelector('.icon-unread');
-                        if (icon) {
-                            icon.classList.remove('fa-envelope', 'icon-unread');
-                            icon.classList.add('fa-envelope-open', 'icon-read');
-                        }
-                        // Remove bold styling by removing the 'unread-message' class
-                        this.classList.remove('unread-message');                        
-                    }
-                });
+                modal.querySelector('#feedbackName').textContent = this.dataset.feedbackName;
+                modal.querySelector('#feedbackEmail').textContent = this.dataset.feedbackEmail;
+                modal.querySelector('#feedbackPageUrl').textContent = this.dataset.feedbackPageUrl;
+                modal.querySelector('#feedbackMessage').textContent = this.dataset.feedbackMessage;
     
                 $('#feedbackModal').modal('show');
             });
-        });
-
-        document.getElementById('bulk-delete-btn').addEventListener('click', function () {
-            handleBulkAction('delete');
-        });
     
-        // Handle bulk mark as read
-        document.getElementById('bulk-mark-read-btn').addEventListener('click', function () {
-            handleBulkAction('mark_read');
-        });
-    
-        // Handle bulk mark as unread
-        document.getElementById('bulk-mark-unread-btn').addEventListener('click', function () {
-            handleBulkAction('mark_unread');
-        });
-    
-        // Function to handle bulk actions
-        function handleBulkAction(action) {
-            const selectedFeedback = [];
-            const checkboxes = document.querySelectorAll('.feedback-checkbox:checked');
-            
-            checkboxes.forEach(checkbox => {
-                selectedFeedback.push(checkbox.value);
-            });
-
-            if (selectedFeedback.length > 0) {
-                fetch('bulk_action/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    body: JSON.stringify({
-                        'feedback_ids': selectedFeedback,
-                        'action': action
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        selectedFeedback.forEach(id => {
-                            const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
-                            const icon = row.querySelector('.icon-unread, .icon-read');
-
-                            if (action === 'delete') {
-                                row.remove();
-                            } else if (action === 'mark_read' && icon) {
-                                icon.classList.remove('fa-envelope', 'icon-unread');
-                                icon.classList.add('fa-envelope-open', 'icon-read');
-                                //remove bold styling
-                                row.classList.remove('unread-message');
-                            } else if (action === 'mark_unread' && icon) {
-                                icon.classList.remove('fa-envelope-open', 'icon-read');
-                                icon.classList.add('fa-envelope', 'icon-unread');
-                                //add bold styling
-                                row.classList.add('unread-message');
-                            }
-                        });
-    
-                        // Uncheck all checkboxes
-                        checkboxes.forEach(checkbox => checkbox.checked = false);
-                    } else {
-                        console.error('Bulk action failed:', data.error);
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-            }
-        }
-    
-        // Handle individual delete
-        document.querySelectorAll('.delete-feedback-btn').forEach(button => {
-            button.addEventListener('click', function (e) {
+            const deleteBtn = row.querySelector('.icon-delete');
+            deleteBtn.addEventListener('click', function (e) {
                 e.stopPropagation(); // Prevent the row click from firing
                 const feedbackId = this.dataset.feedbackId;
                 if (confirm('Are you sure you want to delete this message?')) {
-                    fetch(`/feedback/delete/${feedbackId}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            this.closest('tr').remove(); // Remove the row from the table
-                        } else {
-                            alert('Failed to delete the message.');
-                        }
-                    });
+                    handleAction([feedbackId], 'delete');
                 }
             });
+        }
+    
+        // Poll the server every 15 seconds
+        setInterval(fetchNewFeedback, 15000);
+    
+        // Add event listeners to existing rows
+        const feedbackRows = document.querySelectorAll('.feedback-row');
+        feedbackRows.forEach(addRowEventListeners);
+    
+        document.getElementById('bulk-delete-btn').addEventListener('click', function () {
+            const selectedFeedback = Array.from(document.querySelectorAll('.feedback-checkbox:checked')).map(cb => cb.value);
+            handleAction(selectedFeedback, 'delete');
+        });
+    
+        document.getElementById('bulk-mark-read-btn').addEventListener('click', function () {
+            const selectedFeedback = Array.from(document.querySelectorAll('.feedback-checkbox:checked')).map(cb => cb.value);
+            handleAction(selectedFeedback, 'mark_read');
+        });
+    
+        document.getElementById('bulk-mark-unread-btn').addEventListener('click', function () {
+            const selectedFeedback = Array.from(document.querySelectorAll('.feedback-checkbox:checked')).map(cb => cb.value);
+            handleAction(selectedFeedback, 'mark_unread');
         });
     
         // Select all checkboxes
@@ -482,7 +395,8 @@
                 checkbox.checked = this.checked;
             });
         });
-    });    
+    });
+    
 </script>
 
 {% endblock %}

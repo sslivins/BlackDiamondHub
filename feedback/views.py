@@ -54,22 +54,6 @@ def fetch_new_feedback(request, last_update):
         return JsonResponse({'feedbacks': feedback_data})
     return JsonResponse({'feedbacks': []})
 
-def mark_as_read(request, feedback_id):
-    feedback = get_object_or_404(Feedback, id=feedback_id)
-    feedback.is_read = True
-    feedback.save()
-    return redirect('view_feedback')
-  
-def delete_feedback(request, feedback_id):
-    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        try:
-            feedback = Feedback.objects.get(id=feedback_id)
-            feedback.delete()
-            return JsonResponse({'success': True})
-        except Feedback.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Feedback not found'}, status=404)
-    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
-
 def bulk_feedback_action(request):
     if request.method == 'POST':
         # Parse the JSON body of the request
