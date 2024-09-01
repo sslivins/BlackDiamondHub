@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load django_tables2 %}
+
 {% block title %}View Feedback{% endblock %}
 
 {% block content %}
@@ -53,11 +55,6 @@
         background-color: #333333; /* Darker shade on hover */
         color: #ffffff; /* Ensure text stays white on hover */
         cursor: pointer;
-    }
-    
-    /* Ensure the text color for table cells remains consistent */
-    .table tbody tr:hover td {
-        color: #ffffff; /* Maintain white text color on hover */
     }
     
     .icon-delete {
@@ -135,19 +132,33 @@
         color: #ffffff;
     }
     
-    .pagination a {
+    .pagination a, .pagination span {
         color: #ffffff;
-        margin: 0 10px;
+        margin: 0 5px; /* Reduce the margin to avoid overlap */
         text-decoration: none;
+        background-color: #333333; /* Darker background for the buttons */
+        padding: 8px 12px; /* Adjust padding to make the buttons smaller */
+        border-radius: 5px; /* Rounded corners for the buttons */
+        display: inline-block; /* Ensure proper spacing */
+        min-width: 40px; /* Ensure buttons have a minimum width */
     }
     
     .pagination a:hover {
-        color: #cccccc; /* Slightly lighter on hover */
+        color: #ffffff; /* Text color stays white on hover */
+        background-color: #555555; /* Slightly lighter background on hover */
     }
     
     .pagination .current {
         font-weight: bold;
         color: #ffffff;
+        background-color: #555555; /* Slightly lighter background for the active page */
+        border: 1px solid #ffffff; /* Add a border to the active page button */
+    }
+    
+    .pagination .previous, .pagination .next {
+        padding: 6px 10px; /* Smaller padding for next/previous buttons */
+        min-width: auto; /* Allow the width to adjust based on content */
+        font-size: 14px; /* Smaller font size */
     }
     
 </style>
@@ -161,63 +172,8 @@
             <button type="button" class="btn btn-secondary" id="bulk-mark-read-btn">Mark as Read</button>
             <button type="button" class="btn btn-warning" id="bulk-mark-unread-btn">Mark as Unread</button>
         </div>
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="select-all"></th>
-                    <th></th>
-                    <th>From</th>
-                    <th>Date</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            {% if feedbacks %}                
-            <tbody id="feedback-tbody">
-                {% for feedback in feedbacks %}
-                    <tr class="feedback-row {% if not feedback.is_read %}unread-message{% endif %}" 
-                        data-toggle="modal" 
-                        data-target="#feedbackModal" 
-                        data-feedback-id="{{ feedback.id }}" 
-                        data-feedback-date="{{ feedback.submitted_at|date:'c' }}"
-                        data-feedback-name="{{ feedback.name }}" 
-                        data-feedback-email="{{ feedback.email }}" 
-                        data-feedback-page-url="{{ feedback.page_url }}" 
-                        data-feedback-message="{{ feedback.message }}">
-                        <td><input type="checkbox" name="feedback_ids" value="{{ feedback.id }}" class="feedback-checkbox"></td>
-                        <td class="text-center">
-                            {% if feedback.is_read %}
-                                <i class="fas fa-envelope-open icon-read"></i>
-                            {% else %}
-                                <i class="fas fa-envelope icon-unread"></i>
-                            {% endif %}
-                        </td>                            
-                        <td class="text-center">{{ feedback.name }}</td>
-                        <td class="text-center feedback-date"></td>
-                        <td class="text-center">
-                            <i class="fas fa-trash icon-delete delete-feedback-btn" data-feedback-id="{{ feedback.id }}"></i>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-            {% else %}
-                <p>No feedback messages</p>
-            {% endif %}                 
-        </table>
+        {% render_table table %}
     </form>
-    <!-- Pagination -->
-    <div class="pagination">
-        {% if feedbacks.has_previous %}
-            <a href="?page={{ feedbacks.previous_page_number }}">Previous</a>
-        {% endif %}
-
-        <span class="current">
-            Page {{ feedbacks.number }} of {{ feedbacks.paginator.num_pages }}
-        </span>
-
-        {% if feedbacks.has_next %}
-            <a href="?page={{ feedbacks.next_page_number }}">Next</a>
-        {% endif %}
-    </div>
 </div>
 
 <!-- Modal -->
@@ -246,124 +202,53 @@
     </div>
 </div>
 
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const maxItemsPerPage = 20; // Maximum number of feedback messages per page
-        let lastUpdate = new Date().toISOString(); // Store the timestamp of the last update
-        let totalFeedbackCount = {{ total_feedback_count }};
+        const modal = document.getElementById('feedbackModal');
+        const feedbackDate = modal.querySelector('#feedbackDate');
+        const feedbackName = modal.querySelector('#feedbackName');
+        const feedbackEmail = modal.querySelector('#feedbackEmail');
+        const feedbackPageUrl = modal.querySelector('#feedbackPageUrl');
+        const feedbackMessage = modal.querySelector('#feedbackMessage');
     
-        function fetchNewFeedback() {
-            fetch(`fetch_new_feedback/${lastUpdate}/`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.feedbacks.length > 0) {
-                        const tbody = document.getElementById('feedback-tbody');
-    
-                        // Insert new feedback at the top
-                        for (let i = data.feedbacks.length - 1; i >= 0; i--) {
-                            const feedback = data.feedbacks[i];
-                            const newRow = document.createElement('tr');
-                            newRow.classList.add('feedback-row', feedback.is_read ? '' : 'unread-message');
-                            newRow.dataset.feedbackId = feedback.id;
-                            newRow.dataset.feedbackDate = feedback.submitted_at;
-                            newRow.dataset.feedbackName = feedback.name;
-                            newRow.dataset.feedbackEmail = feedback.email;
-                            newRow.dataset.feedbackPageUrl = feedback.page_url;
-                            newRow.dataset.feedbackMessage = feedback.message;
-    
-                            newRow.innerHTML = `
-                                <td><input type="checkbox" name="feedback_ids" value="${feedback.id}" class="feedback-checkbox"></td>
-                                <td class="text-center"><i class="fas ${feedback.is_read ? 'fa-envelope-open icon-read' : 'fa-envelope icon-unread'}"></i></td>
-                                <td class="text-center">${feedback.name}</td>
-                                <td class="text-center feedback-date">${new Date(feedback.submitted_at).toLocaleString()}</td>
-                                <td class="text-center"><i class="fas fa-trash icon-delete" data-feedback-id="${feedback.id}"></i></td>
-                            `;
-    
-                            // Add event listener to the new row
-                            addRowEventListeners(newRow);
-    
-                            tbody.prepend(newRow); // Add new feedback to the top of the list
-                        }
-    
-                        // Update the total feedback count and pagination
-                        totalFeedbackCount = data.total_feedback_count;
-                        updatePagination(totalFeedbackCount);
-    
-                        // Remove rows that exceed the maxItemsPerPage limit
-                        const currentRows = document.querySelectorAll('.feedback-row');
-                        if (currentRows.length > maxItemsPerPage) {
-                            for (let i = maxItemsPerPage; i < currentRows.length; i++) {
-                                currentRows[i].remove();
-                            }
-                        }
-    
-                        lastUpdate = new Date().toISOString(); // Update the lastUpdate timestamp
-                    }
-                })
-                .catch(error => console.error('Error fetching new feedback:', error));
+        // Function to convert ISO date string to local time string
+        function convertToLocalTime(isoDateString) {
+            const date = new Date(isoDateString);
+            return date.toLocaleString();  // This converts to the local time zone
         }
     
-        function fetchAdditionalFeedback() {
-            const currentRowCount = document.querySelectorAll('.feedback-row').length;
-            const currentPage = 1; // Assuming you are always on the first page when fetching additional feedback
-            const maxItemsPerPage = 20; // Ensure this matches the one in your main script
-        
-            // Calculate how many items you need to fill up to maxItemsPerPage
-            const itemsToFetch = maxItemsPerPage - currentRowCount;
-        
-            if (itemsToFetch > 0) {
-                fetch(`fetch_additional_feedback/${currentPage}/${itemsToFetch}/`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.feedbacks.length > 0) {
-                            const tbody = document.getElementById('feedback-tbody');
-        
-                            // Add each new feedback to the end of the list
-                            data.feedbacks.forEach(feedback => {
-                                const newRow = document.createElement('tr');
-                                newRow.classList.add('feedback-row', feedback.is_read ? '' : 'unread-message');
-                                newRow.dataset.feedbackId = feedback.id;
-                                newRow.dataset.feedbackDate = feedback.submitted_at;
-                                newRow.dataset.feedbackName = feedback.name;
-                                newRow.dataset.feedbackEmail = feedback.email;
-                                newRow.dataset.feedbackPageUrl = feedback.page_url;
-                                newRow.dataset.feedbackMessage = feedback.message;
-        
-                                newRow.innerHTML = `
-                                    <td><input type="checkbox" name="feedback_ids" value="${feedback.id}" class="feedback-checkbox"></td>
-                                    <td class="text-center"><i class="fas ${feedback.is_read ? 'fa-envelope-open icon-read' : 'fa-envelope icon-unread'}"></i></td>
-                                    <td class="text-center">${feedback.name}</td>
-                                    <td class="text-center feedback-date">${new Date(feedback.submitted_at).toLocaleString()}</td>
-                                    <td class="text-center"><i class="fas fa-trash icon-delete" data-feedback-id="${feedback.id}"></i></td>
-                                `;
-        
-                                // Add event listener to the new row
-                                addRowEventListeners(newRow);
-        
-                                tbody.appendChild(newRow); // Add the new feedback to the bottom of the list
-                            });
-        
-                            // Update pagination after fetching additional feedback
-                            totalFeedbackCount += data.feedbacks.length;
-                            updatePagination(totalFeedbackCount);
-                        }
-                    })
-                    .catch(error => console.error('Error fetching additional feedback:', error));
+        // Function to handle showing the modal with feedback details
+        function showFeedbackModal(row) {
+            const feedbackId = row.dataset.feedbackId;
+    
+            // Mark as read using the bulk action
+            handleBulkAction('mark_read', [feedbackId]);
+    
+            feedbackDate.textContent = convertToLocalTime(row.dataset.feedbackDate);
+            feedbackName.textContent = row.dataset.feedbackName;
+            feedbackEmail.textContent = row.dataset.feedbackEmail;
+            feedbackPageUrl.textContent = row.dataset.feedbackPageUrl;
+            feedbackMessage.textContent = row.dataset.feedbackMessage;
+            $(modal).modal('show');
+        }
+    
+        function handleBulkAction(action, specificFeedbackIds = null) {
+            let feedbackIds;
+    
+            if (specificFeedbackIds) {
+                // If specific feedback IDs are provided, use them
+                feedbackIds = specificFeedbackIds;
+            } else {
+                // Otherwise, get the list of selected checkboxes
+                feedbackIds = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
             }
-        }
-        
     
-        function updatePagination(totalCount) {
-            const paginationElement = document.querySelector('.pagination .current');
-            const totalPages = Math.ceil(totalCount / maxItemsPerPage);
+            if (feedbackIds.length === 0) {
+                alert('No feedback selected.');
+                return;
+            }
     
-            // Update the pagination display
-            paginationElement.textContent = `Page 1 of ${totalPages}`;
-        }
-    
-        function handleAction(feedbackIds, action) {
-            fetch('bulk_action/', {
+            fetch('{% url "bulk_feedback_action" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -377,107 +262,90 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    feedbackIds.forEach(id => {
-                        const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
-                        const icon = row.querySelector('.icon-unread, .icon-read');
-    
-                        if (action === 'delete') {
-                            row.remove();
-                            totalFeedbackCount--; // Decrease total count on delete
-                            fetchAdditionalFeedback(); // Fetch additional feedback to fill the gap
-                        } else if (action === 'mark_read' && icon) {
-                            icon.classList.remove('fa-envelope', 'icon-unread');
-                            icon.classList.add('fa-envelope-open', 'icon-read');
-                            row.classList.remove('unread-message');
-                        } else if (action === 'mark_unread' && icon) {
-                            icon.classList.remove('fa-envelope-open', 'icon-read');
-                            icon.classList.add('fa-envelope', 'icon-unread');
-                            row.classList.add('unread-message');
-                        }
-                    });
-    
-                    // Update pagination after an action
-                    updatePagination(totalFeedbackCount);
-    
-                    // Uncheck all checkboxes
-                    const checkboxes = document.querySelectorAll('.feedback-checkbox:checked');
-                    checkboxes.forEach(checkbox => checkbox.checked = false);
+                    document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+                        checkbox.checked = false;
+                    });                    
+                    // If marking as read/unread, update the row immediately without changing order
+                    if (action === 'mark_read' || action === 'mark_unread') {
+                        feedbackIds.forEach(id => {
+                            const row = document.querySelector(`tr[data-feedback-id="${id}"]`);
+                            if (action === 'mark_read') {
+                                row.classList.remove('unread-message');
+                                const icon = row.querySelector('.icon-unread');
+                                if (icon) {
+                                    icon.classList.replace('fa-envelope', 'fa-envelope-open');
+                                    icon.classList.replace('icon-unread', 'icon-read');
+                                }
+                            } else if (action === 'mark_unread') {
+                                row.classList.add('unread-message');
+                                const icon = row.querySelector('.icon-read');
+                                if (icon) {
+                                    icon.classList.replace('fa-envelope-open', 'fa-envelope');
+                                    icon.classList.replace('icon-read', 'icon-unread');
+                                }
+                            }
+                        });
+                    } else {
+                        // Refresh the table after other bulk actions
+                        location.reload();
+                    }
                 } else {
-                    console.error('Action failed:', data.error);
+                    alert('Action failed.');
                 }
             })
             .catch(error => console.error('Error:', error));
         }
     
-        function addRowEventListeners(row) {
-            const feedbackDateStr = row.dataset.feedbackDate;
-            const feedbackDate = new Date(feedbackDateStr);
-            const localDateString = feedbackDate.toLocaleString();
-            row.querySelector('.feedback-date').textContent = localDateString;
+        // Add event listeners to the table rows
+        function addEventListenersToTableRows() {
+            document.querySelectorAll('tbody tr').forEach(row => {
+                // Convert the date for the table display
+                const dateCell = row.querySelector('.feedback-date');
+                const isoDate = row.dataset.feedbackDate;
+                dateCell.textContent = convertToLocalTime(isoDate);
     
-            row.addEventListener('click', function (e) {
-                if (e.target.type === 'checkbox') {
-                    e.stopPropagation();
-                    return;
-                }
-    
-                const feedbackId = this.dataset.feedbackId;
-    
-                // Mark the feedback as read when opening
-                handleAction([feedbackId], 'mark_read');
-    
-                const modal = document.getElementById('feedbackModal');
-                modal.querySelector('#feedbackDate').textContent = localDateString;
-                modal.querySelector('#feedbackName').textContent = this.dataset.feedbackName;
-                modal.querySelector('#feedbackEmail').textContent = this.dataset.feedbackEmail;
-                modal.querySelector('#feedbackPageUrl').textContent = this.dataset.feedbackPageUrl;
-                modal.querySelector('#feedbackMessage').textContent = this.dataset.feedbackMessage;
-    
-                $('#feedbackModal').modal('show');
-            });
-    
-            const deleteBtn = row.querySelector('.icon-delete');
-            deleteBtn.addEventListener('click', function (e) {
-                e.stopPropagation(); // Prevent the row click from firing
-                const feedbackId = this.dataset.feedbackId;
-                if (confirm('Are you sure you want to delete this message?')) {
-                    handleAction([feedbackId], 'delete');
-                }
+                row.addEventListener('click', function (e) {
+                    if (e.target.type === 'checkbox') {
+                        e.stopPropagation(); // Prevent modal from opening when clicking on checkbox
+                        return;
+                    }
+                    if (e.target.classList.contains('icon-delete')) {
+                        e.stopPropagation(); // Prevent row click event
+                        const feedbackId = e.target.dataset.feedbackId;
+                        handleBulkAction('delete', [feedbackId]);
+                    } else {
+                        showFeedbackModal(row);
+                    }
+                });
             });
         }
     
-        // Poll the server every 15 seconds
-        setInterval(fetchNewFeedback, 15000);
+        // Initialize event listeners for table rows
+        addEventListenersToTableRows();
     
-        // Add event listeners to existing rows
-        const feedbackRows = document.querySelectorAll('.feedback-row');
-        feedbackRows.forEach(addRowEventListeners);
-    
+        // Bulk action buttons
         document.getElementById('bulk-delete-btn').addEventListener('click', function () {
-            const selectedFeedback = Array.from(document.querySelectorAll('.feedback-checkbox:checked')).map(cb => cb.value);
-            handleAction(selectedFeedback, 'delete');
+            handleBulkAction('delete');
         });
     
         document.getElementById('bulk-mark-read-btn').addEventListener('click', function () {
-            const selectedFeedback = Array.from(document.querySelectorAll('.feedback-checkbox:checked')).map(cb => cb.value);
-            handleAction(selectedFeedback, 'mark_read');
+            handleBulkAction('mark_read');
         });
     
         document.getElementById('bulk-mark-unread-btn').addEventListener('click', function () {
-            const selectedFeedback = Array.from(document.querySelectorAll('.feedback-checkbox:checked')).map(cb => cb.value);
-            handleAction(selectedFeedback, 'mark_unread');
+            handleBulkAction('mark_unread');
         });
     
         // Select all checkboxes
         document.getElementById('select-all').addEventListener('change', function () {
-            const checkboxes = document.querySelectorAll('input[name="feedback_ids"]');
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
                 checkbox.checked = this.checked;
             });
         });
     });
     
-         
-</script>
+    
+</script>    
 
 {% endblock %}
