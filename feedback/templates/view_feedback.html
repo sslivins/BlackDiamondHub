@@ -165,6 +165,11 @@
 
 <div class="container">
     <h1>Feedback Messages</h1>
+
+    <div id="message-count" class="message-count">
+        <!-- This will be populated by JavaScript -->
+    </div>
+
     <form id="bulk-actions-form" method="POST" action="{% url 'bulk_feedback_action' %}">
         {% csrf_token %}
         <div class="bulk-actions mb-3">
@@ -172,7 +177,9 @@
             <button type="button" class="btn btn-secondary" id="bulk-mark-read-btn">Mark as Read</button>
             <button type="button" class="btn btn-warning" id="bulk-mark-unread-btn">Mark as Unread</button>
         </div>
-        {% render_table table %}
+        <div id="feedback-table-container">
+            {% include "partials/feedback_table.html" %}
+        </div>
     </form>
 </div>
 
@@ -210,11 +217,24 @@
         const feedbackEmail = modal.querySelector('#feedbackEmail');
         const feedbackPageUrl = modal.querySelector('#feedbackPageUrl');
         const feedbackMessage = modal.querySelector('#feedbackMessage');
-    
+        
         // Function to convert ISO date string to local time string
         function convertToLocalTime(isoDateString) {
             const date = new Date(isoDateString);
             return date.toLocaleString();  // This converts to the local time zone
+        }
+    
+        // Function to display the message range
+        function updateMessageCount() {
+            const totalMessages = {{ table.paginator.count }};
+            const currentPage = {{ table.page.number }};
+            const messagesPerPage = {{ table.paginator.per_page }};
+            const firstMessage = (currentPage - 1) * messagesPerPage + 1;
+            const lastMessage = Math.min(currentPage * messagesPerPage, totalMessages);
+    
+            // Display the range and total count
+            const messageCountDiv = document.getElementById('message-count');
+            messageCountDiv.textContent = `Showing ${firstMessage}-${lastMessage} of ${totalMessages} messages`;
         }
     
         // Function to handle showing the modal with feedback details
@@ -239,8 +259,8 @@
                 // If specific feedback IDs are provided, use them
                 feedbackIds = specificFeedbackIds;
             } else {
-                // Otherwise, get the list of selected checkboxes
-                feedbackIds = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+                // Otherwise, get the list of selected checkboxes, excluding the header checkbox
+                feedbackIds = Array.from(document.querySelectorAll('tbody input[type="checkbox"]:checked')).map(cb => cb.value);
             }
     
             if (feedbackIds.length === 0) {
@@ -262,9 +282,11 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Uncheck all checkboxes after bulk action
                     document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
                         checkbox.checked = false;
-                    });                    
+                    });
+                    
                     // If marking as read/unread, update the row immediately without changing order
                     if (action === 'mark_read' || action === 'mark_unread') {
                         feedbackIds.forEach(id => {
@@ -295,6 +317,16 @@
             })
             .catch(error => console.error('Error:', error));
         }
+
+        function refreshTable() {
+            fetch('{% url "refresh_feedback_table" %}')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('feedback-table-container').innerHTML = html;
+                    addEventListenersToTableRows();  // Reattach event listeners to new rows
+                })
+                .catch(error => console.error('Error refreshing table:', error));
+        }        
     
         // Add event listeners to the table rows
         function addEventListenersToTableRows() {
@@ -343,8 +375,12 @@
                 checkbox.checked = this.checked;
             });
         });
-    });
+
+        setInterval(refreshTable, 15000);
     
+        // Update message count
+        updateMessageCount();
+    });
     
 </script>    
 
