@@ -227,18 +227,25 @@
             return date.toLocaleString();  // This converts to the local time zone
         }
     
-        // Function to display the message range
+        // Function to update the message count based on the current state of the table
         function updateMessageCount() {
-            const totalMessages = {{ table.paginator.count }};
-            const currentPage = {{ table.page.number }};
+            //const totalMessages = {{ table.paginator.count }};  // Count the number of rows in the table
+            const totalMessages = parseInt(document.querySelector('#total-message-count').textContent, 10);
             const messagesPerPage = {{ table.paginator.per_page }};
+            const currentPage = {{ table.page.number }};
             const firstMessage = (currentPage - 1) * messagesPerPage + 1;
             const lastMessage = Math.min(currentPage * messagesPerPage, totalMessages);
-    
+
+            //const currentPage = parseInt(document.querySelector('#current-page').textContent, 10);
+            //const messagesPerPage = parseInt(document.querySelector('#messages-per-page').textContent, 10);            
+
             // Display the range and total count
-            console.log(totalMessages);
             const messageCountDiv = document.getElementById('message-count');
-            messageCountDiv.textContent = `Showing ${firstMessage}-${lastMessage} of ${totalMessages} messages`;
+            if (messageCountDiv) {
+                messageCountDiv.textContent = `Showing ${firstMessage}-${lastMessage} of ${totalMessages} messages`;
+            } else {
+                console.error('Message count element not found');
+            }
         }
     
         // Function to handle showing the modal with feedback details
@@ -328,10 +335,12 @@
                 .then(html => {
                     document.getElementById('feedback-table-container').innerHTML = html;
                     addEventListenersToTableRows();  // Reattach event listeners to new rows
+
+                    updateMessageCount();
+
+                    document.getElementById('feedback-table-container').setAttribute('data-refreshed', 'true');                    
                 })
                 .catch(error => console.error('Error refreshing table:', error));
-
-            updateMessageCount();
         }        
     
         // Add event listeners to the table rows

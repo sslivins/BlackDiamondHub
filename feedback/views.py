@@ -37,8 +37,8 @@ def refresh_feedback_table(request):
     feedback_queryset = Feedback.objects.all().order_by('-submitted_at')
     table = FeedbackTable(feedback_queryset)
     RequestConfig(request, paginate={"per_page": 20}).configure(table)
+    
     return render(request, "partials/feedback_table.html", {"table": table})
-
 
 def bulk_feedback_action(request):
     if request.method == 'POST':
