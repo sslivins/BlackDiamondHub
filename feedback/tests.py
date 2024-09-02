@@ -7,6 +7,7 @@ from .models import Feedback
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.options import Options
 import time
 
 
@@ -117,9 +118,15 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        options = webdriver.ChromeOptions()
-        options.add_argument("--auto-open-devtools-for-tabs")        
-        cls.browser = webdriver.Chrome(options)  # Use Firefox() for Firefox
+
+        options = Options()
+        options.add_argument('--headless')  # Run Chrome in headless mode
+        options.add_argument('--no-sandbox')  # Bypass OS security model, necessary in some environments
+        options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
+        options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
+        options.add_argument('--window-size=1920x1080')  # Set a standard window size for consistency
+        cls.browser = webdriver.Chrome(options=options)
+        cls.browser.implicitly_wait(10)        
 
     @classmethod
     def tearDownClass(cls):
