@@ -177,10 +177,10 @@
             <button type="button" class="btn btn-secondary" id="bulk-mark-read-btn">Mark as Read</button>
             <button type="button" class="btn btn-warning" id="bulk-mark-unread-btn">Mark as Unread</button>
         </div>
-            <div id="feedback-table-container">
-                {% include "partials/feedback_table.html" %}
-            </div>
-        {% if not table.data %}
+        <div id="feedback-table-container">
+            {% include "partials/feedback_table.html" %}
+        </div>
+        {% if not table.page.object_list %}
             <p>No messages</p>
         {% endif %}            
     </form>
@@ -236,6 +236,7 @@
             const lastMessage = Math.min(currentPage * messagesPerPage, totalMessages);
     
             // Display the range and total count
+            console.log(totalMessages);
             const messageCountDiv = document.getElementById('message-count');
             messageCountDiv.textContent = `Showing ${firstMessage}-${lastMessage} of ${totalMessages} messages`;
         }
@@ -329,6 +330,8 @@
                     addEventListenersToTableRows();  // Reattach event listeners to new rows
                 })
                 .catch(error => console.error('Error refreshing table:', error));
+
+            updateMessageCount();
         }        
     
         // Add event listeners to the table rows
