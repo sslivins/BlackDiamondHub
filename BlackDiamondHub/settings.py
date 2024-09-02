@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_tables2',
     'crispy_forms',
     'crispy_bootstrap5',
     'inventory',
@@ -97,10 +98,10 @@ WSGI_APPLICATION = 'BlackDiamondHub.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
+        'NAME': 'sunpeaks_inventory',
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': 'postgresql.mi',
+        'HOST': os.getenv('DB_HOST'),
         'PORT': '5432',
     }
 }

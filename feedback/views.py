@@ -2,8 +2,11 @@
 import json
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.dateparse import parse_datetime
 from .models import Feedback
 from django.http import JsonResponse
+from django_tables2 import RequestConfig
+from .tables import FeedbackTable
 
 def submit_feedback(request):
     if request.method == 'POST':
@@ -17,32 +20,25 @@ def submit_feedback(request):
 
     return JsonResponse({'success': False})  # Return a JSON response indicating failure
 
+def get_unread_feedback_count(request):
+    if request.user.is_authenticated and request.user.is_staff:
+        count = Feedback.objects.filter(is_read=False).count()
+    else:
+        count = 0
+    return JsonResponse({'unread_feedback_count': count})
+
 def view_feedback(request):
-    if not request.user.is_staff:
-        return redirect('landing_page')
+    feedback_queryset = Feedback.objects.all().order_by('-submitted_at')
+    table = FeedbackTable(feedback_queryset)
+    RequestConfig(request, paginate={"per_page": 20}).configure(table)
+    return render(request, "view_feedback.html", {"table": table})
 
-    feedbacks = Feedback.objects.all().order_by('-submitted_at')
-    paginator = Paginator(feedbacks, 20)  # Show 20 feedbacks per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+def refresh_feedback_table(request):
+    feedback_queryset = Feedback.objects.all().order_by('-submitted_at')
+    table = FeedbackTable(feedback_queryset)
+    RequestConfig(request, paginate={"per_page": 20}).configure(table)
     
-    return render(request, 'view_feedback.html', {'feedbacks': page_obj})  
-
-def mark_as_read(request, feedback_id):
-    feedback = get_object_or_404(Feedback, id=feedback_id)
-    feedback.is_read = True
-    feedback.save()
-    return redirect('view_feedback')
-  
-def delete_feedback(request, feedback_id):
-    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        try:
-            feedback = Feedback.objects.get(id=feedback_id)
-            feedback.delete()
-            return JsonResponse({'success': True})
-        except Feedback.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Feedback not found'}, status=404)
-    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    return render(request, "partials/feedback_table.html", {"table": table})
 
 def bulk_feedback_action(request):
     if request.method == 'POST':
