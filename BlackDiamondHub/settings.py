@@ -101,7 +101,7 @@ DATABASES = {
         'NAME': 'sunpeaks_inventory',
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': 'postgresql.mi',
+        'HOST': os.getenv('DB_HOST'),
         'PORT': '5432',
     }
 }
