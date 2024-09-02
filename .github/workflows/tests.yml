@@ -16,9 +16,9 @@ jobs:
         image: postgres:13
         env:
           DB_HOST: localhost
-          DB_NAME: test_db
-          DB_USER: postgres
-          DB_PASSWORD: postgres
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
