@@ -171,35 +171,44 @@
             var toggleButton = document.querySelector('.toggle-button');
             var elevations = document.querySelectorAll('.elevation');
             var temperatures = document.querySelectorAll('.temperature');
-
+        
             if (toggleButton.textContent === 'C/F') {
                 elevations.forEach(function (elevation) {
                     var metricValue = parseFloat(elevation.getAttribute('data-metric'));
-                    var imperialValue = Math.round(metricValue * 3.28084); // Convert meters to feet and round
-                    elevation.textContent = 'Elevation: ' + imperialValue + ' ft';
-                    elevation.setAttribute('data-unit', 'ft');
+                    if (!isNaN(metricValue)) {
+                        var imperialValue = Math.round(metricValue * 3.28084); // Convert meters to feet and round
+                        elevation.textContent = 'Elevation: ' + imperialValue + ' ft';
+                        elevation.setAttribute('data-unit', 'ft');
+                    }
                 });
                 temperatures.forEach(function (temperature) {
                     var metricValue = parseFloat(temperature.getAttribute('data-metric'));
-                    var imperialValue = Math.round((metricValue * 9/5) + 32); // Convert Celsius to Fahrenheit and round
-                    temperature.textContent = imperialValue + '°F';
-                    temperature.setAttribute('data-unit', 'F');
+                    if (!isNaN(metricValue)) {
+                        var imperialValue = Math.round((metricValue * 9/5) + 32); // Convert Celsius to Fahrenheit and round
+                        temperature.textContent = imperialValue + '°F';
+                        temperature.setAttribute('data-unit', 'F');
+                    }
                 });
                 toggleButton.textContent = 'F/C';
             } else {
                 elevations.forEach(function (elevation) {
                     var metricValue = elevation.getAttribute('data-metric');
-                    elevation.textContent = 'Elevation: ' + Math.round(metricValue) + ' m';
-                    elevation.setAttribute('data-unit', 'm');
+                    if (!isNaN(parseFloat(metricValue))) {
+                        elevation.textContent = 'Elevation: ' + Math.round(metricValue) + ' m';
+                        elevation.setAttribute('data-unit', 'm');
+                    }
                 });
                 temperatures.forEach(function (temperature) {
                     var metricValue = temperature.getAttribute('data-metric');
-                    temperature.textContent = Math.round(metricValue) + '°C';
-                    temperature.setAttribute('data-unit', 'C');
+                    if (!isNaN(parseFloat(metricValue))) {
+                        temperature.textContent = Math.round(metricValue) + '°C';
+                        temperature.setAttribute('data-unit', 'C');
+                    }
                 });
                 toggleButton.textContent = 'C/F';
             }
         }
+       
     </script>
 </body>
 </html>
