@@ -84,6 +84,8 @@
             border-radius: 5px;
             font-size: 16px;
             font-weight: bold;
+            white-space: nowrap;  /* Prevent text from wrapping */
+            width: auto;          /* Allow the button to grow with content */            
         }
         
         /* Ensure the main container takes up full height minus the weather container */
@@ -152,7 +154,7 @@
             {% endfor %}
         </div>
         <div class="toggle-container">
-            <button class="toggle-button" onclick="toggleUnits()">C/F</button>
+            <button class="toggle-button" onclick="toggleUnits()">°C/°F</button>
         </div>
     </div>
 
@@ -172,7 +174,7 @@
             var elevations = document.querySelectorAll('.elevation');
             var temperatures = document.querySelectorAll('.temperature');
         
-            if (toggleButton.textContent === 'C/F') {
+            if (toggleButton.textContent === '°C/°F') {
                 elevations.forEach(function (elevation) {
                     var metricValue = parseFloat(elevation.getAttribute('data-metric'));
                     if (!isNaN(metricValue)) {
@@ -189,7 +191,7 @@
                         temperature.setAttribute('data-unit', 'F');
                     }
                 });
-                toggleButton.textContent = 'F/C';
+                toggleButton.textContent = '°F/°C';
             } else {
                 elevations.forEach(function (elevation) {
                     var metricValue = elevation.getAttribute('data-metric');
@@ -205,7 +207,7 @@
                         temperature.setAttribute('data-unit', 'C');
                     }
                 });
-                toggleButton.textContent = 'C/F';
+                toggleButton.textContent = '°C/°F';
             }
         }
        
