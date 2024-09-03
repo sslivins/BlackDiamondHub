@@ -27,14 +27,15 @@ class WeatherUnitToggleTest(LiveServerTestCase):
 
     def test_temperature_non_number(self):
         self.browser.get(self.live_server_url)
+        
+        toggle_button = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, 'toggle-button'))
+        )           
+        
         self.browser.execute_script('''
             document.querySelector(".temperature").setAttribute("data-metric", "N/A");
             document.querySelector(".temperature").textContent = "N/A°C";
         ''')
-        
-        toggle_button = WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.CLASS_NAME, 'toggle-button'))
-        )        
         
         toggle_button = self.browser.find_element(By.CLASS_NAME, "toggle-button")
         toggle_button.click()
