@@ -40,6 +40,8 @@ class WeatherUnitToggleTest(LiveServerTestCase):
             document.querySelector(".temperature").textContent = "N/A°C";
         ''')
         
+        self.browser.save_screenshot('screenshot.png')
+        
         toggle_button.click()
         
         temperature_text = self.browser.find_element(By.CLASS_NAME, "temperature").text

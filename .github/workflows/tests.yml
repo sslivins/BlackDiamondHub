@@ -60,3 +60,10 @@ jobs:
         DB_PASSWORD: postgres
       run: |
         python manage.py test
+
+    - name: Upload screenshot on failure
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-screenshot
+        path: screenshot.png        
