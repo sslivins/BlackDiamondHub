@@ -36,14 +36,13 @@ def landing_page(request):
         elevation = int(re.sub(r'[^\d]', '', elevation_str))
         
         # Extract the temperature and convert it to an integer
-        temperature_str = item.find('div', class_='weather-value').text.strip()
-        temperature = int(temperature_str)  # Convert to integer
+        temperature = item.find('div', class_='weather-value').text.strip()
 
         # Create a dictionary for each weather entry
         weather_entry = {
             'location': location,
             'elevation': elevation,
-            'temperature': f"{temperature}"
+            'temperature': temperature
         }
         
         # Append the entry to the weather_data list
