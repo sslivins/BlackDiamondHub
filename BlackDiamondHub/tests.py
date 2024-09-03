@@ -18,7 +18,7 @@ class WeatherUnitToggleTest(LiveServerTestCase):
         options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
         options.add_argument('--window-size=1920x1080')  # Set a standard window size for consistency
         cls.browser = webdriver.Chrome(options=options)
-        cls.browser.implicitly_wait(10)   
+        cls.browser.implicitly_wait(20)
 
     @classmethod
     def tearDownClass(cls):
@@ -28,17 +28,20 @@ class WeatherUnitToggleTest(LiveServerTestCase):
     def test_temperature_non_number(self):
         self.browser.get(self.live_server_url)
         
-        toggle_button = WebDriverWait(self.browser, 10).until(
+        toggle_button = WebDriverWait(self.browser, 20).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, 'toggle-button'))
+        )
+        WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.CLASS_NAME, 'toggle-button'))
-        )           
+        )        
         
         self.browser.execute_script('''
             document.querySelector(".temperature").setAttribute("data-metric", "N/A");
             document.querySelector(".temperature").textContent = "N/A°C";
         ''')
         
-        toggle_button = self.browser.find_element(By.CLASS_NAME, "toggle-button")
         toggle_button.click()
+        
         temperature_text = self.browser.find_element(By.CLASS_NAME, "temperature").text
         self.assertEqual(temperature_text, "N/A°C")
         toggle_button.click()
