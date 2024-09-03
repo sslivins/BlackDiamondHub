@@ -59,7 +59,7 @@ jobs:
         DB_USER: postgres
         DB_PASSWORD: postgres
       run: |
-        python manage.py test
+        python manage.py test -v 2
 
     - name: Upload screenshot on failure
       if: failure()
