@@ -171,6 +171,20 @@
                 transform: scale(1)
             }
         }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .fade-in {
+            animation: fade-in 1s ease-in-out;
+        }
+        
         
         /* The Close Button */
         .close {
@@ -230,8 +244,7 @@
                       if (imgElement) {
                           imgElement.src = newSrc;
                           initialTimestamps[baseSrc] = currentTimestamp;
-                          console.log('Updated image: ' + baseSrc + ' to timestamp:', currentTimestamp);
-                          
+
                           // Update the table data
                           const newTable = newCam.querySelector('table').innerHTML;
                           const currentCam = imgElement.closest('.cam');
@@ -240,6 +253,13 @@
                           } else {
                               console.error('Error: No matching .cam element found for', baseSrc);
                           }
+
+                          imgElement.classList.add('fade-in');
+                            // Remove the fade-in class after the animation completes
+                          setTimeout(() => {
+                            imgElement.classList.remove('fade-in');
+                          }, 1000); // Match the duration of the animation (1 second) 
+
                       } else {
                           console.error('Error: No matching image element found for', baseSrc);
                       }
