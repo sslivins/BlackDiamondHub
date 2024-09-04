@@ -36,6 +36,9 @@ def sonos_control_view(request):
             'play_state': play_state,  # Track the play state
             'speaker': speaker
         })
+        
+    # Sort the speaker_info list alphabetically by speaker name
+    speaker_info = sorted(speaker_info, key=lambda x: x['name'])        
 
     if request.method == 'POST':
         print(f'Got POST request: {request.POST}')
