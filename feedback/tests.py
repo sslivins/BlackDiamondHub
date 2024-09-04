@@ -377,8 +377,5 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         refreshed_rows = self.browser.find_elements(By.CSS_SELECTOR, '#feedback-table-container tbody tr')
         refreshed_data = [row.text for row in refreshed_rows]
         
-        #take picture
-        self.browser.save_screenshot('screenshot.png')
-
         # Verify that the data in the table remains the same after refresh
         self.assertEqual(initial_data, refreshed_data)

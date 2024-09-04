@@ -2,22 +2,33 @@ import django_tables2 as tables
 from .models import Feedback
 
 class FeedbackTable(tables.Table):
-    checkbox = tables.CheckBoxColumn(accessor='pk', attrs={"th__input": {"id": "select-all"}})
+    checkbox = tables.CheckBoxColumn(accessor='pk', attrs={
+      "th__input": {"id": "select-all"},
+      "td": {"class": "checkbox-column"},
+      "th": {"class": "checkbox-column"}
+    })
     icon = tables.TemplateColumn(template_code='''
         {% if record.is_read %}
             <i class="fas fa-envelope-open icon-read"></i>
         {% else %}
             <i class="fas fa-envelope icon-unread"></i>
         {% endif %}
-    ''', orderable=False, verbose_name="")
+    ''', orderable=False, verbose_name="", attrs={
+      "td": {"class": "icon-column"}, 
+      "th": {"class": "icon-column"}
+    })
     name = tables.Column(
         verbose_name='From'  # This sets the header for the name column to 'From'
     )
     delete = tables.TemplateColumn(template_code='''
         <i class="fas fa-trash icon-delete" data-feedback-id="{{ record.pk }}"></i>
-    ''', orderable=False)
+    ''', orderable=False, attrs={
+      "td": {"class": "icon-column"}, 
+      "th": {"class": "icon-column"}
+    })
     submitted_at = tables.DateTimeColumn(format='c', accessor='submitted_at', attrs={
-        'td': {'class': 'feedback-date'}
+        'td': {'class': 'feedback-date'},
+        'th': {'class': 'feedback-date'}
     }, verbose_name='Date')
 
     class Meta:
