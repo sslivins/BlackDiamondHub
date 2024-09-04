@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.http import JsonResponse
 import soco
 from django.templatetags.static import static
 from soco.exceptions import SoCoUPnPException
@@ -23,8 +24,6 @@ def sonos_control_view(request):
 
         # Get play state (playing, paused, stopped)
         play_state = speaker.get_current_transport_info().get('current_transport_state')
-        
-        print(f'Speaker: {speaker.player_name} current play state: {play_state}')
 
         speaker_info.append({
             'name': speaker.player_name,
@@ -33,15 +32,13 @@ def sonos_control_view(request):
             'album': current_track.get('album', 'Unknown Album'),
             'album_art': album_art,
             'volume': volume,
-            'play_state': play_state,  # Track the play state
+            'play_state': play_state,
             'speaker': speaker
         })
         
-    # Sort the speaker_info list alphabetically by speaker name
-    speaker_info = sorted(speaker_info, key=lambda x: x['name'])        
+    speaker_info = sorted(speaker_info, key=lambda x: x['name'])
 
     if request.method == 'POST':
-        print(f'Got POST request: {request.POST}')
         speaker_name = request.POST.get('speaker_name')
         action = request.POST.get('action')
         volume = request.POST.get('volume', None)
@@ -51,22 +48,24 @@ def sonos_control_view(request):
         for info in speaker_info:
             if info['name'] == speaker_name:
                 try:
-                    # Handle play and pause actions based on current play state
                     if action == 'play' and info['play_state'] in ['STOPPED', 'PAUSED_PLAYBACK']:
                         info['speaker'].play()
                     elif action == 'pause' and info['play_state'] == 'PLAYING':
                         info['speaker'].pause()
                     elif action == 'volume' and volume:
                         info['speaker'].volume = int(volume)
+                        return JsonResponse({'status': 'success', 'volume': volume}, status=200)
                     elif action == 'join' and target_group_speaker_name:
                         # Join speaker to a group led by another speaker
                         target_speaker = next(s for s in speakers if s.player_name == target_group_speaker_name)
                         info['speaker'].join(target_speaker)
                     elif action == 'unjoin':
                         # Unjoin speaker from the group
-                        info['speaker'].unjoin()
+                        info['speaker'].unjoin()                      
                 except SoCoUPnPException as e:
                     print(f"Error controlling speaker {info['name']}: {e}")
-                break
+                    return JsonResponse({'error': str(e)}, status=400)
+                # Return a JSON response for play/pause button actions
+                return JsonResponse({'status': 'success'}, status=200)
 
     return render(request, 'sonos.html', {'speaker_info': speaker_info})

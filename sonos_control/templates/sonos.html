@@ -13,21 +13,22 @@
           background-color: #f4f4f4;
           margin: 0;
           padding: 20px;
-          overflow: hidden; /* Prevent scrolling */
+          overflow: hidden;
       }
 
       h1 {
           color: #333;
           text-align: center;
           margin-bottom: 20px;
+          font-size: 2rem;
       }
 
       .grid-container {
           display: grid;
-          grid-template-columns: repeat(3, 1fr); /* 3 tiles across */
+          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
           gap: 20px;
-          max-width: 100vw; /* Make sure it fits within the viewport width */
-          max-height: calc(100vh - 60px); /* Allow some space for padding */
+          max-width: 100vw;
+          padding: 10px;
       }
 
       .speaker {
@@ -35,173 +36,170 @@
           border-radius: 10px;
           padding: 20px;
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          position: relative;
+          touch-action: manipulation;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          position: relative; 
+          align-items: center;
       }
 
       .speaker h2 {
-          margin-top: 0;
-          font-size: 20px;
+          margin-top: 10px;
+          font-size: 1.6rem;
           color: #333;
       }
 
       .track-info {
           margin: 10px 0;
-          font-size: 16px;
+          font-size: 1.2rem;
       }
 
       .track-info strong {
           color: #555;
       }
 
-      .album-art {
-          max-width: 100px;
-          border-radius: 5px;
-          margin-right: 20px;
+      .album-art-container {
+          position: relative;
+          max-width: 200px;
+          width: 100%;
       }
 
-      button {
-          padding: 10px 20px;
-          background-color: #007bff;
+      .album-art {
+          width: 100%;
+          border-radius: 10px;
+      }
+
+      .play-pause-button {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background-color: rgba(0, 0, 0, 0.5);
           color: white;
           border: none;
-          border-radius: 5px;
+          border-radius: 50%;
+          width: 60px;
+          height: 60px;
+          font-size: 24px;
           cursor: pointer;
-          margin-right: 10px;
-      }
-
-      button:hover {
-          background-color: #0056b3;
       }
 
       .volume-control {
-          margin-top: 10px;
+          margin-top: 20px;
+          width: 100%;
       }
 
       input[type=range] {
           width: 100%;
+          height: 40px;
+          -webkit-appearance: none;
+          background: #ddd;
+          border-radius: 10px;
+          outline: none;
       }
 
-      .visualizer {
-          position: absolute;
-          top: 10px;
-          right: 100px;
-          height: 60px;
-          display: flex;
-          align-items: flex-end;
-          background: none; /* No background */
-          z-index: 10; /* Ensures it stays above other content */
-      }
-
-      .bar {
-          width: 5px;
-          height: 100%;
-          display: inline-block;
+      input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 40px;
+          height: 40px;
           background-color: #007bff;
-          animation: bounce 1s infinite ease-in-out;
+          border-radius: 50%;
+          cursor: pointer;
       }
 
-      @keyframes bounce {
-          0%, 100% {
-              transform: scaleY(1);
-          }
-          50% {
-              transform: scaleY(0.3);
-          }
+      input[type=range]::-moz-range-thumb {
+          width: 40px;
+          height: 40px;
+          background-color: #007bff;
+          border-radius: 50%;
+          cursor: pointer;
       }
 
+      .output {
+          margin-left: 15px;
+          font-size: 1.4rem;
+      }
+
+      /* Grouping UI */
+      .group-selection {
+          margin-top: 15px;
+      }
+
+      .group-btn {
+          background-color: #28a745;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          font-size: 1rem;
+          border-radius: 5px;
+          cursor: pointer;
+          margin-top: 10px;
+      }
+
+      .group-btn:disabled {
+          background-color: #aaa;
+          cursor: not-allowed;
+      }
   </style>
 </head>
 <body>
   <h1>Control Sonos Speakers</h1>
 
+  <div class="group-selection">
+    <button class="group-btn" id="group-btn" onclick="groupSelectedSpeakers()" disabled>Group Selected</button>
+  </div>
+
   <div class="grid-container">
       {% for info in speaker_info %}
       <div class="speaker">
           <h2>{{ info.name }}</h2>
-          <div class="track-info">
+
+          <div class="album-art-container">
               <img src="{{ info.album_art }}" alt="Album Art" class="album-art">
+              <button class="play-pause-button" id="play-pause-button-{{ info.name }}"
+                      onclick="togglePlayPause('{{ info.name }}', '{{ info.play_state }}')">
+                  {% if info.play_state == 'PLAYING' %}
+                      &#10074;&#10074;
+                  {% else %}
+                      &#9654;
+                  {% endif %}
+              </button>
+          </div>
+
+          <div class="track-info">
               <p><strong>Track:</strong> {{ info.track }}</p>
               <p><strong>Artist:</strong> {{ info.artist }}</p>
               <p><strong>Album:</strong> {{ info.album }}</p>
           </div>
 
-          <!-- Play/Pause Controls -->
-          <form method="POST" id="control-form-{{ info.name }}">
-              {% csrf_token %}
-              <input type="hidden" name="speaker_name" value="{{ info.name }}">
-              {% if info.play_state == 'PLAYING' %}
-                  <button type="button" onclick="togglePlayPause('{{ info.name }}', 'pause')" id="play-pause-button-{{ info.name }}">Pause</button>
-              {% else %}
-                  <button type="button" onclick="togglePlayPause('{{ info.name }}', 'play')" id="play-pause-button-{{ info.name }}">Play</button>
-              {% endif %}
-          </form>
-        
-          <!-- Group Controls -->
-          <div class="group-controls">
-            <form method="POST">
-                {% csrf_token %}
-                <input type="hidden" name="speaker_name" value="{{ info.name }}">
-
-                <!-- Dropdown to select target group speaker -->
-                <select name="target_group_speaker_name">
-                    <option value="" disabled selected>Group with...</option>
-                    {% for group_speaker in speaker_info %}
-                    {% if group_speaker.name != info.name %}
-                    <option value="{{ group_speaker.name }}">{{ group_speaker.name }}</option>
-                    {% endif %}
-                    {% endfor %}
-                </select>
-                <button type="submit" name="action" value="join">Join Group</button>
-                <button type="submit" name="action" value="unjoin">Unjoin</button>
-            </form>
-          </div>
-
           <!-- Volume Control -->
           <div class="volume-control">
-            <form method="POST" id="volume-form-{{ info.name }}">
-                {% csrf_token %}
-                <input type="hidden" name="speaker_name" value="{{ info.name }}">
-                <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}" 
-                      oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
-            </form>
+              <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
+                     oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
+              <output id="volume-output-{{ info.name }}" class="output">{{ info.volume }}</output>
           </div>
 
-
-          <!-- Audio Visualizer -->
-          {% if info.play_state == 'PLAYING' %}
-          <div class="visualizer">
-              <div class="bar" style="animation-delay: 0s;"></div>
-              <div class="bar" style="animation-delay: 0.1s;"></div>
-              <div class="bar" style="animation-delay: 0.2s;"></div>
-              <div class="bar" style="animation-delay: 0.3s;"></div>
-              <div class="bar" style="animation-delay: 0.4s;"></div>
-              <div class="bar" style="animation-delay: 0.5s;"></div>
-              <div class="bar" style="animation-delay: 0.6s;"></div>
-              <div class="bar" style="animation-delay: 0.7s;"></div>
-              <div class="bar" style="animation-delay: 0.8s;"></div>
-              <div class="bar" style="animation-delay: 0.9s;"></div>
+          <!-- Checkbox for Grouping -->
+          <div class="grouping-checkbox">
+              <input type="checkbox" id="checkbox-{{ info.name }}" class="group-checkbox" onclick="toggleGroupButton()">
+              <label for="checkbox-{{ info.name }}">Select for Group</label>
           </div>
-          {% endif %}
       </div>
       {% endfor %}
   </div>
 </body>
-<script>
-  function adjustVolume(speakerName, volume) {
-      // Get CSRF token from the form
-      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
 
-      // Create a FormData object to send speaker name and volume
+<script>
+  // Toggle Play/Pause
+  function togglePlayPause(speakerName, currentState) {
+      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+      let action = (currentState === 'PLAYING') ? 'pause' : 'play';
+
       const formData = new FormData();
       formData.append('speaker_name', speakerName);
-      formData.append('volume', volume);
-      formData.append('action', 'volume');
+      formData.append('action', action);
       formData.append('csrfmiddlewaretoken', csrfToken);
 
-      // Send POST request to update the volume
       fetch('', {
           method: 'POST',
           body: formData,
@@ -209,11 +207,44 @@
       .then(response => response.json())
       .then(data => {
           if (data.status === 'success') {
-              // Success! Now update the slider and output dynamically
+              const button = document.getElementById(`play-pause-button-${speakerName}`);
+              if (action === 'play') {
+                  button.innerHTML = '&#10074;&#10074;';
+                  button.setAttribute('onclick', `togglePlayPause('${speakerName}', 'PLAYING')`);
+              } else {
+                  button.innerHTML = '&#9654;';
+                  button.setAttribute('onclick', `togglePlayPause('${speakerName}', 'STOPPED')`);
+              }
+          } else {
+              console.error('Failed to toggle play/pause state');
+          }
+      })
+      .catch(error => {
+          console.error('Error:', error);
+      });
+  }
+
+  // Adjust Volume
+  function adjustVolume(speakerName, volume) {
+      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+      const formData = new FormData();
+      formData.append('speaker_name', speakerName);
+      formData.append('volume', volume);
+      formData.append('action', 'volume');
+      formData.append('csrfmiddlewaretoken', csrfToken);
+
+      fetch('', {
+          method: 'POST',
+          body: formData,
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.status === 'success') {
               const slider = document.getElementById(`volume-slider-${speakerName}`);
               const output = document.getElementById(`volume-output-${speakerName}`);
-              slider.value = volume;  // Update slider position
-              output.innerText = volume;  // Update the volume output display
+              slider.value = volume;
+              output.innerText = volume;
           } else {
               console.error('Failed to update volume');
           }
@@ -222,39 +253,41 @@
           console.error('Error:', error);
       });
   }
-  function togglePlayPause(speakerName, action) {
-      // Get CSRF token from the form
-      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
 
-      // Create a FormData object to send speaker name and action
+  // Enable or disable the "Group Selected" button
+  function toggleGroupButton() {
+      const checkboxes = document.querySelectorAll('.group-checkbox:checked');
+      const groupBtn = document.getElementById('group-btn');
+      groupBtn.disabled = checkboxes.length === 0;
+  }
+
+  // Group selected speakers
+  function groupSelectedSpeakers() {
+      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+      const selectedSpeakers = Array.from(document.querySelectorAll('.group-checkbox:checked'))
+                                    .map(cb => cb.id.replace('checkbox-', ''));
+
       const formData = new FormData();
-      formData.append('speaker_name', speakerName);
-      formData.append('action', action);
+      formData.append('action', 'group');
+      formData.append('speakers', selectedSpeakers);
       formData.append('csrfmiddlewaretoken', csrfToken);
 
-      // Send POST request to the server
       fetch('', {
           method: 'POST',
           body: formData,
       })
-      .then(response => {
-          if (response.ok) {
-              // Success! Now toggle the button text
-              const button = document.getElementById(`play-pause-button-${speakerName}`);
-              if (action === 'play') {
-                  button.innerText = 'Pause';
-                  button.setAttribute('onclick', `togglePlayPause('${speakerName}', 'pause')`);
-              } else {
-                  button.innerText = 'Play';
-                  button.setAttribute('onclick', `togglePlayPause('${speakerName}', 'play')`);
-              }
+      .then(response => response.json())
+      .then(data => {
+          if (data.status === 'success') {
+              console.log('Speakers grouped successfully');
+              // Optionally refresh the page or provide visual feedback
           } else {
-              console.error('Failed to update play state');
+              console.error('Failed to group speakers');
           }
       })
       .catch(error => {
           console.error('Error:', error);
       });
-  }  
-  </script>
+  }
+</script>
 {% endblock %}
