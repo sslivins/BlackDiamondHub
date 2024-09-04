@@ -36,24 +36,16 @@ def view_feedback(request):
 def refresh_feedback_table(request):
     # Get the current page number from the request, default to 1
     page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 20)
     
-    print(f"Page number: {page_number}")
-
     # Apply ordering here before pagination
     feedback_queryset = Feedback.objects.all().order_by('-submitted_at')
-
-    # Apply pagination
-    paginator = Paginator(feedback_queryset, 20)  # Assuming 20 items per page
-    page_obj = paginator.get_page(page_number)
-
-    # Create the table with the sliced queryset (object list of the page)
-    table = FeedbackTable(page_obj.object_list)
-
-    # Configure the table for the request
-    RequestConfig(request).configure(table)
+    
+    table = FeedbackTable(feedback_queryset)
+    table.paginate(page=page_number, per_page=page_size)
 
     # Render the partial table view
-    return render(request, "partials/feedback_table.html", {"table": table, "page_obj": page_obj})
+    return render(request, "partials/feedback_table.html", {"table": table})
 
 
 def bulk_feedback_action(request):
