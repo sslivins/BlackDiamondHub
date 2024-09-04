@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'inventory',
     'sunpeaks_webcams',
     'feedback',
+    'sonos_control',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
