@@ -343,3 +343,42 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         # Verify the deleted feedback is no longer in the table
         self.assertFalse(any(latest_feedback.message in row for row in refreshed_data))
             
+    def test_pagination_second_page_after_refresh(self):
+        # Navigate to the feedback view page
+        self.browser.get(f'{self.live_server_url}/feedback/')
+        
+        # Wait until the table is loaded
+        WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
+        )
+        
+        #click on the next page button
+        next_button = self.browser.find_element(By.CSS_SELECTOR, '.page-item.next a')
+        next_button.click()
+        
+        #wait for the table to load
+        WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
+        )
+
+        # Capture the initial state of the table
+        initial_rows = self.browser.find_elements(By.CSS_SELECTOR, '#feedback-table-container tbody tr')
+        initial_data = [row.text for row in initial_rows]
+
+        # Clear the `data-refreshed` attribute before starting the test
+        self.browser.execute_script("document.getElementById('feedback-table-container').removeAttribute('data-refreshed');")
+
+        # Wait until the interval has fired and the table has been refreshed
+        WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "#feedback-table-container[data-refreshed='true']"))
+        )
+
+        # Capture the state of the table after refresh
+        refreshed_rows = self.browser.find_elements(By.CSS_SELECTOR, '#feedback-table-container tbody tr')
+        refreshed_data = [row.text for row in refreshed_rows]
+        
+        #take picture
+        self.browser.save_screenshot('screenshot.png')
+
+        # Verify that the data in the table remains the same after refresh
+        self.assertEqual(initial_data, refreshed_data)
