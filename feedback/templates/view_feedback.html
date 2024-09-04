@@ -330,7 +330,8 @@
         }
 
         function refreshTable() {
-            fetch('{% url "refresh_feedback_table" %}')
+            const currentPage = parseInt(document.querySelector('#current-page').textContent, 10);
+            fetch(`{% url "refresh_feedback_table" %}?page=${currentPage}`)
                 .then(response => response.text())
                 .then(html => {
                     document.getElementById('feedback-table-container').innerHTML = html;

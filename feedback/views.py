@@ -34,11 +34,19 @@ def view_feedback(request):
     return render(request, "view_feedback.html", {"table": table})
 
 def refresh_feedback_table(request):
-    feedback_queryset = Feedback.objects.all().order_by('-submitted_at')
-    table = FeedbackTable(feedback_queryset)
-    RequestConfig(request, paginate={"per_page": 20}).configure(table)
+    # Get the current page number from the request, default to 1
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 20)
     
+    # Apply ordering here before pagination
+    feedback_queryset = Feedback.objects.all().order_by('-submitted_at')
+    
+    table = FeedbackTable(feedback_queryset)
+    table.paginate(page=page_number, per_page=page_size)
+
+    # Render the partial table view
     return render(request, "partials/feedback_table.html", {"table": table})
+
 
 def bulk_feedback_action(request):
     if request.method == 'POST':
