@@ -25,7 +25,7 @@
 
       .grid-container {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
           gap: 20px;
           max-width: 100vw;
           padding: 10px;
@@ -140,53 +140,146 @@
           background-color: #aaa;
           cursor: not-allowed;
       }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+  
+      .modal-content {
+        background-color: #fff;
+        margin: 10% auto;
+        padding: 20px;
+        border-radius: 10px;
+        width: 50%;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+      }
+  
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+  
+      .close:hover,
+      .close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+      }
+  
+      /* Fancy Checkbox */
+      .fancy-checkbox input[type="checkbox"] {
+        display: none;
+      }
+  
+      .fancy-checkbox label {
+        position: relative;
+        padding-left: 35px;
+        cursor: pointer;
+      }
+  
+      .fancy-checkbox label:before,
+      .fancy-checkbox label:after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+  
+      .fancy-checkbox label:before {
+        width: 24px;
+        height: 24px;
+        border: 2px solid #007bff;
+        background-color: #fff;
+        border-radius: 4px;
+      }
+  
+      .fancy-checkbox label:after {
+        width: 10px;
+        height: 6px;
+        border-left: 2px solid #007bff;
+        border-bottom: 2px solid #007bff;
+        transform: rotate(-45deg) translateY(-50%);
+        opacity: 0;
+      }
+  
+      .fancy-checkbox input[type="checkbox"]:checked + label:after {
+        opacity: 1;
+      }      
   </style>
 </head>
 <body>
   <h1>Control Sonos Speakers</h1>
 
-  <div class="group-selection">
-    <button class="group-btn" id="group-btn" onclick="groupSelectedSpeakers()" disabled>Group Selected</button>
-  </div>
-
   <div class="grid-container">
-      {% for info in speaker_info %}
-      <div class="speaker">
-          <h2>{{ info.name }}</h2>
+    {% for info in speaker_info %}
+    <div class="speaker">
+        <h2>{{ info.name }}</h2>
 
-          <div class="album-art-container">
-              <img src="{{ info.album_art }}" alt="Album Art" class="album-art">
-              <button class="play-pause-button" id="play-pause-button-{{ info.name }}"
-                      onclick="togglePlayPause('{{ info.name }}', '{{ info.play_state }}')">
-                  {% if info.play_state == 'PLAYING' %}
-                      &#10074;&#10074;
-                  {% else %}
-                      &#9654;
-                  {% endif %}
-              </button>
-          </div>
+        <div class="album-art-container">
+            <img src="{{ info.album_art }}" alt="Album Art" class="album-art">
+            <button class="play-pause-button" id="play-pause-button-{{ info.name }}"
+                    onclick="togglePlayPause('{{ info.name }}', '{{ info.play_state }}')">
+                {% if info.play_state == 'PLAYING' %}
+                    &#10074;&#10074;
+                {% else %}
+                    &#9654;
+                {% endif %}
+            </button>
+        </div>
 
-          <div class="track-info">
-              <p><strong>Track:</strong> {{ info.track }}</p>
-              <p><strong>Artist:</strong> {{ info.artist }}</p>
-              <p><strong>Album:</strong> {{ info.album }}</p>
-          </div>
+        <div class="track-info">
+            <p><strong>Track:</strong> {{ info.track }}</p>
+            <p><strong>Artist:</strong> {{ info.artist }}</p>
+            <p><strong>Album:</strong> {{ info.album }}</p>
+        </div>
 
-          <!-- Volume Control -->
-          <div class="volume-control">
-              <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
-                     oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
-              <output id="volume-output-{{ info.name }}" class="output">{{ info.volume }}</output>
-          </div>
+        <!-- Volume Control -->
+        <div class="volume-control">
+            <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
+                   oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
+            <output id="volume-output-{{ info.name }}" class="output">{{ info.volume }}</output>
+        </div>
 
-          <!-- Checkbox for Grouping -->
-          <div class="grouping-checkbox">
-              <input type="checkbox" id="checkbox-{{ info.name }}" class="group-checkbox" onclick="toggleGroupButton()">
-              <label for="checkbox-{{ info.name }}">Select for Group</label>
+        <button onclick="openModal('{{ info.name }}')" class="group-btn">Group</button>
+
+        <!-- Modal Structure -->
+        <div id="groupModal-{{ info.name }}" class="modal">
+          <div class="modal-content">
+            <span class="close" onclick="closeModal('{{ info.name }}')">&times;</span>
+            <h2>Group Speakers for {{ info.name }}</h2>
+
+            <h3>Currently in Group</h3>
+            {% for grouped_speaker in info.group %}
+            <div class="fancy-checkbox">
+              <input type="checkbox" id="group-checkbox-{{ grouped_speaker }}" checked onclick="toggleGroup('{{ info.name }}', '{{ grouped_speaker }}')">
+              <label for="group-checkbox-{{ grouped_speaker }}">{{ grouped_speaker }}</label>
+            </div>
+            {% endfor %}
+
+            <h3>Other Speakers</h3>
+            {% for speaker in other_speakers %}
+            <div class="fancy-checkbox">
+              <input type="checkbox" id="group-checkbox-{{ speaker }}" onclick="toggleGroup('{{ info.name }}', '{{ speaker }}')">
+              <label for="group-checkbox-{{ speaker }}">{{ speaker }}</label>
+            </div>
+            {% endfor %}
           </div>
-      </div>
-      {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
   </div>
+
+
 </body>
 
 <script>
@@ -254,40 +347,41 @@
       });
   }
 
-  // Enable or disable the "Group Selected" button
-  function toggleGroupButton() {
-      const checkboxes = document.querySelectorAll('.group-checkbox:checked');
-      const groupBtn = document.getElementById('group-btn');
-      groupBtn.disabled = checkboxes.length === 0;
+  // Open the Modal
+  function openModal(speakerName) {
+    document.getElementById(`groupModal-${speakerName}`).style.display = "block";
   }
 
-  // Group selected speakers
-  function groupSelectedSpeakers() {
-      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-      const selectedSpeakers = Array.from(document.querySelectorAll('.group-checkbox:checked'))
-                                    .map(cb => cb.id.replace('checkbox-', ''));
-
-      const formData = new FormData();
-      formData.append('action', 'group');
-      formData.append('speakers', selectedSpeakers);
-      formData.append('csrfmiddlewaretoken', csrfToken);
-
-      fetch('', {
-          method: 'POST',
-          body: formData,
-      })
-      .then(response => response.json())
-      .then(data => {
-          if (data.status === 'success') {
-              console.log('Speakers grouped successfully');
-              // Optionally refresh the page or provide visual feedback
-          } else {
-              console.error('Failed to group speakers');
-          }
-      })
-      .catch(error => {
-          console.error('Error:', error);
-      });
+  // Close the Modal
+  function closeModal(speakerName) {
+    document.getElementById(`groupModal-${speakerName}`).style.display = "none";
   }
+
+  // Add or Remove speakers from group
+  function toggleGroup(speakerName, targetSpeaker) {
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    const formData = new FormData();
+    formData.append('speaker_name', speakerName);
+    formData.append('target_speaker', targetSpeaker);
+    formData.append('action', 'toggle_group');
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch('', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Group updated');
+            // Optionally, refresh the speaker tile to reflect group changes
+        } else {
+            console.error('Failed to update group');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+  }  
 </script>
 {% endblock %}
