@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Dashboard</title>
+    <script type="text/javascript">
+        // CSRF token handling based on Django documentation
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        // Function to search for tracks using the Spotify API
+        function searchSpotify() {
+            const query = document.getElementById('search').value;
+            if (query) {
+                fetch(`/spotify/search/?q=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    let resultsContainer = document.getElementById('results');
+                    resultsContainer.innerHTML = ''; // Clear old results
+                    data.tracks.items.forEach(track => {
+                        let trackItem = document.createElement('div');
+                        trackItem.innerHTML = `
+                            <p><strong>${track.name}</strong> by ${track.artists[0].name}</p>
+                            <button onclick="playTrack('${track.uri}')">Play</button>
+                        `;
+                        resultsContainer.appendChild(trackItem);
+                    });
+                });
+            }
+        }
+
+        // Function to play the selected track
+        function playTrack(trackUri) {
+            fetch(`/spotify/play/?track_uri=${trackUri}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,  // Use the retrieved CSRF token
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Track played successfully:', data);
+            })
+            .catch(error => {
+                console.error('Error playing track:', error);
+            });
+        }
+
+        // Fetch and display recently played songs
+        function loadRecentlyPlayed() {
+            fetch('/spotify/recently_played/')
+            .then(response => response.json())
+            .then(data => {
+                let recentContainer = document.getElementById('recently-played');
+                data.items.forEach(track => {
+                    let trackItem = document.createElement('div');
+                    trackItem.innerHTML = `
+                        <p>${track.track.name} by ${track.track.artists[0].name}</p>
+                    `;
+                    recentContainer.appendChild(trackItem);
+                });
+            });
+        }
+
+        // Fetch and display user's favorite tracks
+        function loadFavorites() {
+            fetch('/spotify/favorites/')
+            .then(response => response.json())
+            .then(data => {
+                let favoritesContainer = document.getElementById('favorites');
+                data.items.forEach(track => {
+                    let trackItem = document.createElement('div');
+                    trackItem.innerHTML = `
+                        <p>${track.name} by ${track.artists[0].name}</p>
+                    `;
+                    favoritesContainer.appendChild(trackItem);
+                });
+            });
+        }
+
+        // Load content when the page loads
+        window.onload = function() {
+            loadRecentlyPlayed();
+            loadFavorites();
+        };
+    </script>
+</head>
+<body>
+    <h1>Spotify Dashboard</h1>
+
+    <!-- Search for tracks -->
+    <div>
+        <label for="search">Search for a track:</label>
+        <input type="text" id="search" placeholder="Enter track name...">
+        <button onclick="searchSpotify()">Search</button>
+    </div>
+
+    <h2>Search Results</h2>
+    <div id="results"></div>
+
+    <h2>Recently Played</h2>
+    <div id="recently-played"></div>
+
+    <h2>Your Favorites</h2>
+    <div id="favorites"></div>
+
+    <h2>Now Playing</h2>
+    <div id="now-playing">
+        <!-- Add current playing track details here -->
+    </div>
+</body>
+</html>

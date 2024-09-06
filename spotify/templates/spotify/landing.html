@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Login</title>
+</head>
+<body>
+    <h1>Welcome to Spotify on Black Diamond Hub</h1>
+    <p>You are not signed in. Please log in to continue.</p>
+
+    <!-- QR Code for Spotify login -->
+    <p>Scan the QR Code below to sign in using your phone:</p>
+    <img src="{% url 'spotify:login' %}?type=qr" alt="Spotify QR Code">
+
+    <p>Or <a href="{% url 'spotify:login' %}">click here</a> to sign in directly on this device.</p>
+</body>
+</html>

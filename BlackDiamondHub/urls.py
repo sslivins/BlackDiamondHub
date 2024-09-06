@@ -28,6 +28,7 @@ urlpatterns = [
     path('inventory/', include('inventory.urls')),
     path('sunpeaks_webcams/', include('sunpeaks_webcams.urls')),
     path('feedback/', include('feedback.urls')),
+    path('spotify/', include('spotify.urls')),
 ]
 
 if settings.DEBUG:

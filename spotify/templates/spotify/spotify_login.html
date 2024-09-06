@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify QR Code Login</title>
+    <script type="text/javascript">
+        // Function to poll the server to check if the guest has signed in
+        function checkAuth() {
+            fetch('/spotify/check_auth/')  // Poll the server to see if the guest token has been stored
+            .then(response => response.json())
+            .then(data => {
+                if (data.signed_in) {
+                    window.location.href = '/spotify/search/';  // Redirect to search if signed in
+                }
+            });
+        }
+
+        // Check authentication every 5 seconds
+        setInterval(checkAuth, 5000);
+    </script>
+</head>
+<body>
+    <h1>Scan the QR Code to Login</h1>
+    <p>Scan this code with your phone to authenticate via Spotify.</p>
+
+    <!-- Display the QR code that directs the user to the QR login URL -->
+    <img src="{% url 'spotify:login' %}?type=qr" alt="Spotify QR Code">
+</body>
+</html>
