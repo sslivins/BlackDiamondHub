@@ -23,6 +23,52 @@
 
         const csrftoken = getCookie('csrftoken');
 
+        // Function to fetch and display available Spotify devices
+        async function loadDevices() {
+            try {
+                const response = await fetch('/spotify/devices/', { method: 'GET' });
+                const data = await response.json();
+                let devicesContainer = document.getElementById('devices');
+                devicesContainer.innerHTML = '';  // Clear old list
+
+                // Display the list of devices
+                data.devices.forEach(device => {
+                    let deviceItem = document.createElement('div');
+                    deviceItem.innerHTML = `
+                        <input type="radio" name="device" value="${device.id}" id="device-${device.id}">
+                        <label for="device-${device.id}">${device.name} (${device.type})</label>
+                    `;
+                    devicesContainer.appendChild(deviceItem);
+                });
+            } catch (error) {
+                console.error('Error loading devices:', error);
+            }
+        }
+
+        // Function to play the selected track on the chosen device
+        async function playTrack(trackUri) {
+            // Get selected device
+            const selectedDevice = document.querySelector('input[name="device"]:checked');
+            if (!selectedDevice) {
+                alert('Please select a device to play the track.');
+                return;
+            }
+            const deviceId = selectedDevice.value;
+
+            try {
+                await fetch(`/spotify/play/?track_uri=${trackUri}&device_id=${deviceId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                console.log(`Playing track on device ${deviceId}`);
+            } catch (error) {
+                console.error('Error playing track:', error);
+            }
+        }
+
         // Function to search for tracks using the Spotify API
         function searchSpotify() {
             const query = document.getElementById('search').value;
@@ -44,65 +90,9 @@
             }
         }
 
-        // Function to play the selected track
-        function playTrack(trackUri) {
-            fetch(`/spotify/play/?track_uri=${trackUri}`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrftoken,  // Use the retrieved CSRF token
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Track played successfully:', data);
-            })
-            .catch(error => {
-                console.error('Error playing track:', error);
-            });
-        }
-
-        // Fetch and display recently played songs
-        function loadRecentlyPlayed() {
-            fetch('/spotify/recently_played/')
-            .then(response => response.json())
-            .then(data => {
-                let recentContainer = document.getElementById('recently-played');
-                data.items.forEach(track => {
-                    let trackItem = document.createElement('div');
-                    trackItem.innerHTML = `
-                        <p>${track.track.name} by ${track.track.artists[0].name}</p>
-                    `;
-                    recentContainer.appendChild(trackItem);
-                });
-            });
-        }
-
-        // Fetch and display user's favorite tracks
-        function loadFavorites() {
-            fetch('/spotify/favorites/')
-            .then(response => response.json())
-            .then(data => {
-                let favoritesContainer = document.getElementById('favorites');
-                data.items.forEach(track => {
-                    let trackItem = document.createElement('div');
-                    trackItem.innerHTML = `
-                        <p>${track.name} by ${track.artists[0].name}</p>
-                    `;
-                    favoritesContainer.appendChild(trackItem);
-                });
-            });
-        }
-
-        // Load content when the page loads
+        // Load devices when the page loads
         window.onload = function() {
-            loadRecentlyPlayed();
-            loadFavorites();
+            loadDevices();
         };
     </script>
 </head>
@@ -116,18 +106,11 @@
         <button onclick="searchSpotify()">Search</button>
     </div>
 
+    <h2>Available Devices</h2>
+    <div id="devices"></div>  <!-- This is where devices will be listed -->
+
     <h2>Search Results</h2>
     <div id="results"></div>
 
-    <h2>Recently Played</h2>
-    <div id="recently-played"></div>
-
-    <h2>Your Favorites</h2>
-    <div id="favorites"></div>
-
-    <h2>Now Playing</h2>
-    <div id="now-playing">
-        <!-- Add current playing track details here -->
-    </div>
 </body>
 </html>

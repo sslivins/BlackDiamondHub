@@ -11,6 +11,7 @@ import uuid
 from .models import SpotifyToken
 from datetime import datetime, timezone as tz
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 def spotify_landing(request):
     # Check if the user is authenticated
@@ -23,6 +24,9 @@ def spotify_landing(request):
       
     # If not authenticated, redirect to landing page
     return render(request, 'spotify/landing.html')
+  
+def webplayer_view(request):
+    return render(request, 'spotify/webplayer.html')  
 
 def spotify_login(request):
     # Check if the user is logging in via the web or the QR code
@@ -38,7 +42,12 @@ def spotify_login(request):
     sp_oauth = SpotifyOAuth(client_id=settings.SPOTIFY_CLIENT_ID,
                             client_secret=settings.SPOTIFY_CLIENT_SECRET,
                             redirect_uri=redirect_uri,
-                            scope="user-library-read, user-read-recently-played, user-read-playback-state, user-modify-playback-state, user-modify-playback-state, user-read-currently-playing")
+                            scope="user-library-read, \
+                                user-read-recently-played, \
+                                user-read-playback-state, \
+                                user-modify-playback-state, \
+                                user-read-currently-playing, \
+                                streaming")
     
     print(f'Redirect URI: {redirect_uri}')
 
@@ -98,7 +107,7 @@ def spotify_callback(request):
     spotify_token.created_at = timezone.now()
     spotify_token.save()
 
-    return redirect('spotify:search')
+    return redirect('spotify:webplayer')
 
 def spotify_qr_callback(request):
     sp_oauth = SpotifyOAuth(client_id=settings.SPOTIFY_CLIENT_ID,
@@ -165,7 +174,12 @@ def check_auth(request):
     return JsonResponse({'signed_in': False}) 
 
 def get_spotify_client(request):
-    """Get a Spotify client using the stored access token."""
+    
+    access_token = get_spotify_token(request)
+      
+    return Spotify(auth=access_token)
+  
+def get_spotify_token(request):
     if request.user.is_authenticated:
       spotify_token = SpotifyToken.objects.get(user=request.user)
     else:
@@ -189,7 +203,14 @@ def get_spotify_client(request):
         spotify_token.created_at = timezone.now()
         spotify_token.save()
       
-    return Spotify(auth=spotify_token.access_token)
+    return spotify_token.access_token
+  
+
+def spotify_get_token(request):
+    # Get the access token (refresh it if necessary)
+    access_token = get_spotify_token(request)
+    
+    return JsonResponse({'access_token': access_token})  # Return the access token
 
 def spotify_search(request):
     query = request.GET.get('q')
@@ -206,18 +227,20 @@ def spotify_search(request):
     
     return JsonResponse({"error": "No query provided"}, status=400)
   
+@csrf_exempt
 def spotify_play(request):
     track_uri = request.GET.get('track_uri')
-    
-    if track_uri:
-        sp = get_spotify_client(request)
-        try:
-            sp.start_playback(uris=[track_uri])
-            return JsonResponse({"status": "playing"})
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    
-    return JsonResponse({"error": "No track URI provided"}, status=400)
+    device_id = request.GET.get('device_id')
+
+    if not track_uri or not device_id:
+        return JsonResponse({'error': 'Track URI or Device ID missing'}, status=400)
+
+    sp = get_spotify_client(request)
+    try:
+        sp.start_playback(device_id=device_id, uris=[track_uri])
+        return JsonResponse({'message': f'Playing track {track_uri} on device {device_id}'})
+    except Spotify.SpotifyException as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 def spotify_recently_played(request):
     sp = get_spotify_client(request)
@@ -234,3 +257,67 @@ def spotify_favorites(request):
     results = sp.current_user_saved_tracks(limit=10)
     
     return JsonResponse(results, safe=False)
+  
+def spotify_devices(request):
+    sp = get_spotify_client(request)  # Get the authenticated Spotify client
+    try:
+        devices = sp.devices()  # Fetch all available devices
+        print(f"Devices: {devices}")
+        return JsonResponse(devices)  # Return the list of devices (including Sonos speakers if connected)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# Transfer playback to a specific device
+@csrf_exempt  # You can exempt CSRF for this request if needed
+def spotify_transfer_playback(request):
+    device_id = request.GET.get('device_id')
+    if not device_id:
+        return JsonResponse({'error': 'Device ID not provided'}, status=400)
+
+    sp = get_spotify_client(request)
+    try:
+        sp.transfer_playback(device_id)
+        return JsonResponse({'message': f'Transferred playback to device {device_id}'})
+    except Spotify.SpotifyException as e:
+        return JsonResponse({'error': str(e)}, status=500)
+  
+def get_active_devices(spotify_client):
+    devices = spotify_client.devices()
+    return devices['devices']
+  
+# Set the active device for playback
+def set_active_device(spotify_client, device_id):
+  
+    try:
+      spotify_client.transfer_playback(device_id)
+    except Spotify.SpotifyException as e:
+      print(f'Error setting active device: {e}')
+      return False
+    
+    return True
+  
+def check_devices(spotify_client):
+    devices = spotify_client.devices()
+    for device in devices['devices']:
+        print(f"Device: {device['name']}, Active: {device['is_active']}, Restricted: {device['is_restricted']}")
+        if not device['is_restricted']:
+            return device['id']  # Return the first unrestricted device
+    return None
+  
+def play_on_active_device(spotify_client, track_uri):
+    # Fetch active devices
+    devices = spotify_client.devices()
+
+    # Find an active, unrestricted device
+    active_device = None
+    for device in devices['devices']:
+        if device['is_active'] and not device['is_restricted']:
+            active_device = device['id']
+            break
+
+    if not active_device:
+        return {'error': 'No active, unrestricted devices available.'}
+
+    # Play the track on the active device
+    spotify_client.start_playback(device_id=active_device, uris=[track_uri])
+    return {'message': f'Playing {track_uri} on {active_device}'}

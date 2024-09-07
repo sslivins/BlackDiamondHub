@@ -12,4 +12,9 @@ urlpatterns = [
     path('play/', views.spotify_play, name='spotify_play'),
     path('recently_played/', views.spotify_recently_played, name='spotify_recently_played'),
     path('favorites/', views.spotify_favorites, name='spotify_favorites'),
+    path('devices/', views.spotify_devices, name='spotify_devices'),  # Return list of devices
+    path('transfer_playback/', views.spotify_transfer_playback, name='spotify_transfer_playback'),  # Transfer playback to a device
+    path('callback/', views.spotify_callback, name='spotify_callback'),
+    path('get_token/', views.spotify_get_token, name='spotify_get_token'),  # New route to serve the token
+    path('webplayer/', views.webplayer_view, name='webplayer'),  # Your web player view    
 ]

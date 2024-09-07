@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Web Player</title>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script type="text/javascript">
+
+        async function fetchAccessToken() {
+            const response = await fetch('/spotify/get_token/', { method: 'GET' });
+            const data = await response.json();
+            return data.access_token;
+        }
+        
+        window.onSpotifyWebPlaybackSDKReady = async () => {
+            const token = await fetchAccessToken();
+        
+            const player = new Spotify.Player({
+                name: 'My Web Player',
+                getOAuthToken: cb => { cb(token); },
+                volume: 0.5
+            });
+        
+            // Player ready
+            player.addListener('ready', ({ device_id }) => {
+                console.log('Ready with Device ID', device_id);
+                document.getElementById('deviceId').value = device_id;
+            });
+        
+            // Connect the player!
+            player.connect();
+        };
+
+        // Function to play track using the SDK
+        function playTrack(trackUri) {
+            const deviceId = document.getElementById('deviceId').value;
+            fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ uris: [trackUri] }),
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Spotify Web Player</h1>
+    
+    <input type="hidden" id="deviceId" value="">
+    <div>
+        <label for="trackUri">Enter Spotify Track URI:</label>
+        <input type="text" id="trackUri">
+        <button onclick="playTrack(document.getElementById('trackUri').value)">Play Track</button>
+    </div>
+</body>
+</html>
