@@ -132,50 +132,39 @@
             }
         }
 
-        /* The Modal (background) */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1000; /* Sit on top */
-            padding-top: 50px; /* Location of the box */
+        /* Modal */
+        #webcam-image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
             left: 0;
             top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
+            width: 100%;
+            height: 100%;
+            overflow: auto;
             background-color: rgba(0, 0, 0, 0.9); /* Black w/ opacity */
-        }
-        
-        /* Modal Content (Image) */
-        .modal-content {
-            margin: auto;
-            display: block;
-            width: 75%; /* 75% of the screen width */
-            max-width: none; /* Remove max-width limit */
-            max-height: 75vh; /* 75% of the viewport height */
-            object-fit: contain; /* Maintain aspect ratio */
-            position: relative; /* Added to position the close button inside the modal */
-        }
-        
-        /* Caption of Modal Image */
-        #caption {
-            margin: auto;
-            display: block;
-            width: 75%;
-            max-width: 700px;
-            text-align: center;
-            color: #ccc;
-            padding: 10px 0;
-        }
-        
-        /* Add Animation - Zoom in the Modal */
-        .modal-content, #caption {
-            animation-name: zoom;
-            animation-duration: 0.6s;
+            padding-top: 50px; /* To offset content a bit from the top */
         }
 
-        /* Modal Close button */
-        .close {
+        /* Modal content (image) */
+        #webcam-image-modal .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 80%;
+            max-height: 75vh; /* Limit the height */
+            object-fit: contain; /* Keep aspect ratio */
+        }
+
+        /* Caption for modal */
+        #webcam-image-modal-caption {
+            text-align: center;
+            color: #ccc;
+            font-size: 18px;
+            padding: 10px 0;
+        }
+
+        /* Modal close button */
+        #webcam-image-modal-close {
             position: absolute;
             top: 15px;
             right: 15px;
@@ -183,15 +172,13 @@
             font-size: 40px;
             font-weight: bold;
             cursor: pointer;
-            z-index: 1001; /* Ensure it stays on top of the modal content */
         }
-        
-        .close:hover,
-        .close:focus {
+
+        #webcam-image-modal-close:hover,
+        #webcam-image-modal-close:focus {
             color: #bbb;
             text-decoration: none;
-            cursor: pointer;
-        }        
+        }
         
         @keyframes zoom {
             from {
@@ -244,15 +231,12 @@ a
         </div>
         {% endfor %}
     </div>
-    
 
-    <div id="imageModal" class="modal">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <img class="modal-content" id="modalImage">
-        <div id="caption"></div>
-    </div>
-
-  {{ camera_data_timestamps|json_script:"initial-timestamps" }}
+    <div id="webcam-image-modal" class="modal">
+        <span id="webcam-image-modal-close" class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="webcam-image-modal-image">
+        <div id="webcam-image-modal-caption"></div>
+    </div>    
 
   <script>
     function checkForNewImages() {
@@ -298,9 +282,9 @@ a
     setInterval(checkForNewImages, 15000);
 
     // Modal functionality
-    var modal = document.getElementById("imageModal");
-    var modalImg = document.getElementById("modalImage");
-    var captionText = document.getElementById("caption");
+    var modal = document.getElementById("webcam-image-modal");
+    var modalImg = document.getElementById("webcam-image-modal-image");
+    var captionText = document.getElementById("webcam-image-modal-caption");
 
     function openModal(src, alt) {
         modal.style.display = "block";
