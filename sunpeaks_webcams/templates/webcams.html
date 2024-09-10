@@ -3,13 +3,14 @@
 {% block title %}SunPeaks Webcams{% endblock %}
 
 {% block content %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SunPeaks Webcams</title>
-     
+
     <style>
         body {
             background-color: #000000; /* Set the background color to black */
@@ -132,7 +133,6 @@
             width: 100%; /* Full width */
             height: 100%; /* Full height */
             overflow: auto; /* Enable scroll if needed */
-            background-color: rgb(0, 0, 0); /* Fallback color */
             background-color: rgba(0, 0, 0, 0.9); /* Black w/ opacity */
         }
         
@@ -144,6 +144,7 @@
             max-width: none; /* Remove max-width limit */
             max-height: 75vh; /* 75% of the viewport height */
             object-fit: contain; /* Maintain aspect ratio */
+            position: relative; /* Added to position the close button inside the modal */
         }
         
         /* Caption of Modal Image */
@@ -162,6 +163,25 @@
             animation-name: zoom;
             animation-duration: 0.6s;
         }
+
+        /* Modal Close button */
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001; /* Ensure it stays on top of the modal content */
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }        
         
         @keyframes zoom {
             from {
@@ -184,31 +204,36 @@
         .fade-in {
             animation: fade-in 1s ease-in-out;
         }
-        
-        
-        /* The Close Button */
-        .close {
-            position: absolute;
-            top: 15px;
-            right: 35px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-        
-        .close:hover,
-        .close:focus {
-            color: #bbb;
-            text-decoration: none;
-            cursor: pointer;
-        }
-          
+a
     </style>
 </head>
 <body>
-  <div class="webcams">
-      {{ external_webcams|safe }}
+  <div id="webcams">
+    {% for cam in sunpeaks_webcams %}
+    <div class="cam" data-camera-name="{{ cam.camera_name }}">
+        <h2>{{ cam.camera_name }}</h2>
+        <img src="{{ cam.image_url }}" alt="Webcam: {{ cam.camera_name }}" onerror="this.onerror=null;this.src='{% static 'webcam_offline.webp' %}';">
+        <div class="template table simple">
+            <table>
+                <tbody>
+                    <tr>
+                        <td>Last Update:</td>
+                        <td>{{ cam.last_updated }}</td>
+                    </tr>
+                    <tr>
+                        <td>Webcam Location:</td>
+                        <td>{{ cam.location }}</td>
+                    </tr>
+                    <tr>
+                        <td>Elevation:</td>
+                        <td>{{ cam.elevation }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <input type="hidden" class="camera-timestamp" value="{{ cam.timestamp }}">
+    </div>
+    {% endfor %}
   </div>
 
   <div id="imageModal" class="modal">
@@ -217,94 +242,90 @@
     <div id="caption"></div>
   </div>
 
-  {{ image_timestamps|json_script:"initial-timestamps" }}
+  {{ camera_data_timestamps|json_script:"initial-timestamps" }}
 
   <script>
-    const initialTimestamps = JSON.parse(document.getElementById('initial-timestamps').textContent);
-
     function checkForNewImages() {
-      fetch(window.location.href)
-          .then(response => response.text())
-          .then(html => {
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(html, 'text/html');
-              const newCams = doc.querySelectorAll('.cam');
-  
-              newCams.forEach(newCam => {
-                  const newImg = newCam.querySelector('img');
-                  const newSrc = decodeURIComponent(newImg.src);
-                  const baseSrc = newSrc.split('?')[0]; // Decode URL before comparison
-                  const currentTimestamp = newSrc.split('timestamp=')[1];
-                  const oldTimestamp = initialTimestamps[baseSrc];
-  
-                  if (currentTimestamp !== oldTimestamp) {
-                      const imgElement = document.querySelector(`img[src^="${baseSrc}"]`);
-                      
-                      // Check if the image element exists before updating its src
-                      if (imgElement) {
-                          imgElement.src = newSrc;
-                          initialTimestamps[baseSrc] = currentTimestamp;
+        // Fetch the updated webcam data from the Django JSON endpoint
+        fetch('get_webcams/')
+            .then(response => response.json())  // Parse the JSON response
+            .then(newCameraData => {
+                // Loop over the new webcam data
+                newCameraData.forEach(newCam => {
+                    // Find the existing camera element by camera name (data-camera-name attribute)
+                    const cameraDiv = document.querySelector(`.cam[data-camera-name="${newCam.camera_name}"]`);
+                    if (cameraDiv) {
+                        const currentTimestamp = cameraDiv.querySelector('.camera-timestamp').value;
 
-                          // Update the table data
-                          const newTable = newCam.querySelector('table').innerHTML;
-                          const currentCam = imgElement.closest('.cam');
-                          if (currentCam) {
-                              currentCam.querySelector('table').innerHTML = newTable;
-                          } else {
-                              console.error('Error: No matching .cam element found for', baseSrc);
-                          }
-
-                          imgElement.classList.add('fade-in');
-                            // Remove the fade-in class after the animation completes
-                          setTimeout(() => {
-                            imgElement.classList.remove('fade-in');
-                          }, 1000); // Match the duration of the animation (1 second) 
-
-                      } else {
-                          console.error('Error: No matching image element found for', baseSrc);
-                      }
-                  }
-              });
-          })
-          .catch(error => console.error('Error checking for new images:', error));
-    }
+                        // Compare the current timestamp with the new one
+                        if (newCam.timestamp !== currentTimestamp) {
+                            const imgElement = cameraDiv.querySelector('img');
+                            const newSrc = newCam.image_url;
     
+                            // Update the image and timestamp
+                            imgElement.src = newSrc;
+                            cameraDiv.querySelector('.camera-timestamp').value = newCam.timestamp;
+    
+                            // Update the table data (if needed)
+                            const newTableHTML = `
+                                <tr>
+                                    <td>Last Update:</td>
+                                    <td>${newCam.last_updated}</td>
+                                </tr>
+                                <tr>
+                                    <td>Webcam Location:</td>
+                                    <td>${newCam.location}</td>
+                                </tr>
+                                <tr>
+                                    <td>Elevation:</td>
+                                    <td>${newCam.elevation}</td>
+                                </tr>
+                            `;
+                            cameraDiv.querySelector('table').innerHTML = newTableHTML;
+    
+                            // Fade in the updated image
+                            imgElement.classList.add('fade-in');
+                            setTimeout(() => {
+                                imgElement.classList.remove('fade-in');
+                            }, 1000); // 1-second fade-in animation
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error checking for new images:', error));
+    }
+
     // Check for new images every 60 seconds
-    setInterval(checkForNewImages, 60000);
+    setInterval(checkForNewImages, 15000);
 
-    // Get the modal
+    // Modal functionality
     var modal = document.getElementById("imageModal");
-
-    // Get the modal image element
     var modalImg = document.getElementById("modalImage");
-
-    // Get the caption text
     var captionText = document.getElementById("caption");
 
-    // Function to open the modal with the clicked image
     function openModal(src, alt) {
-        console.log("Opening modal with src:", src, "alt:", alt);
         modal.style.display = "block";
         modalImg.src = src;
         captionText.innerHTML = alt;
     }
 
-    // Attach the onclick handler to each image
     document.addEventListener("DOMContentLoaded", function() {
         const images = document.querySelectorAll("#webcams img");
-        console.log("Attaching click events to images");
         images.forEach(function(img) {
             img.setAttribute("onclick", "openModal(this.src, this.alt)");
-            console.log("image src is: " + img.getAttribute("src"));
         });
     });
 
-    // Function to close the modal
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }    
+
     function closeModal() {
         modal.style.display = "none";
     }
   </script>
-
 
 </body>
 </html>
