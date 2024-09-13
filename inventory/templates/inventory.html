@@ -20,7 +20,7 @@
         .top-right-buttons {
             position: fixed;
             top: 20px;
-            right: 20px;
+            right: 200px;
             z-index: 1000;
         }
         .top-right-buttons .btn {
@@ -349,21 +349,15 @@
 <body>
     <div class="top-right-buttons">
         {% if user.is_authenticated and user.is_staff %}
-        <a href="{% url 'add_item' %}" class="btn btn-primary">Add Item</a>
-        <form method="post" action="{% url 'logout' %}" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-secondary">Logout</button>
-        </form>
-        {% else %}
-        <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+        <a href="{% url 'add_item' %}" class="btn add-item" id='add-item-button'>Add Item</a>
         {% endif %}
     </div>
     
     <div class="search-form-container">
         <form method="get" action="{% url 'inventory' %}" class="input-group mb-3">
-            <input type="text" class="form-control search-input" name="keyword" placeholder="Search items..." value="{{ keyword }}">
+            <input type="text" class="form-control search-input" id="search-input" name="keyword" placeholder="Search items..." value="{{ keyword }}">
             <div class="input-group-append">
-                <button class="btn search-btn" type="submit">Search</button>
+                <button class="btn search-btn" id="search-button" type="submit">Search</button>
                 {% if keyword %}
                 <button type="button" class="clear-btn" onclick="clearSearch()">&#10005;</button>
                 {% endif %}
@@ -390,7 +384,7 @@
     
     <!--Item Modal -->
     <div id="itemModal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content" id="item-modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
             <h1 id="modal-item-title" class="modal-item-title"></h1>
             <img id="modal-item-image" class="modal-item-image" src="" alt="" style="display: none;">

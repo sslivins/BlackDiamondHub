@@ -272,7 +272,7 @@
 
     <!-- Home Button -->
     <div class="container mt-3">
-        <div class="home-button-container">
+        <div class="home-button-container" id="home-button">
             <a href="{% url 'landing_page' %}" class="btn">Home</a>
         </div>
     </div>
@@ -287,10 +287,10 @@
         </a>
         <form method="post" action="{% url 'logout' %}" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" class="btn">Logout</button>
+            <button type="submit" class="btn" id='logout-button'>Logout</button>
         </form>
         {% else %}
-        <a href="{% url 'login' %}" class="btn">Login</a>
+        <a href="{% url 'login' %}?next={{ request.path }}" class="btn" id='login-button'>Login</a>
         {% endif %}
     </div>     
 
@@ -302,7 +302,7 @@
     </div>
 
     <footer>
-        <button type="button" class="btn feedback-button" data-toggle="modal" data-target="#feedback-modal">Give Feedback</button>
+        <button type="button" class="btn feedback-button" id='feedback-button' data-toggle="modal" data-target="#feedback-modal">Give Feedback</button>
     
         <!-- Feedback Modal -->
         <div class="modal fade feedback-modal" id="feedback-modal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalLabel" aria-hidden="true">

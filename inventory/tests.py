@@ -11,6 +11,12 @@ from PIL import Image
 import io
 from .models import Item
 import time
+import requests
+from pyzbar.pyzbar import decode
+from io import BytesIO
+import base64
+from selenium.common.exceptions import NoSuchElementException
+from django.contrib.auth.models import User
 
 class ItemModalTest(LiveServerTestCase):
 
@@ -45,15 +51,58 @@ class ItemModalTest(LiveServerTestCase):
         self.items = []
         for i in range(1, 13):
             image_file = SimpleUploadedFile(f'test_image_{i}.png', image_io.getvalue(), content_type="image/png")
-          
-            item = Item.objects.create(
-                name=f"Item {i}",
-                description=f"This is item {i}",
-                room="Living Room",
-                desc_long=f"A long description of item {i}.",
-                picture=image_file
-            )
+            
+            if i <= 6:
+              item = Item.objects.create(
+                  name=f"Item {i}",
+                  description=f"This is item {i}",
+                  room="Living Room",
+                  desc_long=f"A long description of item {i}.",
+                  picture=image_file
+              )
+            else:
+              item = Item.objects.create(
+                  name=f"Item {i}",
+                  description=f"This is item {i}",
+                  room="Bedroom",
+                  picture=image_file
+              )
+            
             self.items.append(item)
+            
+    def tearDown(self):
+        # Clean up the test image files
+        for item in self.items:
+            item.picture.delete()
+            
+    def test_home_button_brings_user_to_home_page(self):
+        # Navigate to the inventory page
+        self.browser.get(f'{self.live_server_url}/inventory/')
+        
+        #wait for first tile to load
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
+        )
+        
+        #click the home button
+        home_button = self.browser.find_element(By.ID, 'home-button')
+        home_button.click()
+        
+        #check that the user is on the home page
+        self.assertEqual(self.browser.current_url, f'{self.live_server_url}/')
+        
+    def test_all_inventory_items_are_displayed(self):
+        # Navigate to the inventory page
+        self.browser.get(f'{self.live_server_url}/inventory/')
+        
+        #wait for first tile to load
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
+        )
+        
+        #count the number of items displayed
+        items = self.browser.find_elements(By.CSS_SELECTOR, "[id^='item-']")
+        self.assertEqual(len(items), 13, "There should be 13 items displayed")                    
 
     def test_modal_opens_and_displays_content_with_image(self):
         # Navigate to the inventory page
@@ -73,21 +122,73 @@ class ItemModalTest(LiveServerTestCase):
         
         # Check modal content
         modal_title = self.browser.find_element(By.ID, 'modal-item-title').text
-        modal_description = self.browser.find_element(By.ID, 'modal-item-description').text
+        self.assertEqual(modal_title, "Item 2")
+                
+        #check room heading
+        modal_room_heading = self.browser.find_element(By.ID, 'modal-item-room-heading').text
+        self.assertEqual(modal_room_heading, "Room")
+                
+        #check room text
         modal_room = self.browser.find_element(By.ID, 'modal-item-room').text
+        self.assertEqual(modal_room, "Living Room")
+        
+        #check description heading
+        modal_description_heading = self.browser.find_element(By.ID, 'modal-item-description-heading').text
+        self.assertEqual(modal_description_heading, "Description")
 
-        # Check that the image is displayed in the modal
+        #check description text
+        modal_description = self.browser.find_element(By.ID, 'modal-item-description').text
+        self.assertEqual(modal_description, "This is item 2")        
+        
+        #check long description heading
+        modal_long_details_heading = self.browser.find_element(By.ID, 'modal-item-details-heading').text
+        self.assertEqual(modal_long_details_heading, "Details")
+        
+        #check long description text
+        modal_item_long_description = self.browser.find_element(By.ID, 'modal-item-long-description').text
+        self.assertEqual(modal_item_long_description, "A long description of item 2.")        
+        
+        ### Check image ###
         modal_image = self.browser.find_element(By.ID, 'modal-item-image')
         image_src = modal_image.get_attribute('src')
-
-        # Assert that the modal content matches the item data
-        self.assertEqual(modal_title, "Item 2")
-        self.assertEqual(modal_description, "This is item 2")
-        self.assertEqual(modal_room, "Living Room")
-
+        
         # Ensure the image source is not empty (the image is loaded)
-        print(self.items[1].picture.url)
-        self.assertTrue(image_src.endswith(self.items[1].picture.url))
+        self.assertTrue(image_src.endswith(self.items[1].picture.url))        
+        
+        # verify the qf code url is correct
+        qr_code_element = self.browser.find_element(By.ID, 'modal-item-qrcode-img')
+        qr_code_data = qr_code_element.get_attribute('src')
+        base64_data = qr_code_data.split(',')[1]
+        image_data = base64.b64decode(base64_data)
+        image = Image.open(BytesIO(image_data))
+        decoded_objects = decode(image)
+        
+        # Check the decoded contents
+        for obj in decoded_objects:
+          self.assertEqual(obj.data.decode('utf-8'), f'{self.live_server_url}/inventory/item/{self.items[1].id}/')
+          
+    def test_modal_opens_and_doesnt_display_long_description(self):
+        # Navigate to the inventory page
+        self.browser.get(f'{self.live_server_url}/inventory/')
+        
+        #wait for tile to load that doesn't have a long description
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[7].id}'))
+        )
+        
+        item_element.click()
+        
+        # Wait for the modal to appear
+        WebDriverWait(self.browser, 10).until(
+            EC.visibility_of_element_located((By.ID, 'itemModal'))
+        )
+        
+        # the detail heading should not be visible
+        details_heading = self.browser.find_element(By.ID, 'modal-item-details-heading')
+        self.assertFalse(details_heading.is_displayed(), "The details heading should not be displayed")
+          
+        modal_item_long_description = self.browser.find_element(By.ID, 'modal-item-long-description')
+        self.assertFalse(modal_item_long_description.is_displayed(), "The long description should not be displayed")
 
     def test_modal_close_functionality(self):
         # Navigate to the inventory page
@@ -117,3 +218,231 @@ class ItemModalTest(LiveServerTestCase):
         # Assert that the modal is no longer visible
         modal = self.browser.find_element(By.ID, 'itemModal')
         self.assertFalse(modal.is_displayed())
+        
+    def test_modal_closes_by_clicking_off_modal(self):
+        # Navigate to the inventory page
+        self.browser.get(f'{self.live_server_url}/inventory/')
+
+        # Open the modal
+        #wait for first tile to load
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[5].id}'))
+        )
+        item_element.click()
+
+        # Wait for the modal to appear
+        WebDriverWait(self.browser, 10).until(
+            EC.visibility_of_element_located((By.ID, 'itemModal'))
+        )
+
+        #move the cursor to the far right of the modal plus 10 pixels
+        modal = self.browser.find_element(By.ID, 'item-modal-content')
+        ActionChains(self.browser).move_to_element_with_offset(modal, modal.size['width'] + 10, 0).click().perform()
+        
+
+        # Wait for the modal to be hidden
+        WebDriverWait(self.browser, 10).until(
+            EC.invisibility_of_element_located((By.ID, 'itemModal'))
+        )
+
+        # Assert that the modal is no longer visible
+        modal = self.browser.find_element(By.ID, 'itemModal')
+        self.assertFalse(modal.is_displayed())
+        
+    def test_search_filter(self):
+        # Navigate to the inventory page
+        self.browser.get(f'{self.live_server_url}/inventory/')
+        
+        #wait for first tile to load
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
+        )
+        
+        #search for 'Bedroom'
+        search_input = self.browser.find_element(By.ID, 'search-input')
+        search_input.send_keys('Bedroom')
+        
+        #hit search button
+        search_button = self.browser.find_element(By.ID, 'search-button')
+        search_button.click()
+        
+        #wait for search to complete
+        WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[7].id}'))
+        )
+        
+        #count the number of items displayed
+        items = self.browser.find_elements(By.CSS_SELECTOR, "[id^='item-']")
+        self.assertEqual(len(items), 7, "There should be 7 items displayed")
+        
+class ItemModalTestLoggedIn(LiveServerTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        # Set up Selenium Chrome WebDriver options (headless mode)
+        options = Options()
+        options.add_argument('--headless') 
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        cls.browser = webdriver.Chrome(options=options)
+        cls.browser.set_window_size(1920, 1080)
+
+        # Set an implicit wait for elements to load
+        cls.browser.implicitly_wait(10)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.quit()
+        super().tearDownClass()
+
+    def setUp(self):
+        # Create a white square placeholder image in memory
+        image = Image.new('RGB', (100, 100), color='black')
+        image_io = io.BytesIO()
+        image.save(image_io, format='PNG')
+
+        #create 12 items and assign them to an array called items
+        self.items = []
+        for i in range(1, 13):
+            image_file = SimpleUploadedFile(f'test_image_{i}.png', image_io.getvalue(), content_type="image/png")
+            
+            if i <= 6:
+              item = Item.objects.create(
+                  name=f"Item {i}",
+                  description=f"This is item {i}",
+                  room="Living Room",
+                  desc_long=f"A long description of item {i}.",
+                  picture=image_file
+              )
+            else:
+              item = Item.objects.create(
+                  name=f"Item {i}",
+                  description=f"This is item {i}",
+                  room="Bedroom",
+                  picture=image_file
+              )
+            
+            self.items.append(item)
+            
+        self.test_user = User.objects.create_user(username='testuser', password='testpassword', is_staff=True)            
+            
+            
+    def tearDown(self):
+        # Clean up the test image files
+        for item in self.items:
+            item.picture.delete()
+            
+    def test_login_and_correct_redirection(self):
+        # Navigate to the inventory page
+        self.browser.get(f'{self.live_server_url}/inventory/')
+        
+        #wait for login button to load
+        login_button = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, 'login-button'))
+        )
+        login_button.click()
+        
+        username_input = self.browser.find_element(By.ID, "id_username")
+        password_input = self.browser.find_element(By.ID, "id_password")
+        
+        username_input.send_keys("testuser")
+        password_input.send_keys("testpassword")
+        
+        login_button = self.browser.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        login_button.click()
+        
+        #take screenshot
+        self.browser.save_screenshot('screenshot.png')
+        
+        #ensure we are redirected to the inventory page
+        WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.ID, "feedback-button"))
+        )
+        
+        #get current url
+        self.assertEqual(self.browser.current_url, 
+                         f'{self.live_server_url}/inventory/', 
+                         "The user should be redirected to the inventory page after logging in")
+        
+    def test_login_and_all_inventory_items_are_displayed(self):
+        self.test_login_and_correct_redirection()
+        
+        #wait for first tile to load
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
+        )
+        
+        #count the number of items displayed
+        items = self.browser.find_elements(By.CSS_SELECTOR, "[id^='item-']")
+        self.assertEqual(len(items), 13, "There should be 13 items displayed")
+        
+    def test_login_and_modal_opens_and_displays_content_with_image(self):
+        self.test_login_and_correct_redirection()
+        # Navigate to the inventory page
+        self.browser.get(f'{self.live_server_url}/inventory/')
+        
+        #wait for first tile to load
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
+        )
+        
+        item_element.click()
+        
+        # Wait for the modal to appear
+        WebDriverWait(self.browser, 10).until(
+            EC.visibility_of_element_located((By.ID, 'itemModal'))
+        )
+        
+        # Check modal content
+        modal_title = self.browser.find_element(By.ID, 'modal-item-title').text
+        self.assertEqual(modal_title, "Item 2")
+                
+        #check room heading
+        modal_room_heading = self.browser.find_element(By.ID, 'modal-item-room-heading').text
+        self.assertEqual(modal_room_heading, "Room")
+                
+        #check room text
+        modal_room = self.browser.find_element(By.ID, 'modal-item-room').text
+        self.assertEqual(modal_room, "Living Room")
+        
+        #check description heading
+        modal_description_heading = self.browser.find_element(By.ID, 'modal-item-description-heading').text
+        self.assertEqual(modal_description_heading, "Description")
+
+        #check description text
+        modal_description = self.browser.find_element(By.ID, 'modal-item-description').text
+        self.assertEqual(modal_description, "This is item 2")        
+        
+        #check long description heading
+        modal_long_details_heading = self.browser.find_element(By.ID, 'modal-item-details-heading').text
+        self.assertEqual(modal_long_details_heading, "Details")
+        
+        #check long description text
+        modal_item_long_description = self.browser.find_element(By.ID, 'modal-item-long-description').text
+        self.assertEqual(modal_item_long_description, "A long description of item 2.")        
+        
+        ### Check image ###
+        modal_image = self.browser.find_element(By.ID, 'modal-item-image')
+        image_src = modal_image.get_attribute('src')
+        
+        # Ensure the image source is not empty (the image is loaded)
+        self.assertTrue(image_src.endswith(self.items[1].picture.url))        
+        
+        # verify the qf code url is correct
+        qr_code_element = self.browser.find_element(By.ID, 'modal-item-qrcode-img')
+        qr_code_data = qr_code_element.get_attribute('src')
+        base64_data = qr_code_data.split(',')[1]
+        image_data = base64.b64decode(base64_data)
+        image = Image.open(BytesIO(image_data))
+        decoded_objects = decode(image)
+        
+        # Check the decoded contents
+        for obj in decoded_objects:
+          self.assertEqual(obj.data.decode('utf-8'), f'{self.live_server_url}/inventory/item/{self.items[1].id}/')
+          
+        #check for edit button
+        edit_button = self.browser.find_element(By.ID, 'edit-btn')
+        self.assertTrue(edit_button.is_displayed(), "The edit button should be displayed")      
