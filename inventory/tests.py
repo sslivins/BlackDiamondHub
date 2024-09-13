@@ -2,14 +2,17 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from selenium.webdriver.common.action_chains import ActionChains
+from django.test import LiveServerTestCase
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 import io
 from .models import Item
+import time
 
-class ItemModalTest(StaticLiveServerTestCase):
+class ItemModalTest(LiveServerTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -34,33 +37,40 @@ class ItemModalTest(StaticLiveServerTestCase):
 
     def setUp(self):
         # Create a white square placeholder image in memory
-        image = Image.new('RGB', (100, 100), color='white')
+        image = Image.new('RGB', (100, 100), color='black')
         image_io = io.BytesIO()
         image.save(image_io, format='PNG')
-        image_file = SimpleUploadedFile("test_image.png", image_io.getvalue(), content_type="image/png")
 
-        # Create a sample item with the placeholder image
-        self.item = Item.objects.create(
-            name="Sample Item",
-            description="This is a sample item",
-            room="Living Room",
-            desc_long="A long description of the sample item.",
-            picture=image_file  # Assuming your model has a picture field
-        )
+        #create 12 items and assign them to an array called items
+        self.items = []
+        for i in range(1, 13):
+            image_file = SimpleUploadedFile(f'test_image_{i}.png', image_io.getvalue(), content_type="image/png")
+          
+            item = Item.objects.create(
+                name=f"Item {i}",
+                description=f"This is item {i}",
+                room="Living Room",
+                desc_long=f"A long description of item {i}.",
+                picture=image_file
+            )
+            self.items.append(item)
 
     def test_modal_opens_and_displays_content_with_image(self):
         # Navigate to the inventory page
         self.browser.get(f'{self.live_server_url}/inventory/')
-
-        # Find the item element and click to open the modal
-        item_element = self.browser.find_element(By.ID, f'item-{self.item.id}')
+        
+        #wait for first tile to load
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
+        )
+        
         item_element.click()
-
+        
         # Wait for the modal to appear
         WebDriverWait(self.browser, 10).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
-
+        
         # Check modal content
         modal_title = self.browser.find_element(By.ID, 'modal-item-title').text
         modal_description = self.browser.find_element(By.ID, 'modal-item-description').text
@@ -71,19 +81,23 @@ class ItemModalTest(StaticLiveServerTestCase):
         image_src = modal_image.get_attribute('src')
 
         # Assert that the modal content matches the item data
-        self.assertEqual(modal_title, "Sample Item")
-        self.assertEqual(modal_description, "This is a sample item")
+        self.assertEqual(modal_title, "Item 2")
+        self.assertEqual(modal_description, "This is item 2")
         self.assertEqual(modal_room, "Living Room")
 
         # Ensure the image source is not empty (the image is loaded)
-        self.assertTrue(image_src.endswith('test_image.png'))
+        print(self.items[1].picture.url)
+        self.assertTrue(image_src.endswith(self.items[1].picture.url))
 
     def test_modal_close_functionality(self):
         # Navigate to the inventory page
         self.browser.get(f'{self.live_server_url}/inventory/')
 
         # Open the modal
-        item_element = self.browser.find_element(By.ID, f'item-{self.item.id}')
+        #wait for first tile to load
+        item_element = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
+        )
         item_element.click()
 
         # Wait for the modal to appear

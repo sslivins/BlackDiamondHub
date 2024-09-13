@@ -373,21 +373,20 @@
 
     <div class="container" id="inventory-container">
         {% for item in items %}
-        <div class="item-tile">
-            <a href="#" onclick="openModal('{{ item.id }}'); return false;">
-                {% if item.picture %}
-                <img src="{{ item.picture.url }}" alt="{{ item.name }}">
-                {% else %}
-                <img src="{{ MEDIA_URL }}default-image.jpg" alt="Default Image">
-                {% endif %}
-                <div class="item-name">{{ item.name }}</div>
-                <div class="item-description">{{ item.description }}</div>
-            </a>
+        <div class="item-tile" id="item-{{ item.id }}" onclick="openModal('{{ item.id }}');">
+            {% if item.picture %}
+            <img src="{{ item.picture.url }}" alt="{{ item.name }}">
+            {% else %}
+            <img src="{{ MEDIA_URL }}default-image.jpg" alt="Default Image">
+            {% endif %}
+            <div class="item-name">{{ item.name }}</div>
+            <div class="item-description">{{ item.description }}</div>
         </div>
         {% empty %}
         <p>No items found.</p>
         {% endfor %}
     </div>
+    
     
     <!--Item Modal -->
     <div id="itemModal" class="modal" style="display: none;">
@@ -420,33 +419,20 @@
         </div>
     </div>
 
-    <div id="itemModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <div id="modal-body">
-                <!-- Item details will be dynamically loaded here -->
-            </div>
-        </div>
-    </div>
-
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeEditModal()">&times;</span>
-            <div id="edit-modal-body">
-                <!-- Edit form will be dynamically loaded here -->
-            </div>
-        </div>
-    </div>    
-
     <script>
         function openModal(itemId) {
             console.log("Modal is opening for item ID:", itemId);
 
             resetModal();
 
-            document.getElementById('save-btn').onclick = function() {
-                saveChanges(itemId);
-            };            
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn) {
+                document.getElementById('save-btn').onclick = function() {
+                    saveChanges(itemId);
+                }; 
+            }            
+
+           
         
             // Use the new JSON endpoint for fetching item details
             const itemUrl = `{% url 'item_detail_json' 0 %}`.replace('0', itemId);
@@ -520,14 +506,30 @@
             document.getElementById('modal-item-long-description').innerHTML = `<textarea id="edit-long-description" class="form-control">${longDescriptionText}</textarea>`;
         
             // Show Save button and hide Edit button
-            document.getElementById('edit-btn').style.display = 'none';
-            document.getElementById('save-btn').style.display = 'inline-block';
+            const editBtn = document.getElementById('edit-btn');
+            if (editBtn) {
+                editBtn.style.display = 'none';  // Hide the save button
+            }
+
+            // Check if the save button exists before trying to modify it
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn) {
+                saveBtn.style.display = 'inline-block';  // Show the save button
+            }
         }
 
         function resetModal() {
             // Hide the save button and show the edit button
-            document.getElementById('save-btn').style.display = 'none';
-            document.getElementById('edit-btn').style.display = 'inline-block';
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn) {
+                saveBtn.style.display = 'none';  // Hide the save button
+            }
+        
+            // Check if the edit button exists before trying to modify it
+            const editBtn = document.getElementById('edit-btn');
+            if (editBtn) {
+                editBtn.style.display = 'inline-block';  // Show the edit button
+            }
         
             // Reset all fields to non-editable mode, including clearing the previous values
             document.getElementById('modal-item-room').innerHTML = '';
@@ -567,15 +569,22 @@
                     document.getElementById('modal-item-long-description').textContent = editedLongDescription;
         
                     // Switch back to view mode
-                    document.getElementById('edit-btn').style.display = 'inline-block';
-                    document.getElementById('save-btn').style.display = 'none';
+                    const editBtn = document.getElementById('edit-btn');
+                    if (editBtn) {
+                        editBtn.style.display = 'inline-block';  // Hide the save button
+                    }
+        
+                    // Check if the save button exists before trying to modify it
+                    const saveBtn = document.getElementById('save-btn');
+                    if (saveBtn) {
+                        saveBtn.style.display = 'none';  // Show the save button
+                    }
+
                 } else {
                     alert('Error saving changes: ' + data.error);
                 }
             }).catch(error => console.error('Error:', error));
         }
-        
-        
 
         window.onclick = function(event) {
             if (event.target == document.getElementById('itemModal')) {
