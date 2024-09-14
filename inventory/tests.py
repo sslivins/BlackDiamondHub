@@ -122,6 +122,11 @@ class ItemModalTests(LiveServerTestCase):
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
+        # Wait until the title of the modal is populated (indicating the modal is fully loaded)
+        WebDriverWait(self.browser, 10).until(
+            lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
+        )
+        
         # Check modal content
         modal_title = self.browser.find_element(By.ID, 'modal-item-title').text
         self.assertEqual(modal_title, "Item 2")
@@ -197,6 +202,11 @@ class ItemModalTests(LiveServerTestCase):
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
+        # Wait until the title of the modal is populated (indicating the modal is fully loaded)
+        WebDriverWait(self.browser, 10).until(
+            lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
+        )        
+        
         # the detail heading should not be visible
         details_heading = self.browser.find_element(By.ID, 'modal-item-details-heading')
         self.assertFalse(details_heading.is_displayed(), "The details heading should not be displayed")
@@ -231,6 +241,11 @@ class ItemModalTests(LiveServerTestCase):
         WebDriverWait(self.browser, 10).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
+        
+        # Wait until the title of the modal is populated (indicating the modal is fully loaded)
+        WebDriverWait(self.browser, 10).until(
+            lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
+        )        
 
         # Find and click the close button in the modal
         close_button = self.browser.find_element(By.CLASS_NAME, 'close')
@@ -260,6 +275,11 @@ class ItemModalTests(LiveServerTestCase):
         WebDriverWait(self.browser, 10).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
+        
+        # Wait until the title of the modal is populated (indicating the modal is fully loaded)
+        WebDriverWait(self.browser, 10).until(
+            lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
+        )        
 
         #move the cursor to the far right of the modal plus 10 pixels
         modal = self.browser.find_element(By.ID, 'item-modal-content')
@@ -462,6 +482,11 @@ class ItemModalEditTests(LiveServerTestCase):
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
+        # Wait until the title of the modal is populated (indicating the modal is fully loaded)
+        WebDriverWait(self.browser, 10).until(
+            lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
+        )        
+        
         #hit the edit button
         edit_button = self.browser.find_element(By.ID, 'edit-btn')
         edit_button.click()
@@ -493,6 +518,11 @@ class ItemModalEditTests(LiveServerTestCase):
         WebDriverWait(self.browser, 10).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
+        
+        # Wait until the title of the modal is populated (indicating the modal is fully loaded)
+        WebDriverWait(self.browser, 10).until(
+            lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
+        )        
         
         #ensure the long description and details heading is not present in the view modal
         details_heading = self.browser.find_element(By.ID, 'modal-item-details-heading')
@@ -543,8 +573,13 @@ class ItemModalEditTests(LiveServerTestCase):
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
+        # Wait until the title of the modal is populated (indicating the modal is fully loaded)
+        WebDriverWait(self.browser, 10).until(
+            lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
+        )        
+        
         #save screenshot
-        self.browser.save_screenshot('modal.png')
+        #self.browser.save_screenshot('modal.png')
         
         #ensure the long description and details heading is present in the view modal and the description is correct
         details_heading = self.browser.find_element(By.ID, 'modal-item-details-heading')
