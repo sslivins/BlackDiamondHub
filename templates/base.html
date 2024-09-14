@@ -128,48 +128,51 @@
             color: #000000; /* Black text color for the heading and description */
         }
         
-        /* Fancy Feedback Modal Styling */
-        .modal-content {
+        .feedback-modal .modal-content {
             background-color: #f5f5f5; /* Soft background color */
             border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5); /* Deeper shadow for a more luxurious feel */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             padding: 20px;
-        }
+        }        
+
+        .feedback-modal .modal-backdrop {
+            z-index: 1040; /* Backdrop is behind the modal */
+        }        
         
-        .modal-header {
+        .feedback-modal .modal-header {
             border-bottom: none;
             text-align: center;
         }
         
-        .modal-title {
+        .feedback-modal .modal-title {
             font-size: 24px;
             font-weight: bold;
             color: #000; /* Black text for a clean look */
         }
         
-        .close {
+        .feedback-modal .close {
             color: #aaa;
             font-size: 28px;
             font-weight: bold;
         }
         
-        .close:hover,
-        .close:focus {
+        .feedback-modal .close:hover,
+        .feedback-modal .close:focus {
             color: #000;
             text-decoration: none;
             cursor: pointer;
         }
         
-        .modal-body {
+        .feedback-modal .modal-body {
             padding: 20px;
         }
         
-        .form-group label {
+        .feedback-modal .form-group label {
             font-weight: bold;
             color: #333; /* Darker color for labels */
         }
         
-        .form-control {
+        .feedback-modal .form-control {
             border-radius: 8px;
             border: 1px solid #ccc;
             padding: 10px;
@@ -177,12 +180,12 @@
             transition: all 0.3s ease-in-out;
         }
         
-        .form-control::placeholder {
+        .feedback-modal .form-control::placeholder {
             color: #888; /* Placeholder color for optional text */
             font-style: italic;
         }
         
-        .form-control:focus {
+        .feedback-modal .form-control:focus {
             border-color: #007bff; /* Accent color on focus */
             box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
         }
@@ -190,7 +193,7 @@
         #feedback-success {
             display: none;
             text-align: center;
-            color: #FFF; /* Black text for thank you message */
+            color: #000; /* Black text for thank you message */
             font-size: 18px;
             margin-top: 15px;
         }
@@ -269,7 +272,7 @@
 
     <!-- Home Button -->
     <div class="container mt-3">
-        <div class="home-button-container">
+        <div class="home-button-container" id="home-button">
             <a href="{% url 'landing_page' %}" class="btn">Home</a>
         </div>
     </div>
@@ -284,10 +287,10 @@
         </a>
         <form method="post" action="{% url 'logout' %}" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" class="btn">Logout</button>
+            <button type="submit" class="btn" id='logout-button'>Logout</button>
         </form>
         {% else %}
-        <a href="{% url 'login' %}" class="btn">Login</a>
+        <a href="{% url 'login' %}?next={{ request.path }}" class="btn" id='login-button'>Login</a>
         {% endif %}
     </div>     
 
@@ -299,15 +302,15 @@
     </div>
 
     <footer>
-        <button type="button" class="btn feedback-button" data-toggle="modal" data-target="#feedback-modal">Give Feedback</button>
+        <button type="button" class="btn feedback-button" id='feedback-button' data-toggle="modal" data-target="#feedback-modal">Give Feedback</button>
     
         <!-- Feedback Modal -->
-        <div class="modal fade" id="feedback-modal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+        <div class="modal fade feedback-modal" id="feedback-modal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalLabel" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="feedbackModalLabel">We Value Your Feedback</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <button type="button" id="feedback-modal-close" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -370,7 +373,11 @@
             })
             .catch(error => console.error('Error:', error));
         });
-        
+
+        $('#feedback-modal').on('shown.bs.modal', function () {
+            $('#name').focus(); // Automatically focus on the first input field when the modal opens
+        });
+                
         document.addEventListener('DOMContentLoaded', function () {
             // Set the page URL in the hidden input field when the modal opens
             $('#feedback-modal').on('show.bs.modal', function () {
