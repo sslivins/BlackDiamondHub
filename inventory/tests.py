@@ -437,9 +437,6 @@ class ItemModalEditTests(LiveServerTestCase):
         login_button = self.browser.find_element(By.CSS_SELECTOR, "button[type='submit']")
         login_button.click()
         
-        #take screenshot
-        self.browser.save_screenshot('screenshot.png')
-        
         #ensure we are redirected to the inventory page
         WebDriverWait(self.browser, 10).until(
             EC.presence_of_element_located((By.ID, "feedback-button"))
