@@ -535,13 +535,16 @@ class ItemModalEditTests(LiveServerTestCase):
             EC.invisibility_of_element_located((By.ID, 'itemModal'))
         )
         
-        #open the modal again
+        #open the modal again so we can check the long description is still present
         item_element.click()
         
         # Wait for the modal to appear
         WebDriverWait(self.browser, 10).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
+        
+        #save screenshot
+        self.browser.save_screenshot('modal.png')
         
         #ensure the long description and details heading is present in the view modal and the description is correct
         details_heading = self.browser.find_element(By.ID, 'modal-item-details-heading')
@@ -552,4 +555,4 @@ class ItemModalEditTests(LiveServerTestCase):
         self.assertEqual(modal_item_long_description.text, "This is a long description")            
 
 
-#add feedback tests
+#TODO: add feedback tests
