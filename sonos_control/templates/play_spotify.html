@@ -1,0 +1,10 @@
+<form method="POST">
+  {% csrf_token %}
+  <label for="spotify_uri">Spotify URI:</label>
+  <input type="text" id="spotify_uri" name="spotify_uri" value="{{ spotify_uri }}" required>
+  
+  <label for="room_name">Sonos Room Name:</label>
+  <input type="text" id="room_name" name="room_name" value="{{ room_name }}" required>
+  
+  <button type="submit">Play on Sonos</button>
+</form>

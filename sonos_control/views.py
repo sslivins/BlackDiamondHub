@@ -3,98 +3,59 @@ from django.http import JsonResponse
 import soco
 from django.templatetags.static import static
 from soco.exceptions import SoCoUPnPException
+from soco.plugins.sharelink import ShareLinkPlugin
+
+import soco
+from django.shortcuts import render
+
+import soco
+from django.shortcuts import render
 
 def sonos_control_view(request):
-    # Discover all Sonos speakers
-    speakers = list(soco.discover())
+    speakers_info = []
 
-    if not speakers:
-        return render(request, 'no_speakers.html')
+    # Discover all Sonos speakers on the network
+    speakers = soco.discover()
+    
+    if speakers:
+        for speaker in speakers:
+            # Get speaker info like current track, artist, album, volume, etc.
+            current_track = speaker.get_current_track_info()
+            queue = speaker.get_queue(full_album_art_uri=True)  # Fetch the speaker's queue
+            
+            # Prepare the queue list with album art
+            queue_with_album_art = []
+            for track in queue:
+                # Get the album art URI, if available
+                album_art_uri = track.album_art_uri if track.album_art_uri else None
+                queue_with_album_art.append({
+                    'title': track.title,
+                    'artist': track.creator,  # Use 'creator' for the artist
+                    'album_art': album_art_uri
+                })
 
-    speaker_info = []
-    for speaker in speakers:
-        current_track = speaker.get_current_track_info()
-        volume = speaker.volume
-        album_art = current_track.get('album_art')
+            # Prepare information to pass to the template
+            speaker_info = {
+                'name': speaker.player_name,
+                'track': current_track['title'],
+                'artist': current_track['artist'],
+                'album': current_track['album'],
+                'album_art': current_track['album_art'],
+                'volume': speaker.volume,
+                'play_state': speaker.get_current_transport_info()['current_transport_state'],
+                'queue': queue_with_album_art,  # Include the queue with album art
+                'group': speaker.group.members  # Get group members
+            }
+            speakers_info.append(speaker_info)
 
-        if not album_art or album_art == "":
-            album_art = static('default_album_art.webp')
+    context = {
+        'speaker_info': speakers_info,
+    }
 
-        play_state = speaker.get_current_transport_info().get('current_transport_state')
-        group = [sp.player_name for sp in speaker.group.members if sp != speaker]
+    return render(request, 'sonos.html', context)
 
-        speaker_info.append({
-            'name': speaker.player_name,
-            'track': current_track.get('title', 'Nothing Playing'),
-            'artist': current_track.get('artist', 'Unknown Artist'),
-            'album': current_track.get('album', 'Unknown Album'),
-            'album_art': album_art,
-            'volume': volume,
-            'play_state': play_state,
-            'group': group,
-            'speaker': speaker
-        })
 
-    speaker_info = sorted(speaker_info, key=lambda x: x['name'])
 
-    if request.method == 'POST':
-        speaker_name = request.POST.get('speaker_name')
-        action = request.POST.get('action')
-        target_speaker_name = request.POST.get('target_speaker_name', speaker_name)
-        
-        print(f'Speaker: {speaker_name}, Action: {action}, Target Speaker: {target_speaker_name}')
-
-        speaker = next(sp for sp in speakers if sp.player_name == speaker_name)
-
-        try:
-            if action == 'play_spotify_uri':
-                spotify_uri = request.POST.get('spotify_uri')
-                if spotify_uri:
-                    # Define the metadata for Spotify content
-                    meta_template = (
-                        '<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" '
-                        'xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" '
-                        'xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/">'
-                        '<item id="1004206cspotify%3a%2f%2f{uri}" parentID="0" restricted="true">'
-                        '<dc:title>{title}</dc:title>'
-                        '<upnp:class>object.item.audioItem.musicTrack</upnp:class>'
-                        '<desc id="cdudn" nameSpace="urn:schemas-rinconnetworks-com:metadata-1-0">'
-                        'SA_RINCON2311_X_#Svc2311-0-Token</desc></item></DIDL-Lite>'
-                    )
-
-                    # Metadata should contain the correct Spotify URI format
-                    spotify_uri_encoded = spotify_uri.replace(':', '%3a')
-                    metadata = meta_template.format(uri=spotify_uri_encoded, title="Spotify Track")
-
-                    # Play Spotify URI on the selected speaker with metadata
-                    speaker.play_uri(spotify_uri, meta=metadata)
-                    return JsonResponse({'status': 'success', 'message': f"Playing Spotify URI on {speaker_name}"}, status=200)
-                else:
-                    return JsonResponse({'error': 'No Spotify URI provided'}, status=400)
-            elif action == 'toggle_group':
-                target_speaker = next(sp for sp in speakers if sp.player_name == target_speaker_name)
-                if target_speaker in speaker.group.members:
-                    target_speaker.unjoin()  # Remove from group
-                else:
-                    target_speaker.join(speaker)  # Add to group
-            elif action == 'volume':
-                volume = int(request.POST.get('volume'))
-                speaker.volume = volume
-                return JsonResponse({'status': 'success', 'volume': volume}, status=200)
-            elif action in ['play', 'pause']:
-                if action == 'play':
-                    speaker.play()
-                else:
-                    speaker.pause()
-
-            return JsonResponse({'status': 'success'}, status=200)
-
-        except SoCoUPnPException as e:
-            return JsonResponse({'error': str(e)}, status=400)
-
-    other_speakers = [sp.player_name for sp in speakers if sp not in speaker.group.members]
-
-    return render(request, 'sonos.html', {'speaker_info': speaker_info, 'other_speakers': other_speakers})
 
 
 def sonos_control(request):
@@ -134,3 +95,59 @@ def get_speaker_by_name(name):
         if device.player_name == name:
             return device
     return None
+
+import requests
+
+def play_spotify_on_sonos(room_name, spotify_uri):
+    sonos_api_url = f'http://<SONOS_API_SERVER>:5005/{room_name}/spotify/{spotify_uri}'
+    
+    try:
+        response = requests.get(sonos_api_url)
+        if response.status_code == 200:
+            print(f'Successfully started playing {spotify_uri} on {room_name}')
+        else:
+            print(f'Failed to play track: {response.content}')
+    except requests.RequestException as e:
+        print(f'Error calling Sonos API: {e}')
+
+
+def play_spotify_on_sonos(request):
+    if request.method == 'POST':
+        room_name = request.POST.get('room_name')
+        spotify_uri = request.POST.get('spotify_uri')
+        
+        print(f'Looking for speaker: {room_name}')
+        
+        # Find the Sonos speaker by name
+        speakers = soco.discover()
+        if speakers:
+            speaker = next((s for s in speakers if s.player_name == room_name), None)
+            if speaker:
+                try:
+                    share_link = ShareLinkPlugin(speaker)
+                    # Stop any current playback first
+                    print(f'Stopping current playback on {room_name}')
+                    speaker.stop()
+                    
+                    share_link.add_share_link_to_queue('https://open.spotify.com/track/5Z01UMMf7V1o0MzF86s6WJ?si=a1a95142a3e249d8')
+                    #index = share_link.add_share_link_to_queue('https://open.spotify.com/track/5bf3qVyRtIpk4Ym3JHalWk?si=af0cc1b567eb4631')
+                    #print(f'Added Spotify URI to queue at index: {index}')
+                    speaker.play_from_queue(index=1)
+                    return redirect('success')
+                except Exception as e:
+                    print(f'Error while trying to play URI: {e}')
+                    return render(request, 'error.html', {'error': f'Failed to play URI: {e}'})
+            else:
+                return render(request, 'error.html', {'error': 'Speaker not found'})
+        else:
+            return render(request, 'error.html', {'error': 'No Sonos speakers found'})
+    
+    context = {
+        'spotify_uri': 'x-sonos-spotify:spotify%3atrack%3a5Z01UMMf7V1o0MzF86s6WJ?sid=9&flags=8224&sn=1',
+        'room_name': 'Kitchen'
+    }
+    
+    return render(request, 'play_spotify.html', context)
+
+
+

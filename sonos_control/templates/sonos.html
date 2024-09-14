@@ -214,86 +214,156 @@
   
       .fancy-checkbox input[type="checkbox"]:checked + label:after {
         opacity: 1;
-      }      
+      }
+
+    .queue-container {
+        margin-top: 20px;
+        width: 100%;
+    }
+
+    .queue-list {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .queue-item {
+        display: grid;                 /* Use grid layout */
+        grid-template-columns: 70px 1fr; /* Two columns: one fixed width for album art, rest for text */
+        align-items: center;           /* Vertically align items */
+        gap: 15px;                     /* Add space between the columns */
+        padding: 10px;
+        background-color: #fff;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      
+      .queue-album-art {
+        width: 60px;                   /* Fixed size for album art */
+        height: 60px;
+        border-radius: 5px;
+        object-fit: cover;             /* Ensure the image fits without distortion */
+      }
+      
+      .queue-info {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;       /* Align text vertically */
+        overflow: hidden;              /* Prevent text from overflowing */
+      }
+      
+      .queue-track-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin: 0;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;       /* Show "..." for overflowed text */
+      }
+      
+      .queue-track-artist {
+        font-size: 1rem;
+        color: #777;
+        margin: 5px 0 0 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;       /* Show "..." for overflowed text */
+      }
+      
+   
   </style>
 </head>
 <body>
   <h1>Control Sonos Speakers</h1>
 
-
   <div class="grid-container">
     {% for info in speaker_info %}
-    <div class="speaker">
-        <h2>{{ info.name }}</h2>
-
-        <!-- Spotify URI Input Form -->
-        <div class="spotify-uri-input">
-            <form method="POST">
-                {% csrf_token %}
-                <label for="spotify-uri-{{ info.name }}">Spotify URI:</label>
-                <input type="text" name="spotify_uri" id="spotify-uri-{{ info.name }}" placeholder="Enter Spotify URI" required>
-                
-                <!-- Pass the speaker name -->
-                <input type="hidden" name="speaker_name" value="{{ info.name }}">
-                
-                <!-- Hidden input for target_speaker_name, defaulting to current speaker -->
-                <input type="hidden" name="target_speaker_name" value="{{ info.name }}">
-                
-                <button type="submit" name="action" value="play_spotify_uri">Play Spotify URI</button>
-            </form>
-        </div>       
-
-        <div class="album-art-container">
-            <img src="{{ info.album_art }}" alt="Album Art" class="album-art">
-            <button class="play-pause-button" id="play-pause-button-{{ info.name }}"
-                    onclick="togglePlayPause('{{ info.name }}', '{{ info.play_state }}')">
-                {% if info.play_state == 'PLAYING' %}
-                    &#10074;&#10074;
-                {% else %}
-                    &#9654;
-                {% endif %}
-            </button>
-        </div>
-
-        <div class="track-info">
-            <p><strong>Track:</strong> {{ info.track }}</p>
-            <p><strong>Artist:</strong> {{ info.artist }}</p>
-            <p><strong>Album:</strong> {{ info.album }}</p>
-        </div>
-
-        <!-- Volume Control -->
-        <div class="volume-control">
-            <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
-                   oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
-            <output id="volume-output-{{ info.name }}" class="output">{{ info.volume }}</output>
-        </div>
-
-        <button onclick="openModal('{{ info.name }}')" class="group-btn">Group</button>
-
-        <!-- Modal Structure -->
-        <div id="groupModal-{{ info.name }}" class="modal">
-          <div class="modal-content">
-            <span class="close" onclick="closeModal('{{ info.name }}')">&times;</span>
-            <h2>Group Speakers for {{ info.name }}</h2>
-
-            <h3>Currently in Group</h3>
-            {% for grouped_speaker in info.group %}
-            <div class="fancy-checkbox">
-              <input type="checkbox" id="group-checkbox-{{ grouped_speaker }}" checked onclick="toggleGroup('{{ info.name }}', '{{ grouped_speaker }}')">
-              <label for="group-checkbox-{{ grouped_speaker }}">{{ grouped_speaker }}</label>
+        <div class="speaker">
+            <h2>{{ info.name }}</h2>
+        
+            <!-- Existing Spotify URI input form -->
+            <div class="spotify-uri-input">
+                <form method="POST">
+                    {% csrf_token %}
+                    <label for="spotify-uri-{{ info.name }}">Spotify URI:</label>
+                    <input type="text" name="spotify_uri" id="spotify-uri-{{ info.name }}" placeholder="Enter Spotify URI" required>
+                    
+                    <!-- Pass the speaker name -->
+                    <input type="hidden" name="speaker_name" value="{{ info.name }}">
+                    
+                    <button type="submit" name="action" value="play_spotify_uri">Play Spotify URI</button>
+                </form>
+            </div>       
+        
+            <div class="album-art-container">
+                <img src="{{ info.album_art }}" alt="Album Art" class="album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                <button class="play-pause-button" id="play-pause-button-{{ info.name }}"
+                        onclick="togglePlayPause('{{ info.name }}', '{{ info.play_state }}')">
+                    {% if info.play_state == 'PLAYING' %}
+                        &#10074;&#10074;
+                    {% else %}
+                        &#9654;
+                    {% endif %}
+                </button>
             </div>
-            {% endfor %}
-
-            <h3>Other Speakers</h3>
-            {% for speaker in other_speakers %}
-            <div class="fancy-checkbox">
-              <input type="checkbox" id="group-checkbox-{{ speaker }}" onclick="toggleGroup('{{ info.name }}', '{{ speaker }}')">
-              <label for="group-checkbox-{{ speaker }}">{{ speaker }}</label>
+        
+            <div class="track-info">
+                <p><strong>Track:</strong> {{ info.track }}</p>
+                <p><strong>Artist:</strong> {{ info.artist }}</p>
+                <p><strong>Album:</strong> {{ info.album }}</p>
             </div>
-            {% endfor %}
-          </div>
+        
+            <!-- Volume control -->
+            <div class="volume-control">
+                <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
+                    oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
+                <output id="volume-output-{{ info.name }}" class="output">{{ info.volume }}</output>
+            </div>
+        
+            <div class="queue-container">
+                <h3>Queue:</h3>
+                <ul class="queue-list">
+                    {% for track in info.queue %}
+                    <li class="queue-item">
+                        <img src="{{ track.album_art }}" alt="Album Art" class="queue-album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                        <div class="queue-info">
+                        <p class="queue-track-title">{{ track.title }}</p>
+                        <p class="queue-track-artist">{{ track.artist }}</p>
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li>No tracks in the queue</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        
+            <button onclick="openModal('{{ info.name }}')" class="group-btn">Group</button>
+        
+            <!-- Modal Structure -->
+            <div id="groupModal-{{ info.name }}" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('{{ info.name }}')">&times;</span>
+                <h2>Group Speakers for {{ info.name }}</h2>
+        
+                <h3>Currently in Group</h3>
+                {% for grouped_speaker in info.group %}
+                <div class="fancy-checkbox">
+                <input type="checkbox" id="group-checkbox-{{ grouped_speaker }}" checked onclick="toggleGroup('{{ info.name }}', '{{ grouped_speaker }}')">
+                <label for="group-checkbox-{{ grouped_speaker }}">{{ grouped_speaker }}</label>
+                </div>
+                {% endfor %}
+        
+                <h3>Other Speakers</h3>
+                {% for speaker in other_speakers %}
+                <div class="fancy-checkbox">
+                <input type="checkbox" id="group-checkbox-{{ speaker }}" onclick="toggleGroup('{{ info.name }}', '{{ speaker }}')">
+                <label for="group-checkbox-{{ speaker }}">{{ speaker }}</label>
+                </div>
+                {% endfor %}
+            </div>
+            </div>
         </div>
-    </div>
     {% endfor %}
   </div>
 

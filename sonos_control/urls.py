@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import sonos_control_view
+from . import views
 
 urlpatterns = [
-    path('', sonos_control_view, name='sonos_control'),
+    path('', views.sonos_control_view, name='sonos_control'),
+    path('sonos_play/', views.play_spotify_on_sonos, name='play_spotify_on_sonos'),
 ]
