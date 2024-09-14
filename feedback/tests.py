@@ -173,7 +173,11 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
         Feedback.objects.create(name=f'User 50', email=f'user50@example.com', message=f'Message 50', page_url='/feedback/?page=1')
       
         self.browser.get(self.live_server_url + reverse('view_feedback'))
-        self.browser.implicitly_wait(10)  # Wait for the JavaScript to execute
+        
+        # Wait until the table is loaded
+        WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
+        )        
 
         # Find the first feedback row and click it to open the modal
         first_feedback_row = self.browser.find_element(By.CSS_SELECTOR, 'tbody tr')
