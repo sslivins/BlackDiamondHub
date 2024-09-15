@@ -6,17 +6,15 @@
 
 {% block content %}
 <head>
-  <title>Sonos Control</title>
   <style>
       body {
           font-family: Arial, sans-serif;
-          background-color: #f4f4f4;
+          background-color: #000000; /* Black background for the entire page */
           margin: 0;
           padding: 20px;
       }
 
       h1 {
-          color: #333;
           text-align: center;
           margin-bottom: 20px;
           font-size: 2rem;
@@ -45,7 +43,6 @@
       .speaker h2 {
           margin-top: 10px;
           font-size: 1.6rem;
-          color: #333;
       }
 
       .track-info {
@@ -142,77 +139,112 @@
 
       .modal {
         display: none;
-        position: fixed;
+        position: fixed; /* Keep modal relative to the viewport */
         z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-      }
-  
-      .modal-content {
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+        width: 100%; /* Full width to cover the whole page */
+        height: 100%; /* Full height */
+        pointer-events: none; /* Ignore pointer events on the background */
+    }
+    
+    .modal-content {
+        position: absolute; /* Position relative to the tile */
         background-color: #fff;
-        margin: 10% auto;
         padding: 20px;
         border-radius: 10px;
-        width: 50%;
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-      }
-  
-      .close {
+        width: auto; /* Make the modal adapt to content size */
+        max-width: 400px; /* Maximum width of the modal */
+        pointer-events: all; /* Allow interaction with modal content */
+    }
+    
+    .close {
         color: #aaa;
-        float: right;
+        position: absolute;
+        top: 10px;
+        right: 20px;
         font-size: 28px;
         font-weight: bold;
-      }
-  
-      .close:hover,
-      .close:focus {
+        cursor: pointer;
+    }
+    
+    .close:hover,
+    .close:focus {
         color: #000;
         text-decoration: none;
         cursor: pointer;
-      }
+    }
+    
   
-      /* Fancy Checkbox */
-      .fancy-checkbox input[type="checkbox"] {
-        display: none;
-      }
-  
-      .fancy-checkbox label {
+      /* The switch - the container */
+      .switch {
         position: relative;
-        padding-left: 35px;
-        cursor: pointer;
-      }
-  
-      .fancy-checkbox label:before,
-      .fancy-checkbox label:after {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-      }
-  
-      .fancy-checkbox label:before {
-        width: 24px;
+        display: inline-block;
+        width: 50px;
         height: 24px;
-        border: 2px solid #007bff;
-        background-color: #fff;
-        border-radius: 4px;
       }
-  
-      .fancy-checkbox label:after {
-        width: 10px;
-        height: 6px;
-        border-left: 2px solid #007bff;
-        border-bottom: 2px solid #007bff;
-        transform: rotate(-45deg) translateY(-50%);
+      
+      /* Hide the default HTML checkbox */
+      .switch input {
         opacity: 0;
+        width: 0;
+        height: 0;
       }
-  
-      .fancy-checkbox input[type="checkbox"]:checked + label:after {
-        opacity: 1;
+      
+      /* The slider */
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 34px;
+      }
+      
+      /* The slider when checked (background color change) */
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+      
+      /* When the checkbox is checked, animate the slider */
+      input:checked + .slider {
+        background-color: #007bff;
+      }
+      
+      input:checked + .slider:before {
+        transform: translateX(26px);
+      }
+      
+      /* Rounded slider */
+      .slider.round {
+        border-radius: 34px;
+      }
+      
+      .slider.round:before {
+        border-radius: 50%;
+      }
+      
+      /* Style for the label next to the switch */
+      .switch-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      
+      .switch-container label {
+        margin-left: 10px;
+        font-size: 1.1rem;
       }
 
     .queue-container {
@@ -278,91 +310,89 @@
 
   <div class="grid-container">
     {% for info in speaker_info %}
-        <div class="speaker">
-            <h2>{{ info.name }}</h2>
-        
-            <!-- Existing Spotify URI input form -->
-            <div class="spotify-uri-input">
-                <form method="POST">
-                    {% csrf_token %}
-                    <label for="spotify-uri-{{ info.name }}">Spotify URI:</label>
-                    <input type="text" name="spotify_uri" id="spotify-uri-{{ info.name }}" placeholder="Enter Spotify URI" required>
-                    
-                    <!-- Pass the speaker name -->
-                    <input type="hidden" name="speaker_name" value="{{ info.name }}">
-                    
-                    <button type="submit" name="action" value="play_spotify_uri">Play Spotify URI</button>
-                </form>
-            </div>       
-        
-            <div class="album-art-container">
-                <img src="{{ info.album_art }}" alt="Album Art" class="album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
-                <button class="play-pause-button" id="play-pause-button-{{ info.name }}"
-                        onclick="togglePlayPause('{{ info.name }}', '{{ info.play_state }}')">
-                    {% if info.play_state == 'PLAYING' %}
-                        &#10074;&#10074;
-                    {% else %}
-                        &#9654;
-                    {% endif %}
-                </button>
-            </div>
-        
-            <div class="track-info">
-                <p><strong>Track:</strong> {{ info.track }}</p>
-                <p><strong>Artist:</strong> {{ info.artist }}</p>
-                <p><strong>Album:</strong> {{ info.album }}</p>
-            </div>
-        
-            <!-- Volume control -->
-            <div class="volume-control">
-                <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
-                    oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
-                <output id="volume-output-{{ info.name }}" class="output">{{ info.volume }}</output>
-            </div>
-        
-            <div class="queue-container">
-                <h3>Queue:</h3>
-                <ul class="queue-list">
-                    {% for track in info.queue %}
-                    <li class="queue-item">
-                        <img src="{{ track.album_art }}" alt="Album Art" class="queue-album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
-                        <div class="queue-info">
-                        <p class="queue-track-title">{{ track.title }}</p>
-                        <p class="queue-track-artist">{{ track.artist }}</p>
+        {% if info.is_coordinator %}
+            <div class="speaker">
+                <h2>{{ info.group_label }}</h2>
+            
+                <div class="album-art-container">
+                    <img src="{{ info.album_art }}" alt="Album Art" class="album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                    <button class="play-pause-button" id="play-pause-button-{{ info.name }}"
+                            onclick="togglePlayPause('{{ info.name }}', '{{ info.play_state }}')">
+                        {% if info.play_state == 'PLAYING' %}
+                            &#10074;&#10074;
+                        {% else %}
+                            &#9654;
+                        {% endif %}
+                    </button>
+                </div>
+            
+                <div class="track-info">
+                    <p><strong>Track:</strong> {{ info.track }}</p>
+                    <p><strong>Artist:</strong> {{ info.artist }}</p>
+                    <p><strong>Album:</strong> {{ info.album }}</p>
+                </div>
+            
+                <!-- Volume control -->
+                <div class="volume-control">
+                    <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
+                        oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
+                    <output id="volume-output-{{ info.name }}" class="output">{{ info.volume }}</output>
+                </div>
+            
+                <div class="queue-container">
+                    <h3>Queue:</h3>
+                    <ul class="queue-list">
+                        {% for track in info.queue %}
+                        <li class="queue-item">
+                            <img src="{{ track.album_art }}" alt="Album Art" class="queue-album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                            <div class="queue-info">
+                            <p class="queue-track-title">{{ track.title }}</p>
+                            <p class="queue-track-artist">{{ track.artist }}</p>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li>No tracks in the queue</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            
+                <button onclick="openModal('{{ info.name }}')" class="group-btn">Group</button>
+            
+                <div id="groupModal-{{ info.name }}" class="modal">
+                    <div class="modal-content">
+                        <span class="close" onclick="closeModal('{{ info.name }}')">&times;</span>
+                        <h2>Group Speakers for {{ info.name }}</h2>
+                
+                        <!-- List currently grouped speakers -->
+                        <h3>Speakers</h3>
+                        {% for grouped_speaker in info.group %}
+                        <div class="switch-container">
+                            <!-- Exclude the coordinator from having a toggle switch -->
+                            {% if grouped_speaker.player_name != info.name %}
+                                <label class="switch">
+                                    <input type="checkbox" id="group-checkbox-{{ grouped_speaker.player_name }}" checked onclick="toggleGroup('{{ info.name }}', '{{ grouped_speaker.player_name }}')">
+                                    <span class="slider round"></span>
+                                </label>
+                                <label for="group-checkbox-{{ grouped_speaker.player_name }}">{{ grouped_speaker.player_name }}</label>
+                            {% endif %}
                         </div>
-                    </li>
-                    {% empty %}
-                    <li>No tracks in the queue</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        
-            <button onclick="openModal('{{ info.name }}')" class="group-btn">Group</button>
-        
-            <!-- Modal Structure -->
-            <div id="groupModal-{{ info.name }}" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('{{ info.name }}')">&times;</span>
-                <h2>Group Speakers for {{ info.name }}</h2>
-        
-                <h3>Currently in Group</h3>
-                {% for grouped_speaker in info.group %}
-                <div class="fancy-checkbox">
-                <input type="checkbox" id="group-checkbox-{{ grouped_speaker }}" checked onclick="toggleGroup('{{ info.name }}', '{{ grouped_speaker }}')">
-                <label for="group-checkbox-{{ grouped_speaker }}">{{ grouped_speaker }}</label>
+                        {% endfor %}
+                
+                        <!-- List other available speakers that are not part of the group -->
+                        {% for ungrouped_speaker in info.ungrouped %}
+                        <div class="switch-container">
+                            <label class="switch">
+                                <input type="checkbox" id="group-checkbox-{{ ungrouped_speaker.player_name }}" onclick="toggleGroup('{{ info.name }}', '{{ ungrouped_speaker.player_name }}')">
+                                <span class="slider round"></span>
+                            </label>
+                            <label for="group-checkbox-{{ ungrouped_speaker.player_name }}">{{ ungrouped_speaker.player_name }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                {% endfor %}
-        
-                <h3>Other Speakers</h3>
-                {% for speaker in other_speakers %}
-                <div class="fancy-checkbox">
-                <input type="checkbox" id="group-checkbox-{{ speaker }}" onclick="toggleGroup('{{ info.name }}', '{{ speaker }}')">
-                <label for="group-checkbox-{{ speaker }}">{{ speaker }}</label>
-                </div>
-                {% endfor %}
+                
             </div>
-            </div>
-        </div>
+        {% endif %}
     {% endfor %}
   </div>
 

@@ -17,11 +17,20 @@ def sonos_control_view(request):
     # Discover all Sonos speakers on the network
     speakers = soco.discover()
     
+    all_ungrouped_speakers = []
+    
     if speakers:
+        for speaker in speakers:
+            #get list of speakers that are not part of any group
+            if len(speaker.group.members) == 1:
+                all_ungrouped_speakers.append(speaker)
+        
         for speaker in speakers:
             # Get speaker info like current track, artist, album, volume, etc.
             current_track = speaker.get_current_track_info()
             queue = speaker.get_queue(full_album_art_uri=True)  # Fetch the speaker's queue
+            
+            print(f'Speaker - {speaker.player_name} - is coordinator: {speaker.is_coordinator}: group label: {speaker.group.label}, this speaker {speaker} - group: {speaker.group}')
             
             # Prepare the queue list with album art
             queue_with_album_art = []
@@ -33,6 +42,13 @@ def sonos_control_view(request):
                     'artist': track.creator,  # Use 'creator' for the artist
                     'album_art': album_art_uri
                 })
+                
+            #copy list of ungrouped speakers but remove the current speaker
+            ungrouped_speakers = all_ungrouped_speakers.copy()
+            try:
+                ungrouped_speakers.remove(speaker)
+            except ValueError:
+                pass
 
             # Prepare information to pass to the template
             speaker_info = {
@@ -44,7 +60,11 @@ def sonos_control_view(request):
                 'volume': speaker.volume,
                 'play_state': speaker.get_current_transport_info()['current_transport_state'],
                 'queue': queue_with_album_art,  # Include the queue with album art
-                'group': speaker.group.members  # Get group members
+                'is_coordinator': speaker.is_coordinator,
+                'is_grouped': len(speaker.group.members) > 1,
+                'group_label': speaker.group.label,
+                'group': speaker.group.members,  # Get group members
+                'ungrouped': ungrouped_speakers
             }
             speakers_info.append(speaker_info)
 
