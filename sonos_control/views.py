@@ -75,6 +75,45 @@ def sonos_control_view(request):
     return render(request, 'sonos.html', context)
 
 
+def toggle_group(request):
+    if request.method == 'POST':
+        speaker_name = request.POST.get('speaker_name')
+        target_speaker_name = request.POST.get('target_speaker')
+
+        # Get the action type (toggle_group)
+        action = request.POST.get('action')
+
+        if action != 'toggle_group':
+            return JsonResponse({'status': 'error', 'message': 'Invalid action'}, status=400)
+
+        # Discover the Sonos speakers
+        speakers = soco.discover()
+        if not speakers:
+            return JsonResponse({'status': 'error', 'message': 'No speakers found'}, status=404)
+
+        # Find the main speaker (coordinator)
+        speaker = next((s for s in speakers if s.player_name == speaker_name), None)
+        if not speaker:
+            return JsonResponse({'status': 'error', 'message': f'Speaker {speaker_name} not found'}, status=404)
+
+        # Find the target speaker (to add/remove from the group)
+        target_speaker = next((s for s in speakers if s.player_name == target_speaker_name), None)
+        if not target_speaker:
+            return JsonResponse({'status': 'error', 'message': f'Target speaker {target_speaker_name} not found'}, status=404)
+
+        # Toggle grouping: add the speaker to the group or remove from the group
+        if target_speaker in speaker.group.members:
+            # Remove target speaker from group
+            target_speaker.unjoin()
+            return JsonResponse({'status': 'success', 'message': f'{target_speaker_name} removed from {speaker_name} group'})
+        else:
+            # Add target speaker to the group
+            speaker.join(target_speaker)
+            return JsonResponse({'status': 'success', 'message': f'{target_speaker_name} added to {speaker_name} group'})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
 
 
 
