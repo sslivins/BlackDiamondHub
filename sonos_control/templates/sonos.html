@@ -532,7 +532,7 @@ function toggleGroup(speakerName, targetSpeaker) {
     .then(data => {
         if (data.status === 'success') {
             console.log('Group updated');
-            // Optionally, refresh the speaker tile to reflect group changes
+            location.reload();
         } else {
             console.error('Failed to update group:', data.message);
         }

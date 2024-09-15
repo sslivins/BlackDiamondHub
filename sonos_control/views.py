@@ -30,7 +30,7 @@ def sonos_control_view(request):
             current_track = speaker.get_current_track_info()
             queue = speaker.get_queue(full_album_art_uri=True)  # Fetch the speaker's queue
             
-            print(f'Speaker - {speaker.player_name} - is coordinator: {speaker.is_coordinator}: group label: {speaker.group.label}, this speaker {speaker} - group: {speaker.group}')
+            #print(f'Speaker - {speaker.player_name} - is coordinator: {speaker.is_coordinator}: group label: {speaker.group.label}, this speaker {speaker} - group: {speaker.group}')
             
             # Prepare the queue list with album art
             queue_with_album_art = []
@@ -105,9 +105,11 @@ def toggle_group(request):
         if target_speaker in speaker.group.members:
             # Remove target speaker from group
             target_speaker.unjoin()
+            print(f'{target_speaker_name} removed from {speaker_name} group')
             return JsonResponse({'status': 'success', 'message': f'{target_speaker_name} removed from {speaker_name} group'})
         else:
             # Add target speaker to the group
+            print(f'Adding {target_speaker_name} to {speaker_name} group')
             speaker.join(target_speaker)
             return JsonResponse({'status': 'success', 'message': f'{target_speaker_name} added to {speaker_name} group'})
 
