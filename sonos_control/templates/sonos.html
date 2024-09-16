@@ -371,8 +371,10 @@
                         {% if grouped_speaker.player_name != info.name %}
                             <label class="switch">
                                 <input type="checkbox" id="group-checkbox-{{ grouped_speaker.uid }}" checked 
-                                    onclick="onCheckboxChange('{{ info.uid }}')">
-                                <span class="slider round"></span>
+                                    onclick="onCheckboxChange('{{ info.uid }}')"
+                                    data-original-state="checked"
+                                    data-speaker-name="{{ grouped_speaker.uid }}">
+                             <span class="slider round"></span>
                             </label>
                             <label for="group-checkbox-{{ grouped_speaker.uid }}">{{ grouped_speaker.player_name }}</label>
                         {% endif %}
@@ -384,8 +386,10 @@
                     <div class="switch-container">
                         <label class="switch">
                             <input type="checkbox" id="group-checkbox-{{ ungrouped_speaker.uid }}" 
-                                onclick="onCheckboxChange('{{ info.uid }}')" >
-                            <span class="slider round"></span>
+                                onclick="onCheckboxChange('{{ info.uid }}')"
+                                data-original-state="unchecked"
+                                data-speaker-name="{{ ungrouped_speaker.uid }}">
+                         <span class="slider round"></span>
                         </label>
                         <label for="group-checkbox-{{ ungrouped_speaker.uid }}">{{ ungrouped_speaker.player_name }}</label>
                     </div>
@@ -524,6 +528,8 @@
             const originalState = checkbox.getAttribute('data-original-state');
             const currentState = checkbox.checked ? 'checked' : 'unchecked';
 
+            console.log(`Speaker: ${checkbox.getAttribute('data-speaker-name')}, Original: ${originalState}, Current: ${currentState}`);
+
             if (originalState !== currentState) {
                 changesDetected = true;
             }
@@ -542,21 +548,24 @@
         const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
         const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
         const formData = new FormData();
-        formData.append('speaker_name', speakerUUID);
+        formData.append('speaker_uuid', speakerUUID);  // Use UUID for backend
         formData.append('action', 'toggle_group');
         formData.append('csrfmiddlewaretoken', csrfToken);
-
+    
         checkboxes.forEach(checkbox => {
+            const targetSpeakerUUID = checkbox.getAttribute('data-speaker-name');
             const originalState = checkbox.getAttribute('data-original-state');
             const currentState = checkbox.checked ? 'checked' : 'unchecked';
 
+            console.log(`Speaker: ${targetSpeakerUUID}, Original: ${originalState}, Current: ${currentState}`);
+    
             // Only send data for speakers that have changed
             if (originalState !== currentState) {
-                formData.append('target_speaker', checkbox.getAttribute('data-speaker-name'));
+                formData.append('target_speaker_uuid', targetSpeakerUUID);  // Use UUID for backend
             }
         });
-
-        fetch('toggle-group/', {
+    
+        fetch('toggle_group/', {
             method: 'POST',
             body: formData,
         })
@@ -564,7 +573,7 @@
         .then(data => {
             if (data.status === 'success') {
                 console.log('Group updated');
-                location.reload();  // Trigger a full page reload on success
+                location.reload();  // Reload the page on success
             } else {
                 console.error('Failed to update group:', data.message);
             }

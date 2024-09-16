@@ -96,6 +96,8 @@ def toggle_group(request):
         speaker = next((s for s in speakers if s.uid == speaker_uuid), None)
         if not speaker:
             return JsonResponse({'status': 'error', 'message': f'Speaker with UUID {speaker_uuid} not found'}, status=404)
+        else:
+            print(f'Found speaker: {speaker.player_name} - uuid: {speaker_uuid}')
 
         # Find the target speaker by UUID
         target_speaker = next((s for s in speakers if s.uid == target_speaker_uuid), None)
