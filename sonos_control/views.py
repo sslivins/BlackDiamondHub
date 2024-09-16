@@ -53,6 +53,7 @@ def sonos_control_view(request):
             # Prepare information to pass to the template
             speaker_info = {
                 'name': speaker.player_name,
+                'uid': speaker.uid,
                 'track': current_track['title'],
                 'artist': current_track['artist'],
                 'album': current_track['album'],
@@ -77,8 +78,8 @@ def sonos_control_view(request):
 
 def toggle_group(request):
     if request.method == 'POST':
-        speaker_name = request.POST.get('speaker_name')
-        target_speaker_name = request.POST.get('target_speaker')
+        speaker_uuid = request.POST.get('speaker_uuid')  # Get the UUID of the main speaker (coordinator)
+        target_speaker_uuid = request.POST.get('target_speaker_uuid')  # Get the UUID of the target speaker
 
         # Get the action type (toggle_group)
         action = request.POST.get('action')
@@ -91,29 +92,30 @@ def toggle_group(request):
         if not speakers:
             return JsonResponse({'status': 'error', 'message': 'No speakers found'}, status=404)
 
-        # Find the main speaker (coordinator)
-        speaker = next((s for s in speakers if s.player_name == speaker_name), None)
+        # Find the main speaker (coordinator) by UUID
+        speaker = next((s for s in speakers if s.uid == speaker_uuid), None)
         if not speaker:
-            return JsonResponse({'status': 'error', 'message': f'Speaker {speaker_name} not found'}, status=404)
+            return JsonResponse({'status': 'error', 'message': f'Speaker with UUID {speaker_uuid} not found'}, status=404)
 
-        # Find the target speaker (to add/remove from the group)
-        target_speaker = next((s for s in speakers if s.player_name == target_speaker_name), None)
+        # Find the target speaker by UUID
+        target_speaker = next((s for s in speakers if s.uid == target_speaker_uuid), None)
         if not target_speaker:
-            return JsonResponse({'status': 'error', 'message': f'Target speaker {target_speaker_name} not found'}, status=404)
+            return JsonResponse({'status': 'error', 'message': f'Target speaker with UUID {target_speaker_uuid} not found'}, status=404)
 
         # Toggle grouping: add the speaker to the group or remove from the group
         if target_speaker in speaker.group.members:
             # Remove target speaker from group
             target_speaker.unjoin()
-            print(f'{target_speaker_name} removed from {speaker_name} group')
-            return JsonResponse({'status': 'success', 'message': f'{target_speaker_name} removed from {speaker_name} group'})
+            print(f'Target speaker {target_speaker_uuid} removed from speaker {speaker_uuid} group')
+            return JsonResponse({'status': 'success', 'message': f'Target speaker {target_speaker_uuid} removed from speaker {speaker_uuid} group'})
         else:
             # Add target speaker to the group
-            print(f'Adding {target_speaker_name} to {speaker_name} group')
+            print(f'Adding target speaker {target_speaker_uuid} to speaker {speaker_uuid} group')
             speaker.join(target_speaker)
-            return JsonResponse({'status': 'success', 'message': f'{target_speaker_name} added to {speaker_name} group'})
+            return JsonResponse({'status': 'success', 'message': f'Target speaker {target_speaker_uuid} added to speaker {speaker_uuid} group'})
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
 
 
 

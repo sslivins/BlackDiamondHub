@@ -312,86 +312,90 @@
     <div class="grid-container">
       {% for info in speaker_info %}
           {% if info.is_coordinator %}
-              <div class="speaker" id="speaker-{{ info.name }}">
-                  <h2>{{ info.group_label }}</h2>
-              
-                  <div class="album-art-container">
-                      <img src="{{ info.album_art }}" alt="Album Art" class="album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
-                      <button class="play-pause-button" id="play-pause-button-{{ info.name }}"
-                              onclick="togglePlayPause('{{ info.name }}', '{{ info.play_state }}')">
-                          {% if info.play_state == 'PLAYING' %}
-                              &#10074;&#10074;
-                          {% else %}
-                              &#9654;
-                          {% endif %}
-                      </button>
-                  </div>
-              
-                  <div class="track-info">
-                      <p><strong>Track:</strong> {{ info.track }}</p>
-                      <p><strong>Artist:</strong> {{ info.artist }}</p>
-                      <p><strong>Album:</strong> {{ info.album }}</p>
-                  </div>
-              
-                  <!-- Volume control -->
-                  <div class="volume-control">
-                      <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
-                          oninput="adjustVolume('{{ info.name }}', this.value)" id="volume-slider-{{ info.name }}">
-                      <output id="volume-output-{{ info.name }}" class="output">{{ info.volume }}</output>
-                  </div>
-              
-                  <div class="queue-container">
-                      <h3>Queue:</h3>
-                      <ul class="queue-list">
-                          {% for track in info.queue %}
-                          <li class="queue-item">
-                              <img src="{{ track.album_art }}" alt="Album Art" class="queue-album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
-                              <div class="queue-info">
-                              <p class="queue-track-title">{{ track.title }}</p>
-                              <p class="queue-track-artist">{{ track.artist }}</p>
-                              </div>
-                          </li>
-                          {% empty %}
-                          <li>No tracks in the queue</li>
-                          {% endfor %}
-                      </ul>
-                  </div>
-              
-                  <button onclick="openModal('{{ info.name }}')" class="group-btn">Group</button>
-              </div>
-  
-              <!-- Modal moved outside of the tile container -->
-              <div id="groupModal-{{ info.name }}" class="modal">
-                  <div class="modal-content">
-                      <span class="close" onclick="closeModal('{{ info.name }}')">&times;</span>
-                      <h2>Group Speakers for {{ info.name }}</h2>
-                
-                        <!-- List currently grouped speakers -->
-                        {% for grouped_speaker in info.group %}
-                        <div class="switch-container">
-                            <!-- Exclude the coordinator from having a toggle switch -->
-                            {% if grouped_speaker.player_name != info.name %}
-                                <label class="switch">
-                                    <input type="checkbox" id="group-checkbox-{{ grouped_speaker.player_name }}" checked onclick="toggleGroup('{{ info.name }}', '{{ grouped_speaker.player_name }}')">
-                                    <span class="slider round"></span>
-                                </label>
-                                <label for="group-checkbox-{{ grouped_speaker.player_name }}">{{ grouped_speaker.player_name }}</label>
-                            {% endif %}
-                        </div>
+            <div class="speaker" id="speaker-{{ info.uid }}">
+                <h2>{{ info.group_label }}</h2>
+            
+                <div class="album-art-container">
+                    <img src="{{ info.album_art }}" alt="Album Art" class="album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                    <button class="play-pause-button" id="play-pause-button-{{ info.uid }}"
+                            onclick="togglePlayPause('{{ info.uid }}', '{{ info.play_state }}')">
+                        {% if info.play_state == 'PLAYING' %}
+                            &#10074;&#10074;
+                        {% else %}
+                            &#9654;
+                        {% endif %}
+                    </button>
+                </div>
+            
+                <div class="track-info">
+                    <p><strong>Track:</strong> {{ info.track }}</p>
+                    <p><strong>Artist:</strong> {{ info.artist }}</p>
+                    <p><strong>Album:</strong> {{ info.album }}</p>
+                </div>
+            
+                <div class="volume-control">
+                    <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
+                        oninput="adjustVolume('{{ info.uid }}', this.value)" id="volume-slider-{{ info.uid }}">
+                    <output id="volume-output-{{ info.uid }}" class="output">{{ info.volume }}</output>
+                </div>
+            
+                <div class="queue-container">
+                    <h3>Queue:</h3>
+                    <ul class="queue-list">
+                        {% for track in info.queue %}
+                        <li class="queue-item">
+                            <img src="{{ track.album_art }}" alt="Album Art" class="queue-album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                            <div class="queue-info">
+                                <p class="queue-track-title">{{ track.title }}</p>
+                                <p class="queue-track-artist">{{ track.artist }}</p>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li>No tracks in the queue</li>
                         {% endfor %}
-                
-                        <!-- List other available speakers that are not part of the group -->
-                        {% for ungrouped_speaker in info.ungrouped %}
-                        <div class="switch-container">
+                    </ul>
+                </div>
+            
+                <button onclick="openModal('{{ info.uid }}')" class="group-btn">Group</button>
+            </div>
+            
+            <!-- Modal for grouping speakers -->
+            <div id="groupModal-{{ info.uid }}" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeModal('{{ info.uid }}')">&times;</span>
+                    <h2>Group Speakers for {{ info.group_label }}</h2>
+            
+                    <!-- List currently grouped speakers -->
+                    {% for grouped_speaker in info.group %}
+                    <div class="switch-container">
+                        {% if grouped_speaker.player_name != info.name %}
                             <label class="switch">
-                                <input type="checkbox" id="group-checkbox-{{ ungrouped_speaker.player_name }}" onclick="toggleGroup('{{ info.name }}', '{{ ungrouped_speaker.player_name }}')">
+                                <input type="checkbox" id="group-checkbox-{{ grouped_speaker.uid }}" checked 
+                                    onclick="onCheckboxChange('{{ info.uid }}')">
                                 <span class="slider round"></span>
                             </label>
-                            <label for="group-checkbox-{{ ungrouped_speaker.player_name }}">{{ ungrouped_speaker.player_name }}</label>
-                        </div>
-                        {% endfor %}
-                  </div>
-              </div>
+                            <label for="group-checkbox-{{ grouped_speaker.uid }}">{{ grouped_speaker.player_name }}</label>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <!-- List other available speakers that are not part of the group -->
+                    {% for ungrouped_speaker in info.ungrouped %}
+                    <div class="switch-container">
+                        <label class="switch">
+                            <input type="checkbox" id="group-checkbox-{{ ungrouped_speaker.uid }}" 
+                                onclick="onCheckboxChange('{{ info.uid }}')" >
+                            <span class="slider round"></span>
+                        </label>
+                        <label for="group-checkbox-{{ ungrouped_speaker.uid }}">{{ ungrouped_speaker.player_name }}</label>
+                    </div>
+                    {% endfor %}                    
+            
+                    <!-- Apply button -->
+                    <button id="apply-button-{{ info.uid }}" onclick="applyGroupChanges('{{ info.uid }}')" disabled>Apply</button>
+                </div>
+            </div>
+                    
           {% endif %}
       {% endfor %}
     </div>
@@ -463,84 +467,160 @@
       });
   }
 
-// Function to open modal and blur the speaker tile
-function openModal(speakerName) {
-    // Get the speaker tile and modal
-    const tile = document.getElementById(`speaker-${speakerName}`);
-    const modal = document.getElementById(`groupModal-${speakerName}`);
+    // Function to open modal and blur the speaker tile
+    function openModal(speakerUUID) {
+        console.log(`Opening modal for speaker: ${speakerUUID}`);
+        // Get the speaker tile and modal
+        const tile = document.getElementById(`speaker-${speakerUUID}`);
+        const modal = document.getElementById(`groupModal-${speakerUUID}`);
 
-    // Check if both tile and modal exist
-    if (tile && modal) {
-        // Get the tile's position and size on the page
-        const tileRect = tile.getBoundingClientRect();
+        // Check if both tile and modal exist
+        if (tile && modal) {
+            // Get the tile's position and size on the page
+            const tileRect = tile.getBoundingClientRect();
 
-        // Show modal to calculate its dimensions
-        modal.style.display = 'block';
-        modal.style.position = 'absolute';
+            // Show modal to calculate its dimensions
+            modal.style.display = 'block';
+            modal.style.position = 'absolute';
 
-        // Set the modal width to match the tile width (minus some margin)
-        const margin = 20; // Total margin on both sides (10px on each side)
-        const modalWidth = tileRect.width - margin;
-        modal.style.width = `${modalWidth}px`; // Apply the width to the modal
+            // Store the original state of each checkbox when the modal is opened
+            const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
+            checkboxes.forEach(checkbox => {
+                checkbox.setAttribute('data-original-state', checkbox.checked ? 'checked' : 'unchecked');
+            });            
 
-        // Get the modal dimensions after making it visible
-        const modalRect = modal.getBoundingClientRect();
+            // Set the modal width to match the tile width (minus some margin)
+            const margin = 20; // Total margin on both sides (10px on each side)
+            const modalWidth = tileRect.width - margin;
+            modal.style.width = `${modalWidth}px`; // Apply the width to the modal
 
-        // Calculate the offset to center the modal within the tile
-        const topOffset = (tileRect.height - modalRect.height) / 2;
-        const leftOffset = margin / 2; // Center the modal with respect to the margin
+            // Get the modal dimensions after making it visible
+            const modalRect = modal.getBoundingClientRect();
 
-        // Position the modal inside the tile
-        modal.style.top = `${tileRect.top + window.scrollY + topOffset}px`; // Add scroll offset for top
-        modal.style.left = `${tileRect.left + window.scrollX + leftOffset}px`; // Add scroll offset for left
+            // Calculate the offset to center the modal within the tile
+            const topOffset = (tileRect.height - modalRect.height) / 2;
+            const leftOffset = margin / 2; // Center the modal with respect to the margin
 
-        // Add blur effect to the tile
-        tile.classList.add('blur-background');
-    } else {
-        console.error(`Could not find the tile or modal for speaker: ${speakerName}`);
-    }
-}
+            // Position the modal inside the tile
+            modal.style.top = `${tileRect.top + window.scrollY + topOffset}px`; // Add scroll offset for top
+            modal.style.left = `${tileRect.left + window.scrollX + leftOffset}px`; // Add scroll offset for left
 
-// Function to close the modal and remove the blur effect from the tile
-function closeModal(speakerName) {
-    const modal = document.getElementById(`groupModal-${speakerName}`);
-    const tile = document.getElementById(`speaker-${speakerName}`);
-
-    if (modal) {
-        modal.style.display = 'none';
-    }
-
-    // Remove blur effect from the tile
-    if (tile) {
-        tile.classList.remove('blur-background');
-    }
-}
-
-function toggleGroup(speakerName, targetSpeaker) {
-    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-    const formData = new FormData();
-    formData.append('speaker_name', speakerName);
-    formData.append('target_speaker', targetSpeaker);
-    formData.append('action', 'toggle_group');
-    formData.append('csrfmiddlewaretoken', csrfToken);
-
-    fetch('toggle-group/', {
-        method: 'POST',
-        body: formData,
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            console.log('Group updated');
-            location.reload();
+            // Add blur effect to the tile
+            tile.classList.add('blur-background');
         } else {
-            console.error('Failed to update group:', data.message);
+            console.error(`Could not find the tile or modal for speaker: ${speakerUUID}`);
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-}
+    }
+
+    
+
+    // Function to track changes in the checkboxes
+    function onCheckboxChange(speakerUUID) {
+        const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
+        const applyButton = document.getElementById(`apply-button-${speakerUUID}`);
+        let changesDetected = false;
+
+        checkboxes.forEach(checkbox => {
+            const originalState = checkbox.getAttribute('data-original-state');
+            const currentState = checkbox.checked ? 'checked' : 'unchecked';
+
+            if (originalState !== currentState) {
+                changesDetected = true;
+            }
+        });
+
+        // Enable or disable the apply button based on changes
+        if (changesDetected) {
+            applyButton.disabled = false;
+        } else {
+            applyButton.disabled = true;
+        }
+    }
+
+    // Function to apply group changes when the 'Apply' button is clicked
+    function applyGroupChanges(speakerUUID) {
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
+        const formData = new FormData();
+        formData.append('speaker_name', speakerUUID);
+        formData.append('action', 'toggle_group');
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+        checkboxes.forEach(checkbox => {
+            const originalState = checkbox.getAttribute('data-original-state');
+            const currentState = checkbox.checked ? 'checked' : 'unchecked';
+
+            // Only send data for speakers that have changed
+            if (originalState !== currentState) {
+                formData.append('target_speaker', checkbox.getAttribute('data-speaker-name'));
+            }
+        });
+
+        fetch('toggle-group/', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('Group updated');
+                location.reload();  // Trigger a full page reload on success
+            } else {
+                console.error('Failed to update group:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    function closeModal(speakerUUID) {
+        const modal = document.getElementById(`groupModal-${speakerUUID}`);
+        const tile = document.getElementById(`speaker-${speakerUUID}`);
+    
+        // Reset the checkboxes to their original state
+        const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
+        checkboxes.forEach(checkbox => {
+            const originalState = checkbox.getAttribute('data-original-state');
+            checkbox.checked = originalState === 'checked'; // Revert to original state
+        });
+    
+        if (modal) {
+            modal.style.display = 'none';  // Close the modal
+        }
+    
+        // Remove blur effect from the tile
+        if (tile) {
+            tile.classList.remove('blur-background');
+        }
+    }
+    
+
+    {% comment %} function toggleGroup(speakerName, targetSpeaker) {
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        const formData = new FormData();
+        formData.append('speaker_name', speakerName);
+        formData.append('target_speaker', targetSpeaker);
+        formData.append('action', 'toggle_group');
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+        fetch('toggle-group/', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('Group updated');
+                location.reload();
+            } else {
+                console.error('Failed to update group:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    } {% endcomment %}
 
 </script>
 {% endblock %}
