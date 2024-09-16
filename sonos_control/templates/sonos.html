@@ -545,6 +545,8 @@
 
     // Function to apply group changes when the 'Apply' button is clicked
     function applyGroupChanges(speakerUUID) {
+        console.log(`Applying group changes for speaker: ${speakerUUID}`);
+
         const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
         const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
         const formData = new FormData();
@@ -561,7 +563,8 @@
     
             // Only send data for speakers that have changed
             if (originalState !== currentState) {
-                formData.append('target_speaker_uuid', targetSpeakerUUID);  // Use UUID for backend
+                console.log(`Adding target speaker: ${targetSpeakerUUID}`);
+                formData.append('target_speaker_uuid[]', targetSpeakerUUID);  // Use UUID for backend
             }
         });
     
@@ -573,13 +576,15 @@
         .then(data => {
             if (data.status === 'success') {
                 console.log('Group updated');
-                location.reload();  // Reload the page on success
+                //location.reload();  // Reload the page on success
+                closeModal(speakerUUID);
             } else {
                 console.error('Failed to update group:', data.message);
             }
         })
         .catch(error => {
             console.error('Error:', error);
+
         });
     }
 

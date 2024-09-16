@@ -30,7 +30,7 @@ def sonos_control_view(request):
             current_track = speaker.get_current_track_info()
             queue = speaker.get_queue(full_album_art_uri=True)  # Fetch the speaker's queue
             
-            #print(f'Speaker - {speaker.player_name} - is coordinator: {speaker.is_coordinator}: group label: {speaker.group.label}, this speaker {speaker} - group: {speaker.group}')
+            print(f'Speaker - {speaker.player_name} - is coordinator: {speaker.is_coordinator}: group label: {speaker.group.label}, this speaker {speaker} - group: {speaker.group}')
             
             # Prepare the queue list with album art
             queue_with_album_art = []
@@ -79,7 +79,9 @@ def sonos_control_view(request):
 def toggle_group(request):
     if request.method == 'POST':
         speaker_uuid = request.POST.get('speaker_uuid')  # Get the UUID of the main speaker (coordinator)
-        target_speaker_uuid = request.POST.get('target_speaker_uuid')  # Get the UUID of the target speaker
+        target_speakers_uuid = request.POST.getlist('target_speaker_uuid[]')  # Get the UUID of the target speaker
+        
+        print(f'target_speakers_uuid: {target_speakers_uuid}')
 
         # Get the action type (toggle_group)
         action = request.POST.get('action')
@@ -96,25 +98,29 @@ def toggle_group(request):
         speaker = next((s for s in speakers if s.uid == speaker_uuid), None)
         if not speaker:
             return JsonResponse({'status': 'error', 'message': f'Speaker with UUID {speaker_uuid} not found'}, status=404)
-        else:
-            print(f'Found speaker: {speaker.player_name} - uuid: {speaker_uuid}')
 
+        status = []
+        
         # Find the target speaker by UUID
-        target_speaker = next((s for s in speakers if s.uid == target_speaker_uuid), None)
-        if not target_speaker:
-            return JsonResponse({'status': 'error', 'message': f'Target speaker with UUID {target_speaker_uuid} not found'}, status=404)
+        for target_uid in target_speakers_uuid:
+            target_speaker = next((s for s in speakers if s.uid == target_uid), None)
+            if not target_speaker:
+                return JsonResponse({'status': 'error', 'message': f'Target speaker with UID {target_uid} not found'}, status=404)
 
-        # Toggle grouping: add the speaker to the group or remove from the group
-        if target_speaker in speaker.group.members:
-            # Remove target speaker from group
-            target_speaker.unjoin()
-            print(f'Target speaker {target_speaker_uuid} removed from speaker {speaker_uuid} group')
-            return JsonResponse({'status': 'success', 'message': f'Target speaker {target_speaker_uuid} removed from speaker {speaker_uuid} group'})
-        else:
-            # Add target speaker to the group
-            print(f'Adding target speaker {target_speaker_uuid} to speaker {speaker_uuid} group')
-            speaker.join(target_speaker)
-            return JsonResponse({'status': 'success', 'message': f'Target speaker {target_speaker_uuid} added to speaker {speaker_uuid} group'})
+            # Toggle grouping: add the speaker to the group or remove from the group
+            if target_speaker in speaker.group.members:
+                # Remove target speaker from group
+                target_speaker.unjoin()
+                print(f'Target speaker {target_uid} removed from speaker {speaker_uuid} group')
+                status.append({'status': 'success', 'message': f'Target speaker {target_uid} removed from speaker {speaker_uuid} group'})
+            else:
+                # Add target speaker to the group
+                target_speaker.join(speaker)                
+                print(f'Adding target speaker {target_speaker.player_name}:{target_uid} to speaker {speaker.player_name}:{speaker_uuid} group')
+                status.append({'status': 'success', 'message': f'Target speaker {target_uid} added to speaker {speaker_uuid} group'})
+                
+        
+        return JsonResponse({'status': 'success', 'message': status})
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
