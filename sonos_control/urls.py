@@ -8,4 +8,5 @@ urlpatterns = [
     path('toggle_group/', views.toggle_group, name='toggle_group'),
     path('adjust-volume/', views.adjust_volume, name='adjust_volume'),
     path('toggle-play-pause/', views.toggle_play_pause, name='toggle_play_pause'),
+    path('play-track/', views.play_track, name='play_track'),
 ]

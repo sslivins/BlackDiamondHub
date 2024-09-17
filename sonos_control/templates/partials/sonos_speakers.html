@@ -31,21 +31,22 @@
       </div>
   
       <div class="queue-container">
-          <h3>Queue:</h3>
-          <ul class="queue-list">
-              {% for track in info.queue %}
-              <li class="queue-item">
-                  <img src="{{ track.album_art }}" alt="Album Art" class="queue-album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
-                  <div class="queue-info">
-                      <p class="queue-track-title">{{ track.title }}</p>
-                      <p class="queue-track-artist">{{ track.artist }}</p>
-                  </div>
-              </li>
-              {% empty %}
-              <li>No tracks in the queue</li>
-              {% endfor %}
-          </ul>
-      </div>
+        <h3>Queue:</h3>
+        <ul class="queue-list">
+            {% for track in info.queue %}
+            <li class="queue-item" onclick="playTrack('{{ info.uid }}', {{ forloop.counter0 }})">
+                <img src="{{ track.album_art }}" alt="Album Art" class="queue-album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                <div class="queue-info">
+                    <p class="queue-track-title">{{ track.title }}</p>
+                    <p class="queue-track-artist">{{ track.artist }}</p>
+                </div>
+            </li>
+            {% empty %}
+            <li>No tracks in the queue</li>
+            {% endfor %}
+        </ul>
+    </div>
+
   </div>
   
   <!-- Modal for grouping speakers -->

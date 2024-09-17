@@ -140,6 +140,33 @@ def toggle_play_pause(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
+def play_track(request):
+    if request.method == 'POST':
+        speaker_uid = request.POST.get('speaker_name')  # Get the speaker UID from the form data
+        track_index = request.POST.get('track_index')  # Get the track index from the form data
+
+        if not speaker_uid or track_index is None:
+            return JsonResponse({'status': 'error', 'message': 'Invalid parameters'}, status=400)
+
+        # Discover Sonos speakers
+        speakers = soco.discover()
+        if not speakers:
+            return JsonResponse({'status': 'error', 'message': 'No Sonos speakers found'}, status=404)
+
+        # Find the speaker by its UID
+        speaker = next((s for s in speakers if s.uid == speaker_uid), None)
+        if not speaker:
+            return JsonResponse({'status': 'error', 'message': f'Speaker {speaker_uid} not found'}, status=404)
+
+        try:
+            # Play the selected track from the queue
+            speaker.play_from_queue(int(track_index))
+            return JsonResponse({'status': 'success', 'message': f'Playing track {track_index} on {speaker_uid}'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Failed to play track: {str(e)}'}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
 def get_sonos_speaker_info():
     speakers_info = []
     speakers = soco.discover()

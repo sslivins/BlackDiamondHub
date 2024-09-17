@@ -372,6 +372,33 @@
       });
   }
 
+  function playTrack(speakerName, trackIndex) {
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+    const formData = new FormData();
+    formData.append('speaker_name', speakerName);
+    formData.append('track_index', trackIndex);
+    formData.append('action', 'play_track');
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch('play-track/', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log(`Track ${trackIndex} is now playing on ${speakerName}`);
+        } else {
+            console.error('Failed to play the track:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+
   // Adjust Volume
   function adjustVolume(speakerName, volume) {
       const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
