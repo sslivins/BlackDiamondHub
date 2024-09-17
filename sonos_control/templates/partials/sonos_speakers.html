@@ -1,0 +1,98 @@
+{% load static %}
+{% for info in speaker_info %}
+{% if info.is_coordinator %}
+  <div class="speaker" id="speaker-{{ info.uid }}">
+      <h2>{{ info.group_label }}</h2>
+  
+      <div class="album-art-container">
+          <img src="{{ info.album_art }}" alt="Album Art" class="album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+          <button class="play-pause-button" id="play-pause-button-{{ info.uid }}"
+                  onclick="togglePlayPause('{{ info.uid }}', '{{ info.play_state }}')">
+              {% if info.play_state == 'PLAYING' %}
+                  &#10074;&#10074;
+              {% else %}
+                  &#9654;
+              {% endif %}
+          </button>
+      </div>
+  
+      <div class="track-info">
+          <p><strong>Track:</strong> {{ info.track }}</p>
+          <p><strong>Artist:</strong> {{ info.artist }}</p>
+          <p><strong>Album:</strong> {{ info.album }}</p>
+      </div>
+
+      <button onclick="openModal('{{ info.uid }}')" class="group-btn">Group</button>      
+  
+      <div class="volume-control">
+          <input type="range" name="volume" min="0" max="100" value="{{ info.volume }}"
+              oninput="adjustVolume('{{ info.uid }}', this.value)" id="volume-slider-{{ info.uid }}">
+          <output id="volume-output-{{ info.uid }}" class="output">{{ info.volume }}</output>
+      </div>
+  
+      <div class="queue-container">
+          <h3>Queue:</h3>
+          <ul class="queue-list">
+              {% for track in info.queue %}
+              <li class="queue-item">
+                  <img src="{{ track.album_art }}" alt="Album Art" class="queue-album-art" onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                  <div class="queue-info">
+                      <p class="queue-track-title">{{ track.title }}</p>
+                      <p class="queue-track-artist">{{ track.artist }}</p>
+                  </div>
+              </li>
+              {% empty %}
+              <li>No tracks in the queue</li>
+              {% endfor %}
+          </ul>
+      </div>
+  </div>
+  
+  <!-- Modal for grouping speakers -->
+  <div id="groupModal-{{ info.uid }}" class="modal">
+      <div class="modal-content">
+          <span class="close" onclick="closeModal('{{ info.uid }}')">&times;</span>
+          <h2>Group Speakers for {{ info.group_label }}</h2>
+  
+          <!-- List currently grouped speakers -->
+          {% for grouped_speaker in info.group %}
+          <div class="switch-container">
+              {% if grouped_speaker.player_name != info.name %}
+                  <label class="switch">
+                      <input type="checkbox" id="group-checkbox-{{ grouped_speaker.uid }}" checked 
+                          onclick="onCheckboxChange('{{ info.uid }}')"
+                          data-original-state="checked"
+                          data-speaker-name="{{ grouped_speaker.uid }}">
+                   <span class="slider round"></span>
+                  </label>
+                  <label for="group-checkbox-{{ grouped_speaker.uid }}">{{ grouped_speaker.player_name }}</label>
+              {% endif %}
+          </div>
+          {% endfor %}
+
+          <!-- List other available speakers that are not part of the group -->
+          {% for ungrouped_speaker in info.ungrouped %}
+          <div class="switch-container">
+              <label class="switch">
+                  <input type="checkbox" id="group-checkbox-{{ ungrouped_speaker.uid }}" 
+                      onclick="onCheckboxChange('{{ info.uid }}')"
+                      data-original-state="unchecked"
+                      data-speaker-name="{{ ungrouped_speaker.uid }}">
+               <span class="slider round"></span>
+              </label>
+              <label for="group-checkbox-{{ ungrouped_speaker.uid }}">{{ ungrouped_speaker.player_name }}</label>
+          </div>
+          {% endfor %}
+          
+          <!-- If there are no ungrouped speakers, display a message -->
+          {% if info.ungrouped|length == 0 %}
+              <p>All available speakers are already grouped</p>
+          {% endif %}
+  
+          <!-- Apply button -->
+          <button id="apply-button-{{ info.uid }}" onclick="applyGroupChanges('{{ info.uid }}')" disabled>Apply</button>
+      </div>
+  </div>
+          
+{% endif %}
+{% endfor %}
