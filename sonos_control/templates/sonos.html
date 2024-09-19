@@ -60,7 +60,7 @@
           width: 100%;
       }
 
-      .album-art {
+      .album-art-img {
           width: 100%;
           border-radius: 10px;
       }
@@ -80,36 +80,52 @@
           cursor: pointer;
       }
 
-      .volume-control {
-          margin-top: 20px;
-          width: 100%;
-      }
+      /* Volume control styling */
 
-      input[type=range] {
-          width: 100%;
-          height: 40px;
+      /* Flexbox to align slider and buttons */
+      .volume-control {
+          display: flex;
+          align-items: center;
+      }
+      
+      /* Styling for buttons */
+      .volume-control .btn {
+          background-color: transparent;
+          border: none;
+          color: #007bff; /* You can change this color */
+          font-size: 24px;
+          cursor: pointer;
+      }
+      
+      .volume-control .btn:hover {
+          color: #0056b3;
+      }
+      
+      /* Slider styling */
+      .volume-control input[type="range"].custom-range {
           -webkit-appearance: none;
+          appearance: none;
+          width: 100%;
+          height: 15px;
           background: #ddd;
           border-radius: 10px;
           outline: none;
+          opacity: 0.7;
+          transition: opacity .15s ease-in-out;
       }
-
-      input[type=range]::-webkit-slider-thumb {
+      
+      /* Slider thumb (handle) */
+      input[type="range"].custom-range::-webkit-slider-thumb {
           -webkit-appearance: none;
-          width: 40px;
-          height: 40px;
-          background-color: #007bff;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          background: #007bff;
           border-radius: 50%;
           cursor: pointer;
       }
 
-      input[type=range]::-moz-range-thumb {
-          width: 40px;
-          height: 40px;
-          background-color: #007bff;
-          border-radius: 50%;
-          cursor: pointer;
-      }
+        /* Group styling */
 
       .output {
           margin-left: 15px;
@@ -424,8 +440,35 @@
 }
 
 
+   // Decrease volume function
+    function decreaseVolume(sliderId) {
+        const slider = document.getElementById('volume-slider-' + sliderId);
+        let currentVolume = parseInt(slider.value);
+        let newVolume = Math.max(currentVolume - 10, 0); // Decrease by 10, but don't go below 0
+        slider.value = newVolume;
+        return newVolume;
+    }
+
+    // Increase volume function
+    function increaseVolume(sliderId) {
+        const slider = document.getElementById('volume-slider-' + sliderId);
+        let currentVolume = parseInt(slider.value);
+        let newVolume = Math.min(currentVolume + 10, 100); // Increase by 10, but don't go above 100
+        slider.value = newVolume;
+        return newVolume;
+    }
+
+    {% comment %} // Adjust volume function (you already have this in your code)
+    function adjustVolume(sliderId, volume) {
+        console.log('Adjusting volume to:', volume); // Replace with actual functionality
+    } {% endcomment %}
+
+
   // Adjust Volume
   function adjustVolume(speakerName, volume) {
+
+      console.log(`Adjusting volume for ${speakerName} to: ${volume}`);
+
       const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
 
       const formData = new FormData();
@@ -444,7 +487,6 @@
               const slider = document.getElementById(`volume-slider-${speakerName}`);
               const output = document.getElementById(`volume-output-${speakerName}`);
               slider.value = volume;
-              output.innerText = volume;
           } else {
               console.error('Failed to update volume');
           }
@@ -531,8 +573,6 @@
 
     // Function to apply group changes when the 'Apply' button is clicked
     function applyGroupChanges(speakerUUID) {
-        console.log(`Applying group changes for speaker: ${speakerUUID}`);
-
         const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
         const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
         const formData = new FormData();
@@ -620,22 +660,6 @@
     };
 
     function updateSpeakerData(speakerData) {
-        // Get the ID of the active tab
-//        const activeTabLink = document.querySelector('#speaker-tabs .nav-link.active');
-//        const activeTabContent = document.querySelector('#speaker-tabContent .tab-pane.active');
-
-//        if (activeTabLink && activeTabContent) {
-//            const activeSpeakerId = activeTabLink.getAttribute('data-speaker-uid');
-//            const data = speakerData[activeSpeakerId];
-//            if (data) {
-                // Update the content of the active tab
-//                updateSpeakerContent(activeSpeakerId, data);
-//            } else {
-//                console.error('Active speaker data not found.');
-//            }
-//        }
-        console.log("test")
-
         for (const speakerId in speakerData) {
             const data = speakerData[speakerId];
             updateSpeakerContent(speakerId, data);
@@ -644,8 +668,6 @@
     }
 
     function updateSpeakerContent(speakerId, data) {
-
-        console.log(`Updating speaker content for ${speakerId}: ${data}`);
         // Update track info
         document.querySelector(`#speaker-content-${speakerId} .card-title`).innerText = data.track;
         document.querySelector(`#speaker-content-${speakerId} .track-artist`).innerText = data.artist;
@@ -669,7 +691,6 @@
         const volumeSlider = document.getElementById(`volume-slider-${speakerId}`);
         const volumeOutput = document.getElementById(`volume-output-${speakerId}`);
         volumeSlider.value = data.volume;
-        volumeOutput.innerText = data.volume;
 
         // Update queue
         const queueList = document.querySelector(`#speaker-content-${speakerId} .queue-list`);
