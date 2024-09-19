@@ -660,6 +660,8 @@
     };
 
     function updateSpeakerData(speakerData) {
+        console.log('Got Speaker Update');
+
         for (const speakerId in speakerData) {
             const data = speakerData[speakerId];
             updateSpeakerContent(speakerId, data);
