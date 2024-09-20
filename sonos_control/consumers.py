@@ -2,7 +2,7 @@
 
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from .views import get_sonos_speaker_info
+from .views import get_sonos_speaker_info, adjust_speaker_volume
 import asyncio
 
 class SonosConsumer(AsyncWebsocketConsumer):
@@ -38,8 +38,29 @@ class SonosConsumer(AsyncWebsocketConsumer):
                 pass
 
     async def receive(self, text_data):
-        # You can handle messages from the client here if needed
-        pass
+        # Parse the incoming WebSocket message (which is a JSON string)
+        data = json.loads(text_data)
+        
+        # Extract the relevant fields from the data
+        speaker_name = data.get('speaker_name')
+        volume = data.get('volume')
+        action = data.get('action')
+        
+        if action == 'volume':
+            # Call the shared function to adjust the volume
+            result = adjust_speaker_volume(speaker_name, volume)
+
+            # Send the result back to the WebSocket client
+            await self.send(text_data=json.dumps({
+                'status': result['status'],
+                'message': result.get('message'),
+                'volume': result.get('volume')
+            }))
+        else:
+            await self.send(text_data=json.dumps({
+                'status': 'error',
+                'message': 'Unknown action'
+            }))
 
     async def send_speaker_updates(self):
         while True:
@@ -72,3 +93,15 @@ class SonosConsumer(AsyncWebsocketConsumer):
 
             # Wait for 5 seconds before checking again
             await asyncio.sleep(3)
+            
+    async def adjust_speaker_volume(self, speaker_name, volume):
+        # This function should contain the logic to adjust the speaker's volume
+        # using your existing Sonos integration or other systems.
+        
+        # Placeholder logic: Just print for now
+        print(f"Adjusting {speaker_name}'s volume to {volume}")
+        
+        # Here you'd add the actual volume adjustment logic, for example:
+        # speaker = get_speaker_by_name(speaker_name)
+        # speaker.set_volume(volume)
+        # Adjust this according to your Sonos control logic            

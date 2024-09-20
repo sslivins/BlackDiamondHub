@@ -85,27 +85,44 @@ def adjust_volume(request):
         speaker_uid = request.POST.get('speaker_name')  # Get the speaker UID from the form data
         volume = request.POST.get('volume')  # Get the volume from the form data
 
-        if not speaker_uid or not volume:
-            return JsonResponse({'status': 'error', 'message': 'Invalid parameters'}, status=400)
+        # Call the shared function to adjust the volume
+        result = adjust_speaker_volume(speaker_uid, volume)
 
-        # Discover Sonos speakers
-        speakers = soco.discover()
-        if not speakers:
-            return JsonResponse({'status': 'error', 'message': 'No Sonos speakers found'}, status=404)
-
-        # Find the speaker by its UID
-        speaker = next((s for s in speakers if s.uid == speaker_uid), None)
-        if not speaker:
-            return JsonResponse({'status': 'error', 'message': f'Speaker {speaker_uid} not found'}, status=404)
-
-        try:
-            # Adjust the speaker's volume
-            speaker.volume = int(volume)
-            return JsonResponse({'status': 'success', 'volume': speaker.volume})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Failed to adjust volume: {str(e)}'}, status=500)
+        # Return the result as a JsonResponse
+        return JsonResponse({
+            'status': result['status'],
+            'message': result.get('message'),
+            'volume': result.get('volume')
+        }, status=result['status_code'])
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+def adjust_speaker_volume(speaker_uid, volume):
+    """
+    Adjusts the volume for a specific speaker by its UID.
+    Returns a dictionary with the status and message.
+    """
+    if not speaker_uid or not volume:
+        return {'status': 'error', 'message': 'Invalid parameters', 'status_code': 400}
+
+    # Discover Sonos speakers
+    speakers = soco.discover()
+    if not speakers:
+        return {'status': 'error', 'message': 'No Sonos speakers found', 'status_code': 404}
+
+    # Find the speaker by its UID
+    speaker = next((s for s in speakers if s.uid == speaker_uid), None)
+    if not speaker:
+        return {'status': 'error', 'message': f'Speaker {speaker_uid} not found', 'status_code': 404}
+
+    try:
+        # Adjust the speaker's volume
+        speaker.volume = int(volume)
+        return {'status': 'success', 'volume': speaker.volume, 'status_code': 200}
+    except Exception as e:
+        return {'status': 'error', 'message': f'Failed to adjust volume: {str(e)}', 'status_code': 500}
+
 
 def toggle_play_pause(request):
     if request.method == 'POST':

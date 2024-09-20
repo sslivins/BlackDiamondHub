@@ -1,12 +1,9 @@
 {% extends 'base.html' %}
-
 {% load static %}
-
 {% block title %}Sonos Control{% endblock %}
-
 {% block content %}
-<head>
-  <style>
+    <head>
+        <style>
       body {
           font-family: Arial, sans-serif;
           background-color: #000000; /* Black background for the entire page */
@@ -276,62 +273,64 @@
         z-index: 1050; /* Ensure the modal appears on top */
     }      
    
-  </style>
-</head>
-<body>
-    <h1>Control Sonos Speakers</h1>
+        </style>
+    </head>
+    <body>
+        <h1>Control Sonos Speakers</h1>
+        {% include 'partials/sonos_speakers.html' %}
+    </body>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        initWebSocket(); // Initialize WebSocket after DOM is ready
+    });
 
-    {% include 'partials/sonos_speakers.html' %}
-</body>
-  
+    // Establish a WebSocket connection
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    let socket = null;
+    {% comment %} const socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/sonos_updates/');
 
-<script>
-    let isModalOpen = false; // Flag to track if any modal is open
+    socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.type === 'speaker_update') {
+            const speakerData = data.speaker_data;
 
-    // Variable to store the ID of the active tab
-    let activeTabId = null;
-
-    {% comment %} function fetchSonosStatus() {
-        if (!isModalOpen) {
-            // Get the ID of the active tab before updating
-            const activeTab = document.querySelector('#speaker-tabs .nav-link.active');
-            if (activeTab) {
-                activeTabId = activeTab.id;
-            }
-
-            fetch('get_sonos_status_partial/')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const speakerContainer = document.getElementById('speaker-container');
-                        speakerContainer.innerHTML = data.html;
-
-                        // After updating the content, re-activate the tab
-                        if (activeTabId) {
-                            const newActiveTab = document.getElementById(activeTabId);
-                            if (newActiveTab) {
-                                // Activate the tab using Bootstrap's tab method
-                                $(newActiveTab).tab('show');
-                            } else {
-                                // If the tab is not found, activate the first tab
-                                $('#speaker-tabs .nav-link:first').tab('show');
-                            }
-                        } else {
-                            // If no activeTabId, activate the first tab
-                            $('#speaker-tabs .nav-link:first').tab('show');
-                        }
-                    } else {
-                        console.error('Error fetching Sonos status:', data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching Sonos status:', error);
-                });
+            // Update the DOM with the new data
+            updateSpeakerData(speakerData);
         }
-    }
+    };
 
+    socket.onopen = function(event) {
+        console.log('WebSocket connection established');
+    };
 
-    //setInterval(fetchSonosStatus, 5000); {% endcomment %}
+    socket.onclose = function(event) {
+        console.log('WebSocket connection closed');
+}; {% endcomment %}
+    function initWebSocket() {
+        if (!socket || socket.readyState === WebSocket.CLOSED) {
+          socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/sonos_updates/');
+      
+          socket.onopen = function () {
+            console.log('WebSocket connection opened');
+          };
+      
+          socket.onclose = function () {
+            console.log('WebSocket connection closed');
+          };
+      
+          socket.onerror = function (error) {
+            console.error('WebSocket Error:', error);
+          };
+      
+          socket.onmessage = function (message) {
+            const data = JSON.parse(message.data);
+            if (data.type === 'speaker_update') {
+                const speakerData = data.speaker_data;
+                updateSpeakerData(speakerData);
+            }            
+          };
+        }
+      }        
 
   // Toggle Play/Pause
   function togglePlayPause(speakerName, currentState) {
@@ -413,8 +412,8 @@
     }
 
 
-  // Adjust Volume
-  function adjustVolume(speakerName, volume) {
+    // Adjust Volume
+    function adjustVolume(speakerName, volume) {
 
       console.log(`Adjusting volume for ${speakerName} to: ${volume}`);
 
@@ -443,13 +442,39 @@
       .catch(error => {
           console.error('Error:', error);
       });
-  }
+    }
 
-    // Function to open modal and blur the speaker tile
+    function adjustVolumeWS(speakerName, volume) {
+        console.log(`Adjusting volume for ${speakerName} to: ${volume}`);
+      
+        // Ensure WebSocket is open
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          console.error('WebSocket connection is not open');
+          return;
+        }
+      
+        // Create a JSON object to send through WebSocket
+        const volumeData = {
+          speaker_name: speakerName,
+          volume: volume,
+          action: 'volume' // Specify action type
+        };
+      
+        // Send volume data as a JSON string
+        socket.send(JSON.stringify(volumeData));
+      
+        // Update the UI with the new volume value locally
+        //const slider = document.getElementById(`volume-slider-${speakerName}`);
+        //const output = document.getElementById(`volume-output-${speakerName}`);
+        //slider.value = volume;
+      
+        console.log(`Volume data sent over WebSocket for ${speakerName}`);
+      }    
+
     // Function to open modal and blur the speaker tile
     function openModal(speakerUUID) {
         console.log(`Opening modal for speaker: ${speakerUUID}`);
-        
+
         // Get the speaker tile and modal
         const tile = document.getElementById(`speaker-content-${speakerUUID}`);
         const modalElement = document.getElementById(`groupModal-${speakerUUID}`);
@@ -460,17 +485,16 @@
 
             // Show the modal to make it visible (we need this to calculate its dimensions)
             modal.show();
-           
 
             // Store the original state of each checkbox when the modal is opened
             const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
             checkboxes.forEach(checkbox => {
-                checkbox.setAttribute('data-original-state', checkbox.checked ? 'checked' : 'unchecked');
+            checkbox.setAttribute('data-original-state', checkbox.checked ? 'checked' : 'unchecked');
             });
 
             // Add blur effect to the tile
             tile.classList.add('blur-background');
-          
+
         } else {
             console.error(`Could not find the tile or modal for speaker: ${speakerUUID}`);
         }
@@ -566,27 +590,7 @@
         }
     }
 
-    // Establish a WebSocket connection
-    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/sonos_updates/');
 
-    socket.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data.type === 'speaker_update') {
-            const speakerData = data.speaker_data;
-
-            // Update the DOM with the new data
-            updateSpeakerData(speakerData);
-        }
-    };
-
-    socket.onopen = function(event) {
-        console.log('WebSocket connection established');
-    };
-
-    socket.onclose = function(event) {
-        console.log('WebSocket connection closed');
-    };
 
     function updateSpeakerData(speakerData) {
         console.log('Got Speaker Update');
@@ -650,5 +654,5 @@
         }
     }    
 
-</script>
+    </script>
 {% endblock %}
