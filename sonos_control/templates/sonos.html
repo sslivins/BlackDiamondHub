@@ -289,6 +289,7 @@
     let socket = null;
 
     function initWebSocket() {
+
         if (!socket || socket.readyState === WebSocket.CLOSED) {
           socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/sonos_updates/');
       
@@ -304,75 +305,97 @@
             console.error('WebSocket Error:', error);
           };
       
-          socket.onmessage = function (message) {
-            const data = JSON.parse(message.data);
-            if (data.type === 'speaker_update') {
+          socket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+
+            if(data.type === 'response') {
+                if (data.action === 'volume') {
+                    console.log('Volume update response:', data);
+                } else if (data.action === 'play') {
+                    play_pause_response(event);
+                }
+                else if (data.action === 'pause') 
+                {
+                    play_pause_response(event);
+                } 
+                else if (data.action === 'play_track') {
+                    console.log('Play track response:', data);
+                } 
+                else {
+                    console.warn('Unhandled WebSocket response:', data);
+                }
+            } 
+            else if (data.type === 'speaker_update') {
                 const speakerData = data.speaker_data;
                 updateSpeakerData(speakerData);
-            }            
-          };
+            } else {
+                console.warn('Unhandled WebSocket message:', data);
+            }
+        };          
+
         }
       }        
 
-  // Toggle Play/Pause
-  function togglePlayPause(speakerName, currentState) {
-      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-      let action = (currentState === 'PLAYING') ? 'pause' : 'play';
-
-      const formData = new FormData();
-      formData.append('speaker_name', speakerName);
-      formData.append('action', action);
-      formData.append('csrfmiddlewaretoken', csrfToken);
-
-      fetch('toggle-play-pause/', {
-          method: 'POST',
-          body: formData,
-      })
-      .then(response => response.json())
-      .then(data => {
-          if (data.status === 'success') {
-              const button = document.getElementById(`play-pause-button-${speakerName}`);
-              if (action === 'play') {
-                  button.innerHTML = '&#10074;&#10074;';
-                  button.setAttribute('onclick', `togglePlayPause('${speakerName}', 'PLAYING')`);
-              } else {
-                  button.innerHTML = '&#9654;';
-                  button.setAttribute('onclick', `togglePlayPause('${speakerName}', 'STOPPED')`);
-              }
-          } else {
-              console.error('Failed to toggle play/pause state');
-          }
-      })
-      .catch(error => {
-          console.error('Error:', error);
-      });
-  }
-
-  function playTrack(speakerName, trackIndex) {
-    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-
-    const formData = new FormData();
-    formData.append('speaker_name', speakerName);
-    formData.append('track_index', trackIndex);
-    formData.append('action', 'play_track');
-    formData.append('csrfmiddlewaretoken', csrfToken);
-
-    fetch('play-track/', {
-        method: 'POST',
-        body: formData,
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            console.log(`Track ${trackIndex} is now playing on ${speakerName}`);
-        } else {
-            console.error('Failed to play the track:', data.message);
+      function togglePlayPause(speakerUid, currentState) {
+        // Determine whether to play or pause based on the current state
+        let action = (currentState === 'PLAYING') ? 'pause' : 'play';
+    
+        // Ensure WebSocket connection is open
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket connection is not open');
+            return;
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-}
+    
+        // Create a data object for WebSocket
+        const playPauseData = {
+            speaker_uid: speakerUid,
+            action: action
+        };
+    
+        // Send the data as a JSON string over WebSocket
+        socket.send(JSON.stringify(playPauseData));
+    
+        console.log(`Requested to ${action} the speaker ${speakerUid}`);
+    }
+
+    // You can handle the WebSocket response in the 'onmessage' handler
+    // Update the UI based on WebSocket response
+    function play_pause_response (response) {
+        const data = JSON.parse(response.data);
+        if (data.status === 'success') {
+            console.log(`${data.action} action successful for ${data.speaker_uid}`);
+            const button = document.getElementById(`play-pause-button-${data.speaker_uid}`);
+            if (data.action === 'play') {
+                button.innerHTML = '&#10074;&#10074;'; // Pause icon
+                button.setAttribute('onclick', `togglePlayPause('${data.speaker_uid}', 'PLAYING')`);
+            } else {
+                button.innerHTML = '&#9654;'; // Play icon
+                button.setAttribute('onclick', `togglePlayPause('${data.speaker_uid}', 'STOPPED')`);
+            }
+        } else {
+            console.error('Failed to toggle play/pause state:', data.message);
+        }
+    };    
+    
+    function playTrack(speakerUid, trackIndex) {
+        // Check if the WebSocket connection is open
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket connection is not open');
+            return;
+        }
+    
+        // Create the data object for WebSocket
+        const playTrackData = {
+            speaker_uid: speakerUid,
+            track_index: trackIndex,
+            action: 'play_track' // Specify action type
+        };
+    
+        // Send the data as a JSON string over the WebSocket connection
+        socket.send(JSON.stringify(playTrackData));
+    
+        console.log(`Requested to play track ${trackIndex} on ${speakerUid}`);
+    }    
 
 
    // Decrease volume function
@@ -393,41 +416,8 @@
         return newVolume;
     }
 
-
-    // Adjust Volume
-    function adjustVolume(speakerName, volume) {
-
-      console.log(`Adjusting volume for ${speakerName} to: ${volume}`);
-
-      const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-
-      const formData = new FormData();
-      formData.append('speaker_name', speakerName);
-      formData.append('volume', volume);
-      formData.append('action', 'volume');
-      formData.append('csrfmiddlewaretoken', csrfToken);
-
-      fetch('adjust-volume/', {
-          method: 'POST',
-          body: formData,
-      })
-      .then(response => response.json())
-      .then(data => {
-          if (data.status === 'success') {
-              const slider = document.getElementById(`volume-slider-${speakerName}`);
-              const output = document.getElementById(`volume-output-${speakerName}`);
-              slider.value = volume;
-          } else {
-              console.error('Failed to update volume');
-          }
-      })
-      .catch(error => {
-          console.error('Error:', error);
-      });
-    }
-
-    function adjustVolumeWS(speakerName, volume) {
-        console.log(`Adjusting volume for ${speakerName} to: ${volume}`);
+    function adjustVolume(speakerUid, volume) {
+        console.log(`Adjusting volume for ${speakerUid} to: ${volume}`);
       
         // Ensure WebSocket is open
         if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -437,7 +427,7 @@
       
         // Create a JSON object to send through WebSocket
         const volumeData = {
-          speaker_name: speakerName,
+          speaker_uid: speakerUid,
           volume: volume,
           action: 'volume' // Specify action type
         };
@@ -445,12 +435,7 @@
         // Send volume data as a JSON string
         socket.send(JSON.stringify(volumeData));
       
-        // Update the UI with the new volume value locally
-        //const slider = document.getElementById(`volume-slider-${speakerName}`);
-        //const output = document.getElementById(`volume-output-${speakerName}`);
-        //slider.value = volume;
-      
-        console.log(`Volume data sent over WebSocket for ${speakerName}`);
+        console.log(`Volume data sent over WebSocket for ${speakerUid}`);
     }
 
     // Function to open modal and blur the speaker tile
@@ -571,8 +556,6 @@
             tile.classList.remove('blur-background');
         }
     }
-
-
 
     function updateSpeakerData(speakerData) {
         console.log('Got Speaker Update');

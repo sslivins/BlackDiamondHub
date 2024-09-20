@@ -2,7 +2,7 @@
 
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from .views import get_sonos_speaker_info, adjust_speaker_volume
+from .views import get_sonos_speaker_info, adjust_speaker_volume, speaker_play_pause
 import asyncio
 
 class SonosConsumer(AsyncWebsocketConsumer):
@@ -42,24 +42,71 @@ class SonosConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         
         # Extract the relevant fields from the data
-        speaker_name = data.get('speaker_name')
-        volume = data.get('volume')
         action = data.get('action')
         
         if action == 'volume':
+            speaker_uid = data.get('speaker_uid')
+            volume = data.get('volume')            
             # Call the shared function to adjust the volume
-            result = adjust_speaker_volume(speaker_name, volume)
+            result = adjust_speaker_volume(speaker_uid, volume)
 
             # Send the result back to the WebSocket client
             await self.send(text_data=json.dumps({
                 'status': result['status'],
                 'message': result.get('message'),
-                'volume': result.get('volume')
+                'action': 'volume',
+                'type': 'response'
+            }))
+        elif action == 'play_track':
+            speaker_uid = data.get('speaker_uid')
+            track_index = data.get('track_index')            
+            # Call your logic to play the track on the speaker
+            result = speaker_play_pause(speaker_uid, "play_track", track_index)
+
+            # Send back a response to the client
+            await self.send(text_data=json.dumps({
+                'status': result['status'],
+                'message': result['message'],
+                'speaker_uid': speaker_uid,
+                'action': 'play_track',
+                'type': 'response'
+            }))
+        elif action == 'pause':
+            print("Pause action received")
+            speaker_uid = data.get('speaker_uid')
+            # Call your logic to pause the speaker
+            result = speaker_play_pause(speaker_uid, "pause")
+
+            # Send back a response to the client
+            await self.send(text_data=json.dumps({
+                'status': result['status'],
+                'message': result['message'],
+                'speaker_uid': speaker_uid,
+                'action': 'pause',
+                'type': 'response'
+            }))
+        elif action == 'play':
+            print("Play action received")
+            speaker_uid = data.get('speaker_uid')
+            # Call your logic to play the speaker
+            result = speaker_play_pause(speaker_uid, "play")
+            
+            if result['status'] != 'success':
+                print(f"Error: {result['message']}")
+                # Send back a response to the client
+            
+            await self.send(text_data=json.dumps({
+                'status': result['status'],
+                'message': result['message'],
+                'speaker_uid': speaker_uid,
+                'action': 'play',
+                'type': 'response'
             }))
         else:
             await self.send(text_data=json.dumps({
                 'status': 'error',
-                'message': 'Unknown action'
+                'message': 'Unknown action',
+                'type': 'response'
             }))
 
     async def send_speaker_updates(self):

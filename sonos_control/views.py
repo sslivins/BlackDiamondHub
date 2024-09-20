@@ -124,38 +124,57 @@ def adjust_speaker_volume(speaker_uid, volume):
         return {'status': 'error', 'message': f'Failed to adjust volume: {str(e)}', 'status_code': 500}
 
 
+def speaker_play_pause(speaker_uid, action, track_index=None):
+    """
+    Handles toggling play/pause for a speaker by UID.
+    Returns a dictionary with the status and message.
+    """
+    if not speaker_uid or not action:
+        return {'status': 'error', 'message': 'Invalid parameters', 'status_code': 400}
+
+    # Discover Sonos speakers
+    speakers = soco.discover()
+    if not speakers:
+        return {'status': 'error', 'message': 'No Sonos speakers found', 'status_code': 404}
+
+    # Find the speaker by its UID
+    speaker = next((s for s in speakers if s.uid == speaker_uid), None)
+    if not speaker:
+        return {'status': 'error', 'message': f'Speaker {speaker_uid} not found', 'status_code': 404}
+
+    try:
+        # Perform play or pause based on the action
+        if action == 'play':
+            speaker.play()
+        elif action == 'pause':
+            speaker.pause()
+        elif action == 'play_track':
+            speaker.play_from_queue(int(track_index))
+        else:
+            return {'status': 'error', 'message': 'Invalid action', 'status_code': 400}
+
+        return {'status': 'success', 'message': f'The Operation Completed Successfully', 'action': action, 'status_code': 200}
+    except Exception as e:
+        return {'status': 'error', 'message': f'Failed to toggle play/pause: {str(e)}', 'status_code': 500}
+
+
 def toggle_play_pause(request):
     if request.method == 'POST':
         speaker_uid = request.POST.get('speaker_name')  # Get the speaker UID from the form data
         action = request.POST.get('action')  # Get the action (play or pause) from the form data
 
-        if not speaker_uid or not action:
-            return JsonResponse({'status': 'error', 'message': 'Invalid parameters'}, status=400)
+        # Call the shared function to handle play/pause
+        result = speaker_play_pause(speaker_uid, action)
 
-        # Discover Sonos speakers
-        speakers = soco.discover()
-        if not speakers:
-            return JsonResponse({'status': 'error', 'message': 'No Sonos speakers found'}, status=404)
+        # Return the result as a JsonResponse
+        return JsonResponse({
+            'status': result['status'],
+            'message': result.get('message'),
+            'action': result.get('action')
+        }, status=result['status_code'])
 
-        # Find the speaker by its UID
-        speaker = next((s for s in speakers if s.uid == speaker_uid), None)
-        if not speaker:
-            return JsonResponse({'status': 'error', 'message': f'Speaker {speaker_uid} not found'}, status=404)
-
-        try:
-            # Perform play or pause based on the action
-            if action == 'play':
-                speaker.play()
-            elif action == 'pause':
-                speaker.pause()
-            else:
-                return JsonResponse({'status': 'error', 'message': 'Invalid action'}, status=400)
-
-            return JsonResponse({'status': 'success', 'action': action})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Failed to toggle play/pause: {str(e)}'}, status=500)
-    
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
 
 def play_track(request):
     if request.method == 'POST':

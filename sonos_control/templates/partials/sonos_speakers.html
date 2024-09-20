@@ -60,7 +60,7 @@
                   <div class="col-md-9">
                     <!-- Volume Down Button -->
                     <button class="volume-btn volume-down"
-                            onclick="adjustVolumeWS('{{ info.uid }}', decreaseVolume('{{ info.uid }}'))">
+                            onclick="adjustVolume('{{ info.uid }}', decreaseVolume('{{ info.uid }}'))">
                       <i class="fas fa-volume-down"></i>
                     </button>
                     <!-- Volume Slider -->
@@ -70,10 +70,10 @@
                            max="100"
                            value="{{ info.volume }}"
                            id="volume-slider-{{ info.uid }}"
-                           onchange="adjustVolumeWS('{{ info.uid }}', this.value)">
+                           onchange="adjustVolume('{{ info.uid }}', this.value)">
                     <!-- Volume Up Button -->
                     <button class="volume-btn volume-up"
-                            onclick="adjustVolumeWS('{{ info.uid }}', increaseVolume('{{ info.uid }}'))">
+                            onclick="adjustVolume('{{ info.uid }}', increaseVolume('{{ info.uid }}'))">
                       <i class="fas fa-volume-up"></i>
                     </button>
                   </div>
