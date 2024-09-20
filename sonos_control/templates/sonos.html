@@ -23,7 +23,18 @@
       .speaker-tabs {
           color: #fff;
           border-radius: 10px;
-            background-color: #333;
+          background-color: #333;
+      }
+
+      .tab-content {
+          padding: 20px;
+          border-radius: 10px;
+          background-color: #fff;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          position: relative; /* Container for both tile and modal */
+          display: flex;
+          justify-content: center;
+          align-items: center;          
       }
 
 
@@ -99,30 +110,13 @@
           margin-top: 15px;
       }
 
-
-
       .group-btn:disabled {
           background-color: #aaa;
           cursor: not-allowed;
       }
 
-      .modal {
-        display: none;
-        position: absolute;
-        z-index: 1000;
-        pointer-events: none;
-        height: auto;
-        overflow: hidden;
-    }
-    
-    .modal-content {
-        background-color: #fff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-        pointer-events: all;
-    }
-    
+      /* modal styling */
+      
     .close {
         color: #aaa;
         position: absolute;
@@ -272,6 +266,15 @@
         text-overflow: ellipsis;       /* Show "..." for overflowed text */
       }
       
+      .tab-content .modal-dialog {
+        border-radius: 25px;
+        top: 100px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: auto;
+        z-index: 1050; /* Ensure the modal appears on top */
+    }      
    
   </style>
 </head>
@@ -288,7 +291,7 @@
     // Variable to store the ID of the active tab
     let activeTabId = null;
 
-    function fetchSonosStatus() {
+    {% comment %} function fetchSonosStatus() {
         if (!isModalOpen) {
             // Get the ID of the active tab before updating
             const activeTab = document.querySelector('#speaker-tabs .nav-link.active');
@@ -328,7 +331,7 @@
     }
 
 
-    //setInterval(fetchSonosStatus, 5000);
+    //setInterval(fetchSonosStatus, 5000); {% endcomment %}
 
   // Toggle Play/Pause
   function togglePlayPause(speakerName, currentState) {
@@ -409,11 +412,6 @@
         return newVolume;
     }
 
-    {% comment %} // Adjust volume function (you already have this in your code)
-    function adjustVolume(sliderId, volume) {
-        console.log('Adjusting volume to:', volume); // Replace with actual functionality
-    } {% endcomment %}
-
 
   // Adjust Volume
   function adjustVolume(speakerName, volume) {
@@ -448,54 +446,36 @@
   }
 
     // Function to open modal and blur the speaker tile
+    // Function to open modal and blur the speaker tile
     function openModal(speakerUUID) {
         console.log(`Opening modal for speaker: ${speakerUUID}`);
+        
         // Get the speaker tile and modal
-        const tile = document.getElementById(`speaker-${speakerUUID}`);
-        const modal = document.getElementById(`groupModal-${speakerUUID}`);
+        const tile = document.getElementById(`speaker-content-${speakerUUID}`);
+        const modalElement = document.getElementById(`groupModal-${speakerUUID}`);
+        const modal = new bootstrap.Modal(modalElement);
 
         // Check if both tile and modal exist
-        if (tile && modal) {
-            // Get the tile's position and size on the page
-            const tileRect = tile.getBoundingClientRect();
+        if (tile && modalElement) {
 
-            // Show modal to calculate its dimensions
-            modal.style.display = 'block';
-            modal.style.position = 'absolute';
+            // Show the modal to make it visible (we need this to calculate its dimensions)
+            modal.show();
+           
 
             // Store the original state of each checkbox when the modal is opened
             const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
             checkboxes.forEach(checkbox => {
                 checkbox.setAttribute('data-original-state', checkbox.checked ? 'checked' : 'unchecked');
-            });            
-
-            // Set the modal width to match the tile width (minus some margin)
-            const margin = 20; // Total margin on both sides (10px on each side)
-            const modalWidth = tileRect.width - margin;
-            modal.style.width = `${modalWidth}px`; // Apply the width to the modal
-
-            // Get the modal dimensions after making it visible
-            const modalRect = modal.getBoundingClientRect();
-
-            // Calculate the offset to center the modal within the tile
-            console.log('tile height:', tileRect.height, 'window height:', window.innerHeight);
-            //get min height of tile and window
-            const min_height = Math.min(tileRect.height, window.innerHeight);
-            const topOffset = (min_height - modalRect.height) / 2;
-            const leftOffset = margin / 2; // Center the modal with respect to the margin
-
-            // Position the modal inside the tile
-            modal.style.top = `${tileRect.top + window.scrollY + topOffset}px`; // Add scroll offset for top
-            modal.style.left = `${tileRect.left + window.scrollX + leftOffset}px`; // Add scroll offset for left
+            });
 
             // Add blur effect to the tile
             tile.classList.add('blur-background');
-
-            isModalOpen = true; // Block polling while modal is open            
+          
         } else {
             console.error(`Could not find the tile or modal for speaker: ${speakerUUID}`);
         }
     }
+
 
     // Function to track changes in the checkboxes
     function onCheckboxChange(speakerUUID) {
@@ -565,8 +545,9 @@
     }
 
     function closeModal(speakerUUID) {
+
         const modal = document.getElementById(`groupModal-${speakerUUID}`);
-        const tile = document.getElementById(`speaker-${speakerUUID}`);
+        const tile = document.getElementById(`speaker-content-${speakerUUID}`);
     
         // Reset the checkboxes to their original state
         const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
@@ -583,9 +564,6 @@
         if (tile) {
             tile.classList.remove('blur-background');
         }
-
-        isModalOpen = false;
-        //fetchSonosStatus();
     }
 
     // Establish a WebSocket connection
@@ -622,7 +600,7 @@
 
     function updateSpeakerContent(speakerId, data) {
         // Update track info
-        document.querySelector(`#speaker-content-${speakerId} .card-title`).innerText = data.track;
+        document.querySelector(`#speaker-content-${speakerId} .track-title`).innerText = data.track;
         document.querySelector(`#speaker-content-${speakerId} .track-artist`).innerText = data.artist;
         document.querySelector(`#speaker-content-${speakerId} .track-album`).innerText = data.album;
 
