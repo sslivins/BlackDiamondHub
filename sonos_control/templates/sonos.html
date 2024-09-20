@@ -287,25 +287,7 @@
     // Establish a WebSocket connection
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     let socket = null;
-    {% comment %} const socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/sonos_updates/');
 
-    socket.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data.type === 'speaker_update') {
-            const speakerData = data.speaker_data;
-
-            // Update the DOM with the new data
-            updateSpeakerData(speakerData);
-        }
-    };
-
-    socket.onopen = function(event) {
-        console.log('WebSocket connection established');
-    };
-
-    socket.onclose = function(event) {
-        console.log('WebSocket connection closed');
-}; {% endcomment %}
     function initWebSocket() {
         if (!socket || socket.readyState === WebSocket.CLOSED) {
           socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/sonos_updates/');
@@ -469,7 +451,7 @@
         //slider.value = volume;
       
         console.log(`Volume data sent over WebSocket for ${speakerName}`);
-      }    
+    }
 
     // Function to open modal and blur the speaker tile
     function openModal(speakerUUID) {

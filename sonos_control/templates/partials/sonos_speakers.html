@@ -70,7 +70,7 @@
                            max="100"
                            value="{{ info.volume }}"
                            id="volume-slider-{{ info.uid }}"
-                           oninput="adjustVolumeWS('{{ info.uid }}', this.value)">
+                           onchange="adjustVolumeWS('{{ info.uid }}', this.value)">
                     <!-- Volume Up Button -->
                     <button class="volume-btn volume-up"
                             onclick="adjustVolumeWS('{{ info.uid }}', increaseVolume('{{ info.uid }}'))">
