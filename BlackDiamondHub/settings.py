@@ -40,7 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
+    'channels',
     'django_tables2',
     'crispy_forms',
     'crispy_bootstrap5',
@@ -50,8 +52,16 @@ INSTALLED_APPS = [
     'sonos_control',
 ]
 
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+ASGI_APPLICATION = 'BlackDiamondHub.asgi.application'
+WSGI_APPLICATION = 'BlackDiamondHub.wsgi.application'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -83,7 +93,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'BlackDiamondHub.wsgi.application'
+
 
 
 # Database
