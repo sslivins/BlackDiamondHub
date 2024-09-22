@@ -1,0 +1,50 @@
+{% if user.is_authenticated %}
+  <h2>Spotify Control</h2>
+  <form id="spotify-search-form"
+        method="GET"
+        action="{% url 'spotify_search' %}">
+    <input type="text"
+           name="query"
+           placeholder="Search for songs, albums, artists"
+           class="form-control mb-3">
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+  <form action="{% url 'social:disconnect' 'spotify' %}"
+        method="POST"
+        style="display: inline">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="submit" class="btn btn-danger">Logout</button>
+  </form>
+  <h4>Recently Played</h4>
+  <ul class="list-group mb-4">
+    {% for track in recently_played %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>
+          <strong>{{ track.name }}</strong> by {{ track.artist }}
+        </span>
+        <button class="btn btn-primary" onclick="playOnSonos('{{ track.uri }}')">Play</button>
+      </li>
+    {% empty %}
+      <li class="list-group-item">No recently played tracks found</li>
+    {% endfor %}
+  </ul>
+  <h4>Favorites</h4>
+  <ul class="list-group">
+    {% for track in favorite_tracks %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>
+          <strong>{{ track.name }}</strong> by {{ track.artist }}
+        </span>
+        <button class="btn btn-primary" onclick="playOnSonos('{{ track.uri }}')">Play</button>
+      </li>
+    {% empty %}
+      <li class="list-group-item">No favorite tracks found</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <h2>Spotify Control</h2>
+  <p>You need to log in to access Spotify features.</p>
+  <a href="{% url 'social:begin' 'spotify' %}?show_dialog=true&next={{ request.path }}"
+     class="btn btn-primary">Login with Spotify</a>
+{% endif %}

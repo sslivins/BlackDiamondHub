@@ -276,8 +276,17 @@
         </style>
     </head>
     <body>
-        <h1>Control Sonos Speakers</h1>
-        {% include 'partials/sonos_speakers.html' %}
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sonos Control Side -->
+                <div class="col-md-5">
+                    <h1>Control Sonos Speakers</h1>
+                    {% include "partials/sonos_speakers.html" %}
+                </div>
+                <!-- Spotify Control Side -->
+                <div class="col-md-7">{% include "partials/spotify.html" %}</div>
+            </div>
+        </div>
     </body>
     <script>
     document.addEventListener("DOMContentLoaded", function() {

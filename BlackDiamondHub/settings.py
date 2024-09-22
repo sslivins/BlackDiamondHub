@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'daphne',
     'django.contrib.staticfiles',
     'channels',
+    'social_django',
     'django_tables2',
     'crispy_forms',
     'crispy_bootstrap5',
@@ -71,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'BlackDiamondHub.urls'
@@ -88,10 +90,32 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'feedback.context_processors.unread_feedback_count',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',                
             ],
         },
     },
 ]
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.spotify.SpotifyOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+# SOCIAL_AUTH_PIPELINE = (
+#     'social_core.pipeline.social_auth.social_details',
+#     'sonos_control.pipeline.custom_redirect',  # Add this step to handle the next parameter
+#     # other pipeline steps...
+# )
+
+SOCIAL_AUTH_DISCONNECT_PIPELINE = (
+    'sonos_control.pipeline.custom_allowed_to_disconnect',
+    'social_core.pipeline.disconnect.get_entries',    
+    'social_core.pipeline.disconnect.revoke_tokens',
+    'social_core.pipeline.disconnect.disconnect',
+    #'sonos_control.pipeline.revoke_tokens',
+    'sonos_control.pipeline.clear_session_and_logout',
+)
 
 
 
@@ -169,3 +193,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
+
+SOCIAL_AUTH_STRATEGY = "social_django.strategy.DjangoStrategy"
+SOCIAL_AUTH_STORAGE = "social_django.models.DjangoStorage"
+
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
+SOCIAL_AUTH_DEBUG = True
+SOCIAL_AUTH_REVOKE_TOKENS_ON_DISCONNECT = True
+
+SOCIAL_AUTH_SPOTIFY_KEY =  os.getenv('SPOTIFY_CLIENT_ID')
+SOCIAL_AUTH_SPOTIFY_SECRET =  os.getenv('SPOTIFY_CLIENT_SECRET')
+SOCIAL_AUTH_SPOTIFY_REDIRECT_URI = 'http://192.168.1.162:8080/auth/complete/spotify/'
+SOCIAL_AUTH_SPOTIFY_SCOPE = ['user-read-email', 'user-read-private', 'user-read-recently-played', 'user-library-read']

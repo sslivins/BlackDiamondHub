@@ -262,6 +262,23 @@ def get_sonos_speaker_info():
     
     return speakers_info
 
+####################################################
+# Spotify Integration
+####################################################
+
+def spotify_test(request):
+    return render(request, 'spotify_test.html')
+
+# In views.py
+def spotify_search(request):
+    query = request.GET.get('query')
+    # Add logic to search Spotify with the query
+    # Use your Spotify API integration to perform the search
+    context = {
+        'search_results': [],  # Replace with actual search results
+    }
+    return render(request, 'partials/spotify.html', context)
+
 
 
 # def sonos_control(request):
