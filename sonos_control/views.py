@@ -284,7 +284,8 @@ def fetch_spotify_data(request):
             recently_played = [{
                 'name': track['track']['name'],
                 'artist': track['track']['artists'][0]['name'],
-                'uri': track['track']['uri']
+                'uri': track['track']['uri'],
+                'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
             } for track in recently_played_results['items']]
 
             # Fetch favorite tracks
@@ -292,7 +293,8 @@ def fetch_spotify_data(request):
             favorite_tracks = [{
                 'name': track['track']['name'],
                 'artist': track['track']['artists'][0]['name'],
-                'uri': track['track']['uri']
+                'uri': track['track']['uri'],
+                'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
             } for track in favorite_tracks_results['items']]
 
             return JsonResponse({
@@ -303,6 +305,7 @@ def fetch_spotify_data(request):
             return JsonResponse({'error': 'Spotify account not connected'}, status=401)
     else:
         return JsonResponse({'error': 'User not authenticated'}, status=401)
+
 
 
 # In views.py

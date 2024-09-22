@@ -1,3 +1,7 @@
+.album-art {
+margin-right: 10px;
+border-radius: 5px;
+}
 {% if user.is_authenticated %}
   <h2>Spotify Control</h2>
   <form id="spotify-search-form"
@@ -16,21 +20,19 @@
     <input type="hidden" name="next" value="{{ request.path }}">
     <button type="submit" class="btn btn-danger">Logout</button>
   </form>
-  <h4>Recently Played</h4>
-  <ul id="recently-played-list" class="list-group mb-4">
-    <li class="list-group-item">Loading...</li>
-  </ul>
-  <h4>Favorites</h4>
-  <ul id="favorite-tracks-list" class="list-group">
-    <li class="list-group-item">Loading...</li>
-  </ul>
-</div>
-</ul>
+  <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
+  <div id="recently-played-list" class="row">
+    <div>Loading...</div>
+  </div>
+  <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
+  <div id="favorite-tracks-list" class="row">
+    <div>Loading...</div>
+  </div>
 {% else %}
-<h2>Spotify Control</h2>
-<p>You need to log in to access Spotify features.</p>
-<a href="{% url 'social:begin' 'spotify' %}?show_dialog=true&next={{ request.path }}"
-   class="btn btn-primary">Login with Spotify</a>
+  <h2>Spotify Control</h2>
+  <p>You need to log in to access Spotify features.</p>
+  <a href="{% url 'social:begin' 'spotify' %}?show_dialog=true&next={{ request.path }}"
+     class="btn btn-primary">Login with Spotify</a>
 {% endif %}
 <script>
   document.addEventListener("DOMContentLoaded", function() {
@@ -41,36 +43,62 @@
           alert(data.error);
           return;
         }
-
+  
         const recentlyPlayedList = document.getElementById("recently-played-list");
         const favoriteTracksList = document.getElementById("favorite-tracks-list");
-
+  
         // Clear loading message
         recentlyPlayedList.innerHTML = '';
         favoriteTracksList.innerHTML = '';
-
-        // Populate Recently Played
-        data.recently_played.forEach(track => {
-          recentlyPlayedList.innerHTML += `
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              <span><strong>${track.name}</strong> by ${track.artist}</span>
-              <button class="btn btn-primary" onclick="playOnSonos('${track.uri}')">Play</button>
-            </li>
-          `;
-        });
-
-        // Populate Favorite Tracks
-        data.favorite_tracks.forEach(track => {
-          favoriteTracksList.innerHTML += `
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              <span><strong>${track.name}</strong> by ${track.artist}</span>
-              <button class="btn btn-primary" onclick="playOnSonos('${track.uri}')">Play</button>
-            </li>
-          `;
-        });
+  
+        // Populate Recently Played (Bootstrap layout)
+        if (data.recently_played.length) {
+          data.recently_played.forEach(track => {
+            const albumArt = track.album_art 
+              ? `<a href="javascript:void(0);" onclick="playOnSonos('${track.uri}')">
+                   <img src="${track.album_art}" alt="${track.name} Album Art" class="img-fluid album-art">
+                 </a>` 
+              : '';
+  
+            recentlyPlayedList.innerHTML += `
+              <div class="col-1 d-flex flex-column align-items-center mb-1">
+                ${albumArt}
+                <span class="mt-2 text-center text-white">${track.name}</span>
+              </div>
+            `;
+          });
+        } else {
+          recentlyPlayedList.innerHTML = '<div class="col-12 text-white">No recently played tracks found</div>';
+        }
+  
+        // Populate Favorite Tracks (Bootstrap layout)
+        if (data.favorite_tracks.length) {
+          data.favorite_tracks.forEach(track => {
+            const albumArt = track.album_art 
+              ? `<a href="javascript:void(0);" onclick="playOnSonos('${track.uri}')">
+                   <img src="${track.album_art}" alt="${track.name} Album Art" class="img-fluid album-art">
+                 </a>` 
+              : '';
+  
+            favoriteTracksList.innerHTML += `
+              <div class="col-1 d-flex flex-column align-items-center mb-1">
+                ${albumArt}
+                <span class="mt-2 text-center text-white">${track.name}</span>
+              </div>
+            `;
+          });
+        } else {
+          favoriteTracksList.innerHTML = '<div class="col-12 text-white">No favorite tracks found</div>';
+        }
       })
       .catch(error => console.error('Error fetching Spotify data:', error));
   });
+  
+  
+  
+  
+
+
 
   function playOnSonos(uri) {
     // Logic to play on Sonos speakers
