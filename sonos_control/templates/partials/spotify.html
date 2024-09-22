@@ -17,34 +17,64 @@
     <button type="submit" class="btn btn-danger">Logout</button>
   </form>
   <h4>Recently Played</h4>
-  <ul class="list-group mb-4">
-    {% for track in recently_played %}
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        <span>
-          <strong>{{ track.name }}</strong> by {{ track.artist }}
-        </span>
-        <button class="btn btn-primary" onclick="playOnSonos('{{ track.uri }}')">Play</button>
-      </li>
-    {% empty %}
-      <li class="list-group-item">No recently played tracks found</li>
-    {% endfor %}
+  <ul id="recently-played-list" class="list-group mb-4">
+    <li class="list-group-item">Loading...</li>
   </ul>
   <h4>Favorites</h4>
-  <ul class="list-group">
-    {% for track in favorite_tracks %}
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        <span>
-          <strong>{{ track.name }}</strong> by {{ track.artist }}
-        </span>
-        <button class="btn btn-primary" onclick="playOnSonos('{{ track.uri }}')">Play</button>
-      </li>
-    {% empty %}
-      <li class="list-group-item">No favorite tracks found</li>
-    {% endfor %}
+  <ul id="favorite-tracks-list" class="list-group">
+    <li class="list-group-item">Loading...</li>
   </ul>
+</div>
+</ul>
 {% else %}
-  <h2>Spotify Control</h2>
-  <p>You need to log in to access Spotify features.</p>
-  <a href="{% url 'social:begin' 'spotify' %}?show_dialog=true&next={{ request.path }}"
-     class="btn btn-primary">Login with Spotify</a>
+<h2>Spotify Control</h2>
+<p>You need to log in to access Spotify features.</p>
+<a href="{% url 'social:begin' 'spotify' %}?show_dialog=true&next={{ request.path }}"
+   class="btn btn-primary">Login with Spotify</a>
 {% endif %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    fetch("{% url 'fetch_spotify_data' %}")
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        const recentlyPlayedList = document.getElementById("recently-played-list");
+        const favoriteTracksList = document.getElementById("favorite-tracks-list");
+
+        // Clear loading message
+        recentlyPlayedList.innerHTML = '';
+        favoriteTracksList.innerHTML = '';
+
+        // Populate Recently Played
+        data.recently_played.forEach(track => {
+          recentlyPlayedList.innerHTML += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><strong>${track.name}</strong> by ${track.artist}</span>
+              <button class="btn btn-primary" onclick="playOnSonos('${track.uri}')">Play</button>
+            </li>
+          `;
+        });
+
+        // Populate Favorite Tracks
+        data.favorite_tracks.forEach(track => {
+          favoriteTracksList.innerHTML += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><strong>${track.name}</strong> by ${track.artist}</span>
+              <button class="btn btn-primary" onclick="playOnSonos('${track.uri}')">Play</button>
+            </li>
+          `;
+        });
+      })
+      .catch(error => console.error('Error fetching Spotify data:', error));
+  });
+
+  function playOnSonos(uri) {
+    // Logic to play on Sonos speakers
+    console.log("Playing on Sonos:", uri);
+  }
+  
+</script>

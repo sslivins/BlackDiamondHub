@@ -4,12 +4,10 @@ import soco
 from django.templatetags.static import static
 from soco.exceptions import SoCoUPnPException
 from soco.plugins.sharelink import ShareLinkPlugin
-
-import soco
-from django.shortcuts import render
-
-import soco
-from django.shortcuts import render
+import json
+from django.http import JsonResponse
+import spotipy
+from social_django.models import UserSocialAuth
 
 def sonos_control_view(request):
     speakers_info = get_sonos_speaker_info()
@@ -268,6 +266,44 @@ def get_sonos_speaker_info():
 
 def spotify_test(request):
     return render(request, 'spotify_test.html')
+
+def fetch_spotify_data(request):
+    if request.user.is_authenticated:
+        print('User is authenticated')
+        try:
+            social = request.user.social_auth.get(provider='spotify')
+            access_token = social.extra_data['access_token']
+            
+            print(f'Access token: {access_token}')
+            print(f'Social: {social}') 
+
+            sp = spotipy.Spotify(auth=access_token)
+
+            # Fetch recently played tracks
+            recently_played_results = sp.current_user_recently_played(limit=10)
+            recently_played = [{
+                'name': track['track']['name'],
+                'artist': track['track']['artists'][0]['name'],
+                'uri': track['track']['uri']
+            } for track in recently_played_results['items']]
+
+            # Fetch favorite tracks
+            favorite_tracks_results = sp.current_user_saved_tracks(limit=10)
+            favorite_tracks = [{
+                'name': track['track']['name'],
+                'artist': track['track']['artists'][0]['name'],
+                'uri': track['track']['uri']
+            } for track in favorite_tracks_results['items']]
+
+            return JsonResponse({
+                'recently_played': recently_played,
+                'favorite_tracks': favorite_tracks,
+            })
+        except UserSocialAuth.DoesNotExist:
+            return JsonResponse({'error': 'Spotify account not connected'}, status=401)
+    else:
+        return JsonResponse({'error': 'User not authenticated'}, status=401)
+
 
 # In views.py
 def spotify_search(request):
