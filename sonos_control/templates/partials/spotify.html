@@ -2,40 +2,49 @@
 margin-right: 10px;
 border-radius: 5px;
 }
-{% if user.is_authenticated %}
-  <h2>Spotify Control</h2>
-  <form id="spotify-search-form"
-        method="GET"
-        action="{% url 'spotify_search' %}">
-    <input type="text"
-           name="query"
-           placeholder="Search for songs, albums, artists"
-           class="form-control mb-3">
-    <button type="submit" class="btn btn-primary">Search</button>
-  </form>
-  <form action="{% url 'social:disconnect' 'spotify' %}"
-        method="POST"
-        style="display: inline">
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ request.path }}">
-    <button type="submit" class="btn btn-danger">Logout</button>
-  </form>
-  <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
-  <div id="recently-played-list" class="row">
-    <div>Loading...</div>
-  </div>
-  <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
-  <div id="favorite-tracks-list" class="row">
-    <div>Loading...</div>
-  </div>
-{% else %}
-  <h2>Spotify Control</h2>
-  <p>You need to log in to access Spotify features.</p>
-  <a href="{% url 'social:begin' 'spotify' %}?show_dialog=true&next={{ request.path }}"
-     class="btn btn-primary">Login with Spotify</a>
-{% endif %}
+<body data-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+  {% if user.is_authenticated %}
+    <h2>Spotify Control</h2>
+    <form id="spotify-search-form"
+          method="GET"
+          action="{% url 'spotify_search' %}">
+      <input type="text"
+             name="query"
+             placeholder="Search for songs, albums, artists"
+             class="form-control mb-3">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    <form action="{% url 'social:disconnect' 'spotify' %}"
+          method="POST"
+          style="display: inline">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <button type="submit" class="btn btn-danger">Logout</button>
+    </form>
+    <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
+    <div id="recently-played-list" class="row">
+      <div>Loading...</div>
+    </div>
+    <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
+    <div id="favorite-tracks-list" class="row">
+      <div>Loading...</div>
+    </div>
+  {% else %}
+    <h2>Spotify Control</h2>
+    <p>You need to log in to access Spotify features.</p>
+    <a href="{% url 'social:begin' 'spotify' %}?show_dialog=true&next={{ request.path }}"
+       class="btn btn-primary">Login with Spotify</a>
+  {% endif %}
+</body>
 <script>
   document.addEventListener("DOMContentLoaded", function() {
+
+    const isAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
+
+    if (!isAuthenticated) {
+      return;
+    }    
+
     fetch("{% url 'fetch_spotify_data' %}")
       .then(response => response.json())
       .then(data => {
@@ -94,15 +103,56 @@ border-radius: 5px;
       .catch(error => console.error('Error fetching Spotify data:', error));
   });
   
-  
-  
-  
+  function playOnSonos(trackUri) {
+    // Assuming you have an active speaker identified
+    const speakerUid = getActiveSpeaker();  // You need to implement this function to return the speaker's UID
+    const service = "spotify";  // Fixed value for Spotify service
 
+    if (!speakerUid) {
+        alert('No active speaker selected');
+        return;
+    }
 
+    // Prepare the POST request data
+    const data = new FormData();
+    data.append('speakerUid', speakerUid);
+    data.append('service', service);
+    data.append('track_uri', trackUri);
 
-  function playOnSonos(uri) {
-    // Logic to play on Sonos speakers
-    console.log("Playing on Sonos:", uri);
+    // Get CSRF token from the form (if available)
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Send the POST request to the Django view
+    fetch("{% url 'queue_track' %}", {
+        method: 'POST',
+        body: data,
+        headers: {
+            'X-CSRFToken': csrfToken  // CSRF token for security
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Track added to Sonos queue:', data.message);
+        } else {
+            console.error('Error adding track:', data.message);
+        }
+    })
+    .catch(error => console.error('Error in request:', error));
+}
+
+function getActiveSpeaker() {
+  // Get the currently active tab using the 'active' class
+  const activeTab = document.querySelector('.nav-link.active');
+  
+  if (activeTab) {
+      // Retrieve the speaker UID from the active tab's ID or data attribute
+      const speakerUid = activeTab.id.replace('speaker-tab-', '');  // Strip 'speaker-tab-' from the ID to get the UID
+      return speakerUid;
+  } else {
+      console.error('No active speaker found');
+      return null;
   }
+}
   
 </script>

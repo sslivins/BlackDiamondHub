@@ -9,6 +9,7 @@ urlpatterns = [
     path('adjust-volume/', views.adjust_volume, name='adjust_volume'),
     path('toggle-play-pause/', views.toggle_play_pause, name='toggle_play_pause'),
     path('play-track/', views.play_track, name='play_track'),
+    path('queue-track/', views.queue_track, name='queue_track'),
     path('spotify-test/', views.spotify_test, name='spotify_test'),
     path('search/', views.spotify_search, name='spotify_search'),
     path('spotify/data/', views.fetch_spotify_data, name='fetch_spotify_data'),

@@ -4,6 +4,7 @@ import soco
 from django.templatetags.static import static
 from soco.exceptions import SoCoUPnPException
 from soco.plugins.sharelink import ShareLinkPlugin
+from soco.plugins.sharelink import SpotifyShare
 import json
 from django.http import JsonResponse
 import spotipy
@@ -173,6 +174,43 @@ def toggle_play_pause(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
+def queue_track(request):
+    if request.method == 'POST':
+        speakerUid = request.POST.get('speakerUid')
+        service = request.POST.get('service')
+        track_uri = request.POST.get('track_uri')
+        
+        print(f'Looking for speaker: {speakerUid}')
+        
+        # Find the Sonos speaker by name
+        speakers = soco.discover()
+        if speakers:
+            speaker = next((s for s in speakers if s.uid == speakerUid), None)
+            if speaker:
+                try:
+                    #add track uri to queue
+                    #speaker.add_uri_to_queue(track_uri)
+                    share_link_plugin = ShareLinkPlugin(speaker)
+                    spotify_share = SpotifyShare()
+                    share_uri = spotify_share.canonical_uri(track_uri)
+                    print(f'Adding Spotify URI to queue: {share_uri}')
+                    share_link_plugin.add_share_link_to_queue(share_uri)
+                    
+                    # print(f'Stopping current playback on {speakerUid}')
+                    # speaker.stop()
+                    # share_link.add_share_link_to_queue('https://open.spotify.com/track/5Z01UMMf7V1o0MzF86s6WJ?si=a1a95142a3e249d8')
+                    # speaker.play_from_queue(index=1)
+                    return JsonResponse({'status': 'success', 'message': f'Track added to queue on {speakerUid}'})
+                except Exception as e:
+                    print(f'Error while trying to play URI: {e}')
+                    return JsonResponse({'status': 'error', 'message': f'Failed to add track to queue: {e}'})
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Speaker not found'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'No Sonos speakers found'})
+    
+   
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
 def play_track(request):
     if request.method == 'POST':
@@ -280,7 +318,7 @@ def fetch_spotify_data(request):
             sp = spotipy.Spotify(auth=access_token)
 
             # Fetch recently played tracks
-            recently_played_results = sp.current_user_recently_played(limit=10)
+            recently_played_results = sp.current_user_recently_played(limit=12)
             recently_played = [{
                 'name': track['track']['name'],
                 'artist': track['track']['artists'][0]['name'],
@@ -289,7 +327,7 @@ def fetch_spotify_data(request):
             } for track in recently_played_results['items']]
 
             # Fetch favorite tracks
-            favorite_tracks_results = sp.current_user_saved_tracks(limit=10)
+            favorite_tracks_results = sp.current_user_saved_tracks(limit=12)
             favorite_tracks = [{
                 'name': track['track']['name'],
                 'artist': track['track']['artists'][0]['name'],
