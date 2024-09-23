@@ -194,12 +194,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
+########################
+# Social Auth Settings #
+########################
 SOCIAL_AUTH_STRATEGY = "social_django.strategy.DjangoStrategy"
 SOCIAL_AUTH_STORAGE = "social_django.models.DjangoStorage"
 
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_DEBUG = True
 SOCIAL_AUTH_REVOKE_TOKENS_ON_DISCONNECT = True
+SOCIAL_AUTH_REFRESH_TOKENS = True
 
 SOCIAL_AUTH_SPOTIFY_KEY =  os.getenv('SPOTIFY_CLIENT_ID')
 SOCIAL_AUTH_SPOTIFY_SECRET =  os.getenv('SPOTIFY_CLIENT_SECRET')

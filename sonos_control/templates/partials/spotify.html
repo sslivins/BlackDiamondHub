@@ -4,7 +4,6 @@ border-radius: 5px;
 }
 <body data-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
   {% if user.is_authenticated %}
-    <h2>Spotify Control</h2>
     <form id="spotify-search-form"
           method="GET"
           action="{% url 'spotify_search' %}">
@@ -51,8 +50,9 @@ border-radius: 5px;
           </button>
         </div>
         <div class="modal-body">
-          <button class="btn btn-primary btn-block" id="add-to-queue-btn">Add to Queue</button>
-          <!-- You can add more buttons like "Play Now", "Add to Playlist", etc. -->
+          <button class="btn btn-primary btn-block" id="modal-play-btn">Play Now</button>
+          <button class="btn btn-primary btn-block" id="modal-add-to-front-btn">Play Next</button>
+          <button class="btn btn-primary btn-block" id="modal-add-to-back-btn">Add to Queue</button>
         </div>
       </div>
     </div>
@@ -90,7 +90,7 @@ border-radius: 5px;
             : '';
   
           return `
-            <div class="col-1 d-flex flex-column align-items-center mb-1 track-item" data-track-uri="${trackUri}">
+            <div class="col-2 d-flex flex-column align-items-center mb-1 track-item" data-track-uri="${trackUri}">
               ${albumArt}
               <span class="mt-2 text-center text-white">${track.name}</span>
             </div>
@@ -148,20 +148,27 @@ border-radius: 5px;
         function handleClick(event) {
           if (pressTimer) {
             clearTimeout(pressTimer);
-            playOnSonos(selectedTrackUri); // Play track on short click
+            playOnActiveSpeaker(selectedTrackUri); // Play track on short click
           }
         }
-  
-        // Handle "Add to Queue" button click from the context menu
-        document.getElementById('add-to-queue-btn').addEventListener('click', function() {
-          addToActiveSpeakerQueue(selectedTrackUri); // Add to queue
+
+        document.getElementById('modal-play-btn').addEventListener('click', function() {
+          playOnActiveSpeaker(selectedTrackUri); 
           $('#contextMenuModal').modal('hide');
         });
+        document.getElementById('modal-add-to-front-btn').addEventListener('click', function() {
+          addToActiveSpeakerQueue(selectedTrackUri, 'next'); 
+          $('#contextMenuModal').modal('hide');
+        });
+        document.getElementById('modal-add-to-back-btn').addEventListener('click', function() {
+          addToActiveSpeakerQueue(selectedTrackUri, 'end'); 
+          $('#contextMenuModal').modal('hide');
+        });                
       })
       .catch(error => console.error('Error fetching Spotify data:', error));
   });
   
-function addToActiveSpeakerQueue(trackUri) {
+function addToActiveSpeakerQueue(trackUri, position='end') {
     // Assuming you have an active speaker identified
     const speakerUid = getActiveSpeaker();  // You need to implement this function to return the speaker's UID
     const service = "spotify";  // Fixed value for Spotify service
@@ -170,12 +177,17 @@ function addToActiveSpeakerQueue(trackUri) {
         alert('No active speaker selected');
         return;
     }
+    else
+    {
+        console.log(`Adding track to queue: ${trackUri}`);
+    } 
 
     // Prepare the POST request data
     const data = new FormData();
     data.append('speakerUid', speakerUid);
     data.append('service', service);
     data.append('track_uri', trackUri);
+    data.append('position', position);
 
     // Get CSRF token from the form (if available)
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -199,8 +211,7 @@ function addToActiveSpeakerQueue(trackUri) {
     .catch(error => console.error('Error in request:', error));
   }
 
-  function playOnSonos(trackUri) {
-    // Assuming you have an active speaker identified
+  function playOnActiveSpeaker(trackUri) {
     const speakerUid = getActiveSpeaker();  // You need to implement this function to return the speaker's UID
     const service = "spotify";  // Fixed value for Spotify service
 

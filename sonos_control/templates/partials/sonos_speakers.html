@@ -2,7 +2,7 @@
 <div class="container-fluid">
   <div class="row">
     <!-- Speaker Tabs -->
-    <div class="col-md-4">
+    <div class="col-md-3">
       <div class="nav flex-column nav-pills"
            id="speaker-tabs"
            role="tablist"
@@ -21,7 +21,7 @@
       </div>
     </div>
     <!-- Speaker Content -->
-    <div class="col-md-8">
+    <div class="col-md-9">
       <div class="tab-content" id="speaker-tabContent">
         {% for info in speaker_info %}
           {% if info.is_coordinator %}
@@ -32,6 +32,7 @@
               <div class="card mb-3">
                 <div class="row no-gutters">
                   <div class="col-md-12">
+                    <h2 class="mt-8 text-center">{{ info.group_label }}</h2>
                     <img src="{{ info.album_art }}"
                          class="album-art-img"
                          alt="Album Art"

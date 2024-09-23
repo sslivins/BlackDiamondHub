@@ -180,8 +180,9 @@ def queue_track(request):
         speakerUid = request.POST.get('speakerUid')
         service = request.POST.get('service')
         track_uri = request.POST.get('track_uri')
+        position = request.POST.get('position')
         
-        print(f'Looking for speaker: {speakerUid}')
+        print(f'Looking for speaker: {speakerUid} - adding track: {track_uri} at position: {position}')
         
         # Find the Sonos speaker by name
         speakers = soco.discover()
@@ -190,19 +191,11 @@ def queue_track(request):
             if speaker:
                 try:
                     share_link_plugin = ShareLinkPlugin(speaker)
-                    if service == 'spotify':
-                        spotify_share = SpotifyShare()
-                        share_uri = spotify_share.canonical_uri(track_uri)
-                        print(f'Adding Spotify URI to queue: {share_uri}')
-                    else:
-                        return JsonResponse({'status': 'error', 'message': 'Invalid service'}, status=400)
-                    
-                    share_link_plugin.add_share_link_to_queue(share_uri)
-                    
-                    # print(f'Stopping current playback on {speakerUid}')
-                    # speaker.stop()
-                    # share_link.add_share_link_to_queue('https://open.spotify.com/track/5Z01UMMf7V1o0MzF86s6WJ?si=a1a95142a3e249d8')
-                    # speaker.play_from_queue(index=1)
+                    queue_position = 0 # Add to the end of the queue
+                    if position == 'next':
+                        queue_position = 1; # Add to the end of the queue                    
+                    insert_index = share_link_plugin.add_share_link_to_queue(uri=track_uri, position=queue_position)
+                    print(f'Added Spotify URI to queue at index: {insert_index}')
                     return JsonResponse({'status': 'success', 'message': f'Track added to queue on {speakerUid}'})
                 except Exception as e:
                     print(f'Error while trying to play URI: {e}')
