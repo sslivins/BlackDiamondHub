@@ -9,6 +9,7 @@ import json
 from django.http import JsonResponse
 import spotipy
 from social_django.models import UserSocialAuth
+import time
 
 def sonos_control_view(request):
     speakers_info = get_sonos_speaker_info()
@@ -188,12 +189,14 @@ def queue_track(request):
             speaker = next((s for s in speakers if s.uid == speakerUid), None)
             if speaker:
                 try:
-                    #add track uri to queue
-                    #speaker.add_uri_to_queue(track_uri)
                     share_link_plugin = ShareLinkPlugin(speaker)
-                    spotify_share = SpotifyShare()
-                    share_uri = spotify_share.canonical_uri(track_uri)
-                    print(f'Adding Spotify URI to queue: {share_uri}')
+                    if service == 'spotify':
+                        spotify_share = SpotifyShare()
+                        share_uri = spotify_share.canonical_uri(track_uri)
+                        print(f'Adding Spotify URI to queue: {share_uri}')
+                    else:
+                        return JsonResponse({'status': 'error', 'message': 'Invalid service'}, status=400)
+                    
                     share_link_plugin.add_share_link_to_queue(share_uri)
                     
                     # print(f'Stopping current playback on {speakerUid}')
@@ -201,6 +204,45 @@ def queue_track(request):
                     # share_link.add_share_link_to_queue('https://open.spotify.com/track/5Z01UMMf7V1o0MzF86s6WJ?si=a1a95142a3e249d8')
                     # speaker.play_from_queue(index=1)
                     return JsonResponse({'status': 'success', 'message': f'Track added to queue on {speakerUid}'})
+                except Exception as e:
+                    print(f'Error while trying to play URI: {e}')
+                    return JsonResponse({'status': 'error', 'message': f'Failed to add track to queue: {e}'})
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Speaker not found'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'No Sonos speakers found'})
+    
+   
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+def play_uri(request):
+    if request.method == 'POST':
+        speakerUid = request.POST.get('speakerUid')
+        service = request.POST.get('service')
+        track_uri = request.POST.get('track_uri')
+        
+        print(f'Looking for speaker: {speakerUid}')
+        
+        # Find the Sonos speaker by name
+        speakers = soco.discover()
+        if speakers:
+            speaker = next((s for s in speakers if s.uid == speakerUid), None)
+            if speaker:
+                try:
+                    share_link_plugin = ShareLinkPlugin(speaker)
+                    # if service == 'spotify':
+                    #     print(f'is uri a share link: {share_link_plugin.is_share_link(track_uri)}')
+                    #     spotify_share = SpotifyShare()
+                    #     share_uri = spotify_share.canonical_uri(track_uri)
+                    #     print(f'Adding Spotify URI to queue: {share_uri}')
+                    # else:
+                    #     return JsonResponse({'status': 'error', 'message': 'Invalid service'}, status=400)
+                    
+                    speaker.stop()
+                    insert_index = share_link_plugin.add_share_link_to_queue(uri=track_uri, position=1)
+                    print(f'Added Spotify URI to queue at index: {insert_index}')
+                    speaker.play_from_queue(index=insert_index-1)
+                    return JsonResponse({'status': 'success', 'message': f'Playing track {track_uri} on {speakerUid}'})
                 except Exception as e:
                     print(f'Error while trying to play URI: {e}')
                     return JsonResponse({'status': 'error', 'message': f'Failed to add track to queue: {e}'})

@@ -35,16 +35,37 @@ border-radius: 5px;
     <a href="{% url 'social:begin' 'spotify' %}?show_dialog=true&next={{ request.path }}"
        class="btn btn-primary">Login with Spotify</a>
   {% endif %}
+  <!-- Long Press Context Menu Modal -->
+  <div class="modal fade"
+       id="contextMenuModal"
+       tabindex="-1"
+       role="dialog"
+       aria-labelledby="contextMenuModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="contextMenuModalLabel">Choose an Action</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <button class="btn btn-primary btn-block" id="add-to-queue-btn">Add to Queue</button>
+          <!-- You can add more buttons like "Play Now", "Add to Playlist", etc. -->
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 <script>
   document.addEventListener("DOMContentLoaded", function() {
-
     const isAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
-
+  
     if (!isAuthenticated) {
       return;
-    }    
-
+    }
+  
     fetch("{% url 'fetch_spotify_data' %}")
       .then(response => response.json())
       .then(data => {
@@ -60,50 +81,87 @@ border-radius: 5px;
         recentlyPlayedList.innerHTML = '';
         favoriteTracksList.innerHTML = '';
   
-        // Populate Recently Played (Bootstrap layout)
+        // Helper function to create track item
+        const createTrackItem = (track, trackUri) => {
+          const albumArt = track.album_art 
+            ? `<a href="javascript:void(0);">
+                 <img src="${track.album_art}" alt="${track.name} Album Art" class="img-fluid album-art">
+               </a>`
+            : '';
+  
+          return `
+            <div class="col-1 d-flex flex-column align-items-center mb-1 track-item" data-track-uri="${trackUri}">
+              ${albumArt}
+              <span class="mt-2 text-center text-white">${track.name}</span>
+            </div>
+          `;
+        };
+  
+        // Populate Recently Played
         if (data.recently_played.length) {
           data.recently_played.forEach(track => {
-            const albumArt = track.album_art 
-              ? `<a href="javascript:void(0);" onclick="playOnSonos('${track.uri}')">
-                   <img src="${track.album_art}" alt="${track.name} Album Art" class="img-fluid album-art">
-                 </a>` 
-              : '';
-  
-            recentlyPlayedList.innerHTML += `
-              <div class="col-1 d-flex flex-column align-items-center mb-1">
-                ${albumArt}
-                <span class="mt-2 text-center text-white">${track.name}</span>
-              </div>
-            `;
+            recentlyPlayedList.innerHTML += createTrackItem(track, track.uri);
           });
         } else {
           recentlyPlayedList.innerHTML = '<div class="col-12 text-white">No recently played tracks found</div>';
         }
   
-        // Populate Favorite Tracks (Bootstrap layout)
+        // Populate Favorite Tracks
         if (data.favorite_tracks.length) {
           data.favorite_tracks.forEach(track => {
-            const albumArt = track.album_art 
-              ? `<a href="javascript:void(0);" onclick="playOnSonos('${track.uri}')">
-                   <img src="${track.album_art}" alt="${track.name} Album Art" class="img-fluid album-art">
-                 </a>` 
-              : '';
-  
-            favoriteTracksList.innerHTML += `
-              <div class="col-1 d-flex flex-column align-items-center mb-1">
-                ${albumArt}
-                <span class="mt-2 text-center text-white">${track.name}</span>
-              </div>
-            `;
+            favoriteTracksList.innerHTML += createTrackItem(track, track.uri);
           });
         } else {
           favoriteTracksList.innerHTML = '<div class="col-12 text-white">No favorite tracks found</div>';
         }
+  
+        // Long press logic starts here
+        let pressTimer;
+        let longPressDuration = 500; // 500ms for long press detection
+        let selectedTrackUri = '';  // Store the currently selected track URI
+  
+        const trackItems = document.querySelectorAll('.track-item');
+        trackItems.forEach(item => {
+          // Detect long press (for touch screen and mouse events)
+          item.addEventListener('mousedown', handlePressStart);
+          item.addEventListener('touchstart', handlePressStart);
+  
+          item.addEventListener('mouseup', handlePressEnd);
+          item.addEventListener('mouseleave', handlePressEnd);
+          item.addEventListener('touchend', handlePressEnd);
+  
+          item.addEventListener('click', handleClick); // Prevents firing on short click
+        });
+  
+        function handlePressStart(event) {
+          selectedTrackUri = event.currentTarget.dataset.trackUri;
+  
+          pressTimer = window.setTimeout(() => {
+            $('#contextMenuModal').modal('show');
+          }, longPressDuration);
+        }
+  
+        function handlePressEnd() {
+          clearTimeout(pressTimer);
+        }
+  
+        function handleClick(event) {
+          if (pressTimer) {
+            clearTimeout(pressTimer);
+            playOnSonos(selectedTrackUri); // Play track on short click
+          }
+        }
+  
+        // Handle "Add to Queue" button click from the context menu
+        document.getElementById('add-to-queue-btn').addEventListener('click', function() {
+          addToActiveSpeakerQueue(selectedTrackUri); // Add to queue
+          $('#contextMenuModal').modal('hide');
+        });
       })
       .catch(error => console.error('Error fetching Spotify data:', error));
   });
   
-  function playOnSonos(trackUri) {
+function addToActiveSpeakerQueue(trackUri) {
     // Assuming you have an active speaker identified
     const speakerUid = getActiveSpeaker();  // You need to implement this function to return the speaker's UID
     const service = "spotify";  // Fixed value for Spotify service
@@ -139,7 +197,45 @@ border-radius: 5px;
         }
     })
     .catch(error => console.error('Error in request:', error));
-}
+  }
+
+  function playOnSonos(trackUri) {
+    // Assuming you have an active speaker identified
+    const speakerUid = getActiveSpeaker();  // You need to implement this function to return the speaker's UID
+    const service = "spotify";  // Fixed value for Spotify service
+
+    if (!speakerUid) {
+        alert('No active speaker selected');
+        return;
+    }
+
+    // Prepare the POST request data
+    const data = new FormData();
+    data.append('speakerUid', speakerUid);
+    data.append('service', service);
+    data.append('track_uri', trackUri);
+
+    // Get CSRF token from the form (if available)
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Send the POST request to the Django view
+    fetch("{% url 'play_uri' %}", {
+        method: 'POST',
+        body: data,
+        headers: {
+            'X-CSRFToken': csrfToken  // CSRF token for security
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Track added to Sonos queue:', data.message);
+        } else {
+            console.error('Error adding track:', data.message);
+        }
+    })
+    .catch(error => console.error('Error in request:', error));
+  }  
 
 function getActiveSpeaker() {
   // Get the currently active tab using the 'active' class
