@@ -342,40 +342,45 @@ def get_sonos_speaker_info():
 def spotify_test(request):
     return render(request, 'spotify_test.html')
 
+def get_spotify_instance(user):
+
+    social = user.social_auth.get(provider='spotify')
+    token_info = social.extra_data
+    
+    try:
+        # Create Spotipy instance with current access token
+        sp = spotipy.Spotify(auth=token_info['access_token'])
+
+        # Make a test API call to check if the token is valid
+        sp.current_user()  # This will throw an exception if the token has expired
+
+    except spotipy.exceptions.SpotifyException as e:
+        if e.http_status == 401:  # 401 Unauthorized, meaning the token has expired
+            print("Token expired, refreshing...")
+            
+            # Trigger token refresh using social-auth's backend
+            strategy = load_strategy()
+            backend = social.get_backend_instance(strategy)
+            new_tokens = backend.refresh_token(token_info['refresh_token'])
+
+            # Update the tokens in the database
+            social.extra_data['access_token'] = new_tokens['access_token']
+            social.save()            
+            
+            # Recreate the Spotipy instance with the new token
+            sp = spotipy.Spotify(auth=token_info['access_token'])
+
+        else:
+            print("Error: ", e)
+            raise e  # Rethrow the exception if it's not related to token expiration
+
+    return sp
+
 def fetch_spotify_data(request):
     if request.user.is_authenticated:
         print('User is authenticated')
         try:
-            social = request.user.social_auth.get(provider='spotify')
-            access_token = social.extra_data['access_token']
-            refresh_token = social.extra_data['refresh_token']
-            
-            #print key/value pairs from extra_data
-            print(f'Extra data: {social.extra_data}')
-            
-           
-            print(f'Access token: {access_token}')
-            print(f'Social: {social}') 
-            
-            # # Check if token is expired
-            # if expires_at and datetime.now(datetime.timezone.utc) > expires_at:
-            #     print("Access token has expired. Attempting to refresh...")
-
-            #     # Trigger token refresh using social-auth's backend
-            #     strategy = load_strategy()
-            #     backend = social.get_backend_instance(strategy)
-            #     new_tokens = backend.refresh_token(refresh_token)
-
-            #     # Update the tokens in the database
-            #     social.extra_data['access_token'] = new_tokens['access_token']
-            #     social.extra_data['expires_at'] = new_tokens['expires_at']
-            #     social.save()
-                
-            #     # Update the access token to use the refreshed one
-            #     access_token = new_tokens['access_token']
-            #     print("Token refreshed successfully.")            
-
-            sp = spotipy.Spotify(auth=access_token)
+            sp = get_spotify_instance(request.user)
             
             print(f'spotify object: {sp}')
 
