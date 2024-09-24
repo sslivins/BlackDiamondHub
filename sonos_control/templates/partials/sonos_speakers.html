@@ -21,14 +21,16 @@
       </div>
     </div>
     <!-- Speaker Content -->
-    <div class="col-md-9">
+    <div class="col-md-9 speaker-dropzone">
       <div class="tab-content" id="speaker-tabContent">
         {% for info in speaker_info %}
           {% if info.is_coordinator %}
-            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %} "
                  id="speaker-content-{{ info.uid }}"
                  role="tabpanel"
-                 aria-labelledby="speaker-tab-{{ info.uid }}">
+                 aria-labelledby="speaker-tab-{{ info.uid }}"
+                 ondragover="handleDragOver(event)"
+                 ondrop="handleDrop(event, '{{ info.uid }}')">
               <div class="card mb-3">
                 <div class="row no-gutters">
                   <div class="col-md-12">
@@ -84,7 +86,7 @@
                   <!-- Queue -->
                   <div class="queue-container">
                     <h5>Queue:</h5>
-                    <ul class="queue-list">
+                    <ul class="queue-list overflow-auto h-75" style="max-height: 400px;>
                       {% for track in info.queue %}
                         <li class="list-group-item"
                             onclick="playTrack('{{ info.uid }}', {{ forloop.counter0 }})">

@@ -10,6 +10,8 @@ from django.http import JsonResponse
 import spotipy
 from social_django.models import UserSocialAuth
 import time
+from datetime import datetime
+from social_django.utils import load_strategy
 
 def sonos_control_view(request):
     speakers_info = get_sonos_speaker_info()
@@ -346,11 +348,36 @@ def fetch_spotify_data(request):
         try:
             social = request.user.social_auth.get(provider='spotify')
             access_token = social.extra_data['access_token']
+            refresh_token = social.extra_data['refresh_token']
             
+            #print key/value pairs from extra_data
+            print(f'Extra data: {social.extra_data}')
+            
+           
             print(f'Access token: {access_token}')
             print(f'Social: {social}') 
+            
+            # # Check if token is expired
+            # if expires_at and datetime.now(datetime.timezone.utc) > expires_at:
+            #     print("Access token has expired. Attempting to refresh...")
+
+            #     # Trigger token refresh using social-auth's backend
+            #     strategy = load_strategy()
+            #     backend = social.get_backend_instance(strategy)
+            #     new_tokens = backend.refresh_token(refresh_token)
+
+            #     # Update the tokens in the database
+            #     social.extra_data['access_token'] = new_tokens['access_token']
+            #     social.extra_data['expires_at'] = new_tokens['expires_at']
+            #     social.save()
+                
+            #     # Update the access token to use the refreshed one
+            #     access_token = new_tokens['access_token']
+            #     print("Token refreshed successfully.")            
 
             sp = spotipy.Spotify(auth=access_token)
+            
+            print(f'spotify object: {sp}')
 
             # Fetch recently played tracks
             recently_played_results = sp.current_user_recently_played(limit=12)

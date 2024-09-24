@@ -197,6 +197,19 @@ LOGOUT_REDIRECT_URL = "/"
 ########################
 # Social Auth Settings #
 ########################
+SOCIAL_AUTH_AUTHENTICATION_BACKENDS = (
+    'social_core.backends.spotify.SpotifyOAuth2',
+)
+
+SOCIAL_AUTH_SPOTIFY_EXTRA_DATA = [
+    ('access_token', 'access_token'),
+    ('refresh_token', 'refresh_token'),
+    ('token_type', 'token_type'),
+    ('expires_in', 'expires_in'), 
+    ('id', 'id'),
+    ('email', 'email'),
+]
+
 SOCIAL_AUTH_STRATEGY = "social_django.strategy.DjangoStrategy"
 SOCIAL_AUTH_STORAGE = "social_django.models.DjangoStorage"
 
@@ -204,7 +217,9 @@ SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_DEBUG = True
 SOCIAL_AUTH_REVOKE_TOKENS_ON_DISCONNECT = True
 SOCIAL_AUTH_REFRESH_TOKENS = True
+SOCIAL_AUTH_SESSION_EXPIRATION = True
 
+# social auth for spotify settings
 SOCIAL_AUTH_SPOTIFY_KEY =  os.getenv('SPOTIFY_CLIENT_ID')
 SOCIAL_AUTH_SPOTIFY_SECRET =  os.getenv('SPOTIFY_CLIENT_SECRET')
 SOCIAL_AUTH_SPOTIFY_REDIRECT_URI = 'http://192.168.1.162:8080/auth/complete/spotify/'

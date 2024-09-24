@@ -2,6 +2,12 @@
 margin-right: 10px;
 border-radius: 5px;
 }
+.ghost-drag {
+opacity: 0.7;
+border: 2px solid #fff;
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+border-radius: 8px;
+}
 <body data-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
   {% if user.is_authenticated %}
     <form id="spotify-search-form"
@@ -89,8 +95,8 @@ border-radius: 5px;
                </a>`
             : '';
   
-          return `
-            <div class="col-2 d-flex flex-column align-items-center mb-1 track-item" data-track-uri="${trackUri}">
+            return `
+            <div class="col-2 d-flex flex-column align-items-center mb-1 track-item" data-track-uri="${trackUri}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ontouchstart="handleTouchStart(event)" ontouchmove="handleTouchMove(event)" ontouchend="handleTouchEnd(event)">
               ${albumArt}
               <span class="mt-2 text-center text-white">${track.name}</span>
             </div>
@@ -123,14 +129,14 @@ border-radius: 5px;
         const trackItems = document.querySelectorAll('.track-item');
         trackItems.forEach(item => {
           // Detect long press (for touch screen and mouse events)
-          item.addEventListener('mousedown', handlePressStart);
-          item.addEventListener('touchstart', handlePressStart);
+//          item.addEventListener('mousedown', handlePressStart);
+//          item.addEventListener('touchstart', handlePressStart);
   
-          item.addEventListener('mouseup', handlePressEnd);
-          item.addEventListener('mouseleave', handlePressEnd);
-          item.addEventListener('touchend', handlePressEnd);
+//          item.addEventListener('mouseup', handlePressEnd);
+//          item.addEventListener('mouseleave', handlePressEnd);
+//          item.addEventListener('touchend', handlePressEnd);
   
-          item.addEventListener('click', handleClick); // Prevents firing on short click
+//          item.addEventListener('click', handleClick); // Prevents firing on short click
         });
   
         function handlePressStart(event) {
@@ -167,6 +173,98 @@ border-radius: 5px;
       })
       .catch(error => console.error('Error fetching Spotify data:', error));
   });
+
+  let draggedTrackUri = '';
+  let isTouchDragging = false;
+
+  function handleDragStart(event) {
+      // Store the track URI of the dragged item
+      draggedTrackUri = event.currentTarget.getAttribute('data-track-uri');
+      event.dataTransfer.effectAllowed = 'move';  // Set the effect for drag-and-drop
+  }
+
+  function handleTouchStart(event) {
+    const touch = event.touches[0];
+    const target = event.currentTarget;
+
+    draggedTrackUri = target.getAttribute('data-track-uri');
+
+    // Create a ghost element to represent the dragged item
+    ghostElement = target.cloneNode(true);  // Clone the dragged element
+    ghostElement.style.position = 'absolute';
+    ghostElement.style.opacity = '0.7';
+    ghostElement.style.pointerEvents = 'none';  // Make sure it doesn't interfere with other elements
+    ghostElement.classList.add('ghost-drag');
+    document.body.appendChild(ghostElement);
+
+    // Position the ghost element at the touch start point
+    ghostElement.style.left = `${touch.clientX}px`;
+    ghostElement.style.top = `${touch.clientY}px`;
+  }
+
+  function handleTouchMove(event) {
+    if (!ghostElement) return;  // Exit if there's no ghost element
+
+    const touch = event.touches[0];
+    
+    // Move the ghost element along with the finger
+    ghostElement.style.left = `${touch.clientX}px`;
+    ghostElement.style.top = `${touch.clientY}px`;
+
+    event.preventDefault();  // Prevent default behavior like scrolling
+  }
+
+function handleTouchEnd(event) {
+  // When touch ends, simulate a drop
+  isTouchDragging = false;
+
+    // Remove the ghost element
+  if (ghostElement) {
+      document.body.removeChild(ghostElement);
+      ghostElement = null;
+  }  
+  
+  dropTarget = document.elementFromPoint(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
+
+  // Traverse up the DOM to find the correct drop zone (in this case, the speaker-dropzone)
+  while (dropTarget && dropTarget !== document && (!dropTarget.classList || !dropTarget.classList.contains('speaker-dropzone'))) {
+    dropTarget = dropTarget.parentNode;
+}
+
+// If no valid drop zone found, log a message and return
+if (!dropTarget || dropTarget === document) {
+    console.log('Touch drag ended outside a valid drop zone');
+    return;
+}
+
+  const speakerUid = dropTarget.getAttribute('data-speaker-uid');
+  handleDrop(event, speakerUid);
+}
+  
+  function handleDragEnd(event) {
+      // Clear the dragged track URI after dragging
+      draggedTrackUri = '';
+  }
+  
+  function handleDragOver(event) {
+      // Prevent the default to allow dropping
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';  // Specify the allowed drop effect
+  }
+  
+  function handleDrop(event, speakerUid) {
+      // Prevent the default action (browser may redirect on drop)
+      event.preventDefault();
+  
+      // Ensure a track URI is available
+      if (!draggedTrackUri) {
+          return;
+      }
+  
+      // Call the function to add the dragged track to the Sonos speaker's queue
+      addToActiveSpeakerQueue(draggedTrackUri, speakerUid);
+  }
+  
   
 function addToActiveSpeakerQueue(trackUri, position='end') {
     // Assuming you have an active speaker identified
