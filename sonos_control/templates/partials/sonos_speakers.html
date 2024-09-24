@@ -22,7 +22,7 @@
     </div>
     <!-- Speaker Content -->
     <div class="col-md-9 speaker-dropzone">
-      <div class="tab-content" id="speaker-tabContent">
+      <div class="tab-content" id="speaker-tabContent";>
         {% for info in speaker_info %}
           {% if info.is_coordinator %}
             <div class="tab-pane fade {% if forloop.first %}show active{% endif %} "
@@ -68,7 +68,7 @@
                     </button>
                     <!-- Volume Slider -->
                     <input type="range"
-                           class="volume-slider mx-2"
+                           class="volume-slider"
                            min="0"
                            max="100"
                            value="{{ info.volume }}"
@@ -85,8 +85,18 @@
                   </div>
                   <!-- Queue -->
                   <div class="queue-container">
-                    <h5>Queue:</h5>
-                    <ul class="queue-list overflow-auto h-75" style="max-height: 400px;>
+                    <div class="row">
+                      <div class="col-md-4">
+                        <h5>Queue:</h5>
+                      </div>
+                      <div class="col-md-2"></div>
+                      <div class="col-md-6">
+                        <button class="btn btn-danger" onclick="clearQueue('{{ info.uid }}')">Clear Queue</button>
+                      </div>
+                    </div>
+                    <ul class="queue-list"
+                        style="max-height: calc(100vh - 825px);
+                               overflow-y: auto">
                       {% for track in info.queue %}
                         <li class="list-group-item"
                             onclick="playTrack('{{ info.uid }}', {{ forloop.counter0 }})">

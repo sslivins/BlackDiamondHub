@@ -2,7 +2,7 @@
 
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from .views import get_sonos_speaker_info, adjust_speaker_volume, speaker_play_pause
+from .views import get_sonos_speaker_info, adjust_speaker_volume, speaker_play_pause, sonos_clear_queue
 import asyncio
 
 class SonosConsumer(AsyncWebsocketConsumer):
@@ -102,6 +102,20 @@ class SonosConsumer(AsyncWebsocketConsumer):
                 'action': 'play',
                 'type': 'response'
             }))
+        elif action == 'clear_queue':
+            print("Clear queue action received")
+            speaker_uid = data.get('speaker_uid')
+            # Call your logic to clear the queue
+            result = sonos_clear_queue(speaker_uid)
+
+            # Send back a response to the client
+            await self.send(text_data=json.dumps({
+                'status': result['status'],
+                'message': result['message'],
+                'speaker_uid': speaker_uid,
+                'action': 'clear_queue',
+                'type': 'response'
+            }))
         else:
             await self.send(text_data=json.dumps({
                 'status': 'error',
@@ -138,8 +152,8 @@ class SonosConsumer(AsyncWebsocketConsumer):
                 # Update the previous state
                 self.previous_speaker_data = speaker_data
 
-            # Wait for 5 seconds before checking again
-            await asyncio.sleep(3)
+            # Wait for 1 seconds before checking again
+            await asyncio.sleep(1)
             
     async def adjust_speaker_volume(self, speaker_name, volume):
         # This function should contain the logic to adjust the speaker's volume

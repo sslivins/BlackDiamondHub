@@ -71,12 +71,11 @@
           cursor: pointer;  
       }
       
-     
       /* Slider styling */
       .volume-slider {
           -webkit-appearance: none;
           appearance: none;
-          width: 70%;
+          width: 60%;
           height: 25px;
           background: #ddd;
           border-radius: 10px;
@@ -326,7 +325,10 @@
                 } 
                 else if (data.action === 'play_track') {
                     console.log('Play track response:', data);
-                } 
+                }
+                else if (data.action === 'clear_queue') {
+                    console.log('Clear queue response:', data);
+                }
                 else {
                     console.warn('Unhandled WebSocket response:', data);
                 }
@@ -381,7 +383,28 @@
         } else {
             console.error('Failed to toggle play/pause state:', data.message);
         }
-    };    
+    };
+
+    function clearQueue(speakerUid) {
+        console.log(`Clearing queue for ${speakerUid}`);
+      
+        // Ensure WebSocket is open
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          console.error('WebSocket connection is not open');
+          return;
+        }
+      
+        // Create a JSON object to send through WebSocket
+        const clearQueueData = {
+          speaker_uid: speakerUid,
+          action: 'clear_queue' // Specify action type
+        };
+      
+        // Send clear queue data as a JSON string
+        socket.send(JSON.stringify(clearQueueData));
+      
+        console.log(`Clear queue data sent over WebSocket for ${speakerUid}`);
+    }
     
     function playTrack(speakerUid, trackIndex) {
         // Check if the WebSocket connection is open
@@ -401,7 +424,7 @@
         socket.send(JSON.stringify(playTrackData));
     
         console.log(`Requested to play track ${trackIndex} on ${speakerUid}`);
-    }    
+    }
 
 
    // Decrease volume function

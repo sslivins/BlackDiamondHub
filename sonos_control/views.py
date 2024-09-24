@@ -276,6 +276,58 @@ def play_track(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
+def sonos_clear_queue(speaker_uid):
+    
+    if not speaker_uid:
+        return {'status': 'error', 'message': 'Invalid parameters', 'status_code': 400}    
+        
+    # Discover and find the speaker by UID
+    speakers = soco.discover()
+    speaker = next((s for s in speakers if s.uid == speaker_uid), None)
+
+    if speaker:
+        try:
+            # Clear the speaker's queue
+            speaker.clear_queue()
+            return {'status': 'success', 'message': 'Queue cleared'}
+        except Exception as e:
+            return {'status': 'error', 'message': str(e)}
+    else:
+        return {'status': 'error', 'message': 'Speaker not found'}
+
+def speaker_play_pause(speaker_uid, action, track_index=None):
+    """
+    Handles toggling play/pause for a speaker by UID.
+    Returns a dictionary with the status and message.
+    """
+    if not speaker_uid or not action:
+        return {'status': 'error', 'message': 'Invalid parameters', 'status_code': 400}
+
+    # Discover Sonos speakers
+    speakers = soco.discover()
+    if not speakers:
+        return {'status': 'error', 'message': 'No Sonos speakers found', 'status_code': 404}
+
+    # Find the speaker by its UID
+    speaker = next((s for s in speakers if s.uid == speaker_uid), None)
+    if not speaker:
+        return {'status': 'error', 'message': f'Speaker {speaker_uid} not found', 'status_code': 404}
+
+    try:
+        # Perform play or pause based on the action
+        if action == 'play':
+            speaker.play()
+        elif action == 'pause':
+            speaker.pause()
+        elif action == 'play_track':
+            speaker.play_from_queue(int(track_index))
+        else:
+            return {'status': 'error', 'message': 'Invalid action', 'status_code': 400}
+
+        return {'status': 'success', 'message': f'The Operation Completed Successfully', 'action': action, 'status_code': 200}
+    except Exception as e:
+        return {'status': 'error', 'message': f'Failed to toggle play/pause: {str(e)}', 'status_code': 500}
+
 def get_sonos_speaker_info():
     speakers_info = []
     speakers = soco.discover()
