@@ -22,7 +22,7 @@
     </div>
     <!-- Speaker Content -->
     <div class="col-md-9 speaker-dropzone">
-      <div class="tab-content" id="speaker-tabContent";>
+      <div class="tab-content" id="speaker-tabContent">
         {% for info in speaker_info %}
           {% if info.is_coordinator %}
             <div class="tab-pane fade {% if forloop.first %}show active{% endif %} "
@@ -94,9 +94,7 @@
                         <button class="btn btn-danger" onclick="clearQueue('{{ info.uid }}')">Clear Queue</button>
                       </div>
                     </div>
-                    <ul class="queue-list"
-                        style="max-height: calc(100vh - 825px);
-                               overflow-y: auto">
+                    <ul class="queue-list">
                       {% for track in info.queue %}
                         <li class="list-group-item"
                             onclick="playTrack('{{ info.uid }}', {{ forloop.counter0 }})">
@@ -117,6 +115,7 @@
                         <li class="list-group-item">No tracks in the queue</li>
                       {% endfor %}
                     </ul>
+                    <div class="scroll-gradient"></div>
                   </div>
                 </div>
               </div>
