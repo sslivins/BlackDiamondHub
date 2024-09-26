@@ -1,29 +1,43 @@
 <body data-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
   {% if user.is_authenticated %}
-    <form id="spotify-search-form"
-          method="GET"
-          action="{% url 'spotify_search' %}">
-      <input type="text"
-             name="query"
-             placeholder="Search for songs, albums, artists"
-             class="form-control mb-3">
-      <button type="submit" class="btn btn-primary">Search</button>
-    </form>
+    <div class="d-flex justify-content-between">
+      <form id="spotify-search-form" method="GET" class="d-flex w-100">
+        <input type="text"
+               id="spotify-search-input"
+               name="query"
+               placeholder="Search for songs, albums, artists"
+               class="form-control mr-2"
+               style="width: 60%">
+        <button type="submit"
+                id="spotify-search-button"
+                class="btn btn-primary"
+                style="width: 20%;
+                       height: 60%">Search</button>
+        <button type="button"
+                id="clear-search-button"
+                class="btn btn-secondary"
+                style="width: 20%;
+                       height: 60%">Clear</button>
+      </form>
+    </div>
+    <!-- Placeholder for dynamic content -->
+    <div id="spotify-content">
+      <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
+      <div id="recently-played-list" class="row">
+        <div>Loading...</div>
+      </div>
+      <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
+      <div id="favorite-tracks-list" class="row">
+        <div>Loading...</div>
+      </div>
+    </div>
     <form action="{% url 'social:disconnect' 'spotify' %}"
           method="POST"
           style="display: inline">
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ request.path }}">
-      <button type="submit" class="btn btn-danger">Logout</button>
+      <button type="submit" class="btn btn-danger">Logout of Spotify</button>
     </form>
-    <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
-    <div id="recently-played-list" class="row">
-      <div>Loading...</div>
-    </div>
-    <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
-    <div id="favorite-tracks-list" class="row">
-      <div>Loading...</div>
-    </div>
   {% else %}
     <h2>Spotify Control</h2>
     <p>You need to log in to access Spotify features.</p>
@@ -57,11 +71,167 @@
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     const isAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
+    if (!isAuthenticated) return;
   
-    if (!isAuthenticated) {
-      return;
+    const contentContainer = document.getElementById('spotify-content'); // Container for search and original content
+    const searchForm = document.getElementById('spotify-search-form');
+    const clearButton = document.getElementById('clear-search-button');
+  
+    // ---- Fetch the Initial Spotify Data ----
+    fetchSpotifyData();
+  
+    // ---- Handle Form Submission for Both Enter Key and Button ----
+    searchForm.addEventListener('submit', function(event) {
+      event.preventDefault(); // Prevent the form from submitting and reloading the page
+  
+      const query = document.getElementById('spotify-search-input').value.trim();
+      if (!query) {
+        alert('Please enter a search term');
+        return;
+      }
+  
+      fetchSearchResults(query);
+    });
+  
+    // ---- Handle Clearing Search Results ----
+    clearButton.addEventListener('click', function() {
+      //clear the search text
+      document.getElementById('spotify-search-input').value = '';
+      fetchSpotifyData();  // Re-fetch and restore original content
+    });
+  
+    // ---- Spotify Data Fetching and Display ----
+    function fetchSpotifyData() {
+      fetch("{% url 'fetch_spotify_data' %}")
+        .then(response => response.json())
+        .then(data => {
+          populateSpotifyData(data);  // Populate Recently Played and Favorites
+        })
+        .catch(error => console.error('Error fetching Spotify data:', error));
     }
   
+    function fetchSearchResults(query) {
+      fetch(`{% url 'spotify_search' %}?query=${query}`)
+        .then(response => response.json())
+        .then(data => {
+          displaySearchResults(data.search_results);  // Display search results in content container
+        })
+        .catch(error => console.error('Error fetching search results:', error));
+    }
+  
+    function populateSpotifyData(data) {
+      // Clear current content but keep the structure
+      contentContainer.innerHTML = `
+        <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
+        <div id="recently-played-list" class="row"></div>
+        <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
+        <div id="favorite-tracks-list" class="row"></div>
+      `;
+  
+      const recentlyPlayedList = document.getElementById("recently-played-list");
+      const favoriteTracksList = document.getElementById("favorite-tracks-list");
+  
+      // Populate Recently Played
+      if (data.recently_played.length) {
+        data.recently_played.forEach(track => {
+          recentlyPlayedList.innerHTML += createTrackItem(track, track.uri);
+        });
+      } else {
+        recentlyPlayedList.innerHTML = '<div class="col-12 text-white">No recently played tracks found</div>';
+      }
+  
+      // Populate Favorites
+      if (data.favorite_tracks.length) {
+        data.favorite_tracks.forEach(track => {
+          favoriteTracksList.innerHTML += createTrackItem(track, track.uri);
+        });
+      } else {
+        favoriteTracksList.innerHTML = '<div class="col-12 text-white">No favorite tracks found</div>';
+      }
+    }
+  
+    function displaySearchResults(results) {
+      // Clear current content and display search results
+      contentContainer.innerHTML = ''; // Clear content
+      if (results.length === 0) {
+        contentContainer.innerHTML = '<p>No results found for your search.</p>';
+      } else {
+        let html = '<h4>Search Results:</h4><div class="row">';
+        results.forEach(track => {
+          html += createTrackItem(track, track.uri);
+        });
+        html += '</div>';
+        contentContainer.innerHTML = html;
+      }
+    }
+  
+    function createTrackItem(track, trackUri) {
+      const albumArt = track.album_art
+        ? `<a href="javascript:void(0);">
+             <img src="${track.album_art}" alt="${track.name} Album Art" class="img-fluid album-art">
+           </a>`
+        : '';
+  
+      return `
+        <div class="col-2 d-flex flex-column align-items-center mb-1 track-item" data-track-uri="${trackUri}">
+          ${albumArt}
+          <span class="mt-2 text-center text-white">${track.name}</span>
+        </div>
+      `;
+    }
+  
+    // ---- Track Item Long Press / Click Functionality ----
+    let pressTimer, selectedTrackUri;
+    const longPressDuration = 500; // 500ms for long press detection
+  
+    const trackItems = document.querySelectorAll('.track-item');
+    trackItems.forEach(item => {
+      item.addEventListener('mousedown', handlePressStart);
+      item.addEventListener('touchstart', handlePressStart);
+      item.addEventListener('mouseup', handlePressEnd);
+      item.addEventListener('mouseleave', handlePressEnd);
+      item.addEventListener('touchend', handlePressEnd);
+      item.addEventListener('click', handleClick); // Short click handling
+    });
+  
+    function handlePressStart(event) {
+      selectedTrackUri = event.currentTarget.dataset.trackUri;
+      pressTimer = window.setTimeout(() => {
+        $('#contextMenuModal').modal('show');
+      }, longPressDuration);
+    }
+  
+    function handlePressEnd() {
+      clearTimeout(pressTimer);
+    }
+  
+    function handleClick() {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        playOnActiveSpeaker(selectedTrackUri);  // Short click: Play track
+      }
+    }
+  
+    // ---- Modal Actions for Tracks ----
+    document.getElementById('modal-play-btn').addEventListener('click', function() {
+      playOnActiveSpeaker(selectedTrackUri);
+      $('#contextMenuModal').modal('hide');
+    });
+  
+    document.getElementById('modal-add-to-front-btn').addEventListener('click', function() {
+      addToActiveSpeakerQueue(selectedTrackUri, 'next');
+      $('#contextMenuModal').modal('hide');
+    });
+  
+    document.getElementById('modal-add-to-back-btn').addEventListener('click', function() {
+      addToActiveSpeakerQueue(selectedTrackUri, 'end');
+      $('#contextMenuModal').modal('hide');
+    });
+  });
+  
+  
+  
+{% comment %}   
     fetch("{% url 'fetch_spotify_data' %}")
       .then(response => response.json())
       .then(data => {
@@ -109,61 +279,13 @@
           });
         } else {
           favoriteTracksList.innerHTML = '<div class="col-12 text-white">No favorite tracks found</div>';
-        }
-  
+} {% endcomment %}
         // Long press logic starts here
-        let pressTimer;
-        let longPressDuration = 500; // 500ms for long press detection
-        let selectedTrackUri = '';  // Store the currently selected track URI
-  
-        const trackItems = document.querySelectorAll('.track-item');
-        trackItems.forEach(item => {
-          // Detect long press (for touch screen and mouse events)
-//          item.addEventListener('mousedown', handlePressStart);
-//          item.addEventListener('touchstart', handlePressStart);
-  
-//          item.addEventListener('mouseup', handlePressEnd);
-//          item.addEventListener('mouseleave', handlePressEnd);
-//          item.addEventListener('touchend', handlePressEnd);
-  
-//          item.addEventListener('click', handleClick); // Prevents firing on short click
-        });
-  
-        function handlePressStart(event) {
-          selectedTrackUri = event.currentTarget.dataset.trackUri;
-  
-          pressTimer = window.setTimeout(() => {
-            $('#contextMenuModal').modal('show');
-          }, longPressDuration);
-        }
-  
-        function handlePressEnd() {
-          clearTimeout(pressTimer);
-        }
-  
-        function handleClick(event) {
-          if (pressTimer) {
-            clearTimeout(pressTimer);
-            playOnActiveSpeaker(selectedTrackUri); // Play track on short click
-          }
-        }
-
-        document.getElementById('modal-play-btn').addEventListener('click', function() {
-          playOnActiveSpeaker(selectedTrackUri); 
-          $('#contextMenuModal').modal('hide');
-        });
-        document.getElementById('modal-add-to-front-btn').addEventListener('click', function() {
-          addToActiveSpeakerQueue(selectedTrackUri, 'next'); 
-          $('#contextMenuModal').modal('hide');
-        });
-        document.getElementById('modal-add-to-back-btn').addEventListener('click', function() {
-          addToActiveSpeakerQueue(selectedTrackUri, 'end'); 
-          $('#contextMenuModal').modal('hide');
-        });                
-      })
+               
+      {% comment %} })
       .catch(error => console.error('Error fetching Spotify data:', error));
-  });
-
+}); {% endcomment %}
+  {% comment %}
   let draggedTrackUri = '';
   let isTouchDragging = false;
 
@@ -173,7 +295,7 @@
       event.dataTransfer.effectAllowed = 'move';  // Set the effect for drag-and-drop
   }
 
-  function handleTouchStart(event) {
+ function handleTouchStart(event) {
     const touch = event.touches[0];
     const target = event.currentTarget;
 
@@ -253,9 +375,7 @@ if (!dropTarget || dropTarget === document) {
   
       // Call the function to add the dragged track to the Sonos speaker's queue
       addToActiveSpeakerQueue(draggedTrackUri, speakerUid);
-  }
-  
-  
+} {% endcomment %}
 function addToActiveSpeakerQueue(trackUri, position='end') {
     // Assuming you have an active speaker identified
     const speakerUid = getActiveSpeaker();  // You need to implement this function to return the speaker's UID

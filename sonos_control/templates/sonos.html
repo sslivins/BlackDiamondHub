@@ -9,7 +9,13 @@
           background-color: #000000; /* Black background for the entire page */
           margin: 0;
           padding: 20px;
+          overflow: hidden;
       }
+    
+        .sonos-content, .spotify-content {
+            height: 100vh; /* Full height of the viewport */
+            overflow-y: auto; /* Allow vertical scrolling */
+        }
 
       h1 {
           text-align: center;
@@ -32,7 +38,6 @@
           display: flex;
           justify-content: center;
           align-items: center;
-          max-height: 90vh;      
       }
 
 
@@ -209,7 +214,7 @@
       }
 
     .queue-list {
-        max-height: 30vh; /* Limit the height of the queue list */
+        max-height: 25vh; /* Limit the height of the queue list */
         overflow-y: auto; /* Enable vertical scrolling */
         margin-top: 20px;
         border-radius: 10px;
@@ -277,9 +282,9 @@
         <div class="container-fluid">
             <div class="row">
                 <!-- Sonos Control Side -->
-                <div class="col-md-4">{% include "partials/sonos_speakers.html" %}</div>
+                <div class="col-md-4 sonos-content">{% include "partials/sonos_speakers.html" %}</div>
                 <!-- Spotify Control Side -->
-                <div class="col-md-8">{% include "partials/spotify.html" %}</div>
+                <div class="col-md-8 spotify-content">{% include "partials/spotify.html" %}</div>
             </div>
         </div>
     </body>

@@ -430,17 +430,15 @@ def get_spotify_instance(user):
 
 def fetch_spotify_data(request):
     if request.user.is_authenticated:
-        print('User is authenticated')
         try:
             sp = get_spotify_instance(request.user)
             
-            print(f'spotify object: {sp}')
-
             # Fetch recently played tracks
             recently_played_results = sp.current_user_recently_played(limit=12)
             recently_played = [{
                 'name': track['track']['name'],
                 'artist': track['track']['artists'][0]['name'],
+                'album': track['track']['album']['name'],
                 'uri': track['track']['uri'],
                 'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
             } for track in recently_played_results['items']]
@@ -450,6 +448,7 @@ def fetch_spotify_data(request):
             favorite_tracks = [{
                 'name': track['track']['name'],
                 'artist': track['track']['artists'][0]['name'],
+                'album': track['track']['album']['name'],
                 'uri': track['track']['uri'],
                 'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
             } for track in favorite_tracks_results['items']]
@@ -463,17 +462,35 @@ def fetch_spotify_data(request):
     else:
         return JsonResponse({'error': 'User not authenticated'}, status=401)
 
-
-
-# In views.py
 def spotify_search(request):
-    query = request.GET.get('query')
-    # Add logic to search Spotify with the query
-    # Use your Spotify API integration to perform the search
-    context = {
-        'search_results': [],  # Replace with actual search results
-    }
-    return render(request, 'partials/spotify.html', context)
+    query = request.GET.get('query', '')
+    search_results = []
+
+    try:
+        # Get the Spotify instance for the authenticated user
+        sp = get_spotify_instance(request.user)
+
+        if query:
+            # Search on Spotify for tracks, albums, and artists
+            results = sp.search(q=query, type='track,album,artist', limit=18)
+            
+            # Structure the search results to return relevant information as JSON
+            for item in results.get('tracks', {}).get('items', []):
+                search_results.append({
+                    'name': item['name'],
+                    'artist': item['artists'][0]['name'],
+                    'album': item['album']['name'],
+                    'album_art': item['album']['images'][0]['url'] if item['album']['images'] else None,
+                    'uri': item['uri'],
+                })
+
+    except Exception as e:
+        # Catch any errors, return the error message in the JSON response
+        return JsonResponse({'error': str(e)}, status=500)
+
+    # Return the search results as JSON
+    return JsonResponse({'search_results': search_results})
+
 
 
 
