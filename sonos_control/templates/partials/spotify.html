@@ -134,7 +134,8 @@
       // Populate Recently Played
       if (data.recently_played.length) {
         data.recently_played.forEach(track => {
-          recentlyPlayedList.innerHTML += createTrackItem(track, track.uri);
+          const trackItem = createTrackItem(track, track.uri);
+          recentlyPlayedList.appendChild(trackItem);             
         });
       } else {
         recentlyPlayedList.innerHTML = '<div class="col-12 text-white">No recently played tracks found</div>';
@@ -143,7 +144,8 @@
       // Populate Favorites
       if (data.favorite_tracks.length) {
         data.favorite_tracks.forEach(track => {
-          favoriteTracksList.innerHTML += createTrackItem(track, track.uri);
+          const trackItem = createTrackItem(track, track.uri);
+          favoriteTracksList.appendChild(trackItem);          
         });
       } else {
         favoriteTracksList.innerHTML = '<div class="col-12 text-white">No favorite tracks found</div>';
@@ -151,19 +153,32 @@
     }
   
     function displaySearchResults(results) {
+      const contentContainer = document.getElementById('spotify-content'); // Make sure this is defined
+    
       // Clear current content and display search results
       contentContainer.innerHTML = ''; // Clear content
+      
       if (results.length === 0) {
-        contentContainer.innerHTML = '<p>No results found for your search.</p>';
+        const noResultsMessage = document.createElement('p');
+        noResultsMessage.textContent = 'No results found for your search.';
+        contentContainer.appendChild(noResultsMessage);
       } else {
-        let html = '<h4>Search Results:</h4><div class="row">';
+        const header = document.createElement('h4');
+        header.textContent = 'Search Results:';
+        contentContainer.appendChild(header);
+    
+        const rowDiv = document.createElement('div');
+        rowDiv.classList.add('row'); // Create a div for the row layout
+    
         results.forEach(track => {
-          html += createTrackItem(track, track.uri);
+          const trackItem = createTrackItem(track, track.uri); // Create track item using the modified function
+          rowDiv.appendChild(trackItem); // Append the track item to the row div
         });
-        html += '</div>';
-        contentContainer.innerHTML = html;
+    
+        contentContainer.appendChild(rowDiv); // Append the row div to the content container
       }
     }
+    
   
     function createTrackItem(track, trackUri) {
       const albumArt = track.album_art
@@ -171,32 +186,41 @@
              <img src="${track.album_art}" alt="${track.name} Album Art" class="img-fluid album-art">
            </a>`
         : '';
-  
-      return `
-        <div class="col-2 d-flex flex-column align-items-center mb-1 track-item" data-track-uri="${trackUri}">
-          ${albumArt}
-          <span class="mt-2 text-center text-white">${track.name}</span>
-        </div>
+    
+      // Create a wrapper element
+      const trackElement = document.createElement('div');
+      trackElement.classList.add('col-2', 'd-flex', 'flex-column', 'align-items-center', 'mb-1', 'track-item');
+      trackElement.setAttribute('data-track-uri', trackUri);
+    
+      // Add inner HTML (album art and track name)
+      trackElement.innerHTML = `
+        ${albumArt}
+        <span class="mt-2 text-center text-white">${track.name}</span>
       `;
+    
+      // Add the event listeners for long press and click events
+      trackElement.addEventListener('mousedown', handlePressStart);
+      trackElement.addEventListener('touchstart', handlePressStart);
+    
+      trackElement.addEventListener('mouseup', handlePressEnd);
+      trackElement.addEventListener('mouseleave', handlePressEnd);
+      trackElement.addEventListener('touchend', handlePressEnd);
+    
+      trackElement.addEventListener('click', handleClick); // Handle short click event
+    
+      return trackElement;
     }
+    
   
-    // ---- Track Item Long Press / Click Functionality ----
-    let pressTimer, selectedTrackUri;
-    const longPressDuration = 500; // 500ms for long press detection
-  
-    const trackItems = document.querySelectorAll('.track-item');
-    trackItems.forEach(item => {
-      item.addEventListener('mousedown', handlePressStart);
-      item.addEventListener('touchstart', handlePressStart);
-      item.addEventListener('mouseup', handlePressEnd);
-      item.addEventListener('mouseleave', handlePressEnd);
-      item.addEventListener('touchend', handlePressEnd);
-      item.addEventListener('click', handleClick); // Short click handling
-    });
+    // Long press and click functions
+    let pressTimer;
+    let longPressDuration = 500; // 500ms for long press detection
+    let selectedTrackUri = '';  // Store the currently selected track URI
   
     function handlePressStart(event) {
       selectedTrackUri = event.currentTarget.dataset.trackUri;
       pressTimer = window.setTimeout(() => {
+        console.log('Long press detected');
         $('#contextMenuModal').modal('show');
       }, longPressDuration);
     }
