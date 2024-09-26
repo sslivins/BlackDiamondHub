@@ -35,19 +35,21 @@
                 <div class="row no-gutters">
                   <div class="col-md-12">
                     <h2 class="mt-8 text-center">{{ info.group_label }}</h2>
-                    <img src="{{ info.album_art }}"
-                         class="album-art-img"
-                         alt="Album Art"
-                         onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
-                    <button class="btn btn-primary play-pause-button"
-                            id="play-pause-button-{{ info.uid }}"
-                            onclick="togglePlayPause('{{ info.uid }}', '{{ info.play_state }}')">
-                      {% if info.play_state == 'PLAYING' %}
-                        &#10074;&#10074;
-                      {% else %}
-                        &#9654;
-                      {% endif %}
-                    </button>
+                    <div class="album-art-container position-relative">
+                      <img src="{{ info.album_art }}"
+                           class="img-fluid album-art"
+                           alt="Album Art"
+                           onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                      <button class="btn play-pause-btn position-absolute"
+                              id="play-pause-button-{{ info.uid }}"
+                              onclick="togglePlayPause('{{ info.uid }}', '{{ info.play_state }}')">
+                        {% if info.play_state == 'PLAYING' %}
+                          &#10074;&#10074;
+                        {% else %}
+                          &#9654;
+                        {% endif %}
+                      </button>
+                    </div>
                   </div>
                   <div class="col-md-12">
                     <h5 class="track-title">
@@ -79,7 +81,7 @@
                     </button>
                   </div>
                   <div class="col-md-3">
-                    <button onclick="openModal('{{ info.uid }}')" class="group-btn">Group</button>
+                    <button onclick="openModal('{{ info.uid }}')" class="btn group-btn">Group</button>
                   </div>
                 </div>
                 <!-- Queue Section -->
@@ -92,17 +94,20 @@
                   <ul class="queue-list list-group" style="padding-left: 0; margin-left: 0">
                     {% for track in info.queue %}
                       <li class="list-group-item" style="padding-left: 0;">
-                        <div class="media"
-                             onclick="playTrack('{{ info.uid }}', {{ forloop.counter0 }})">
-                          <img src="{{ track.album_art }}"
-                               class="mr-3"
-                               alt="Album Art"
-                               style="width: 60px;
-                                      height: 60px"
-                               onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
-                          <div class="media-body">
-                            <h6 class="mt-0">{{ track.title }}</h6>
-                            {{ track.artist }}
+                        <div class="row align-items-center">
+                          <!-- Album Art on the left -->
+                          <div class="col-auto">
+                            <img src="{{ track.album_art }}"
+                                 class="img-fluid"
+                                 alt="Album Art"
+                                 style="width: 60px;
+                                        height: 60px"
+                                 onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                          </div>
+                          <!-- Title and Artist on the right -->
+                          <div class="col">
+                            <h6 class="mb-1">{{ track.title }}</h6>
+                            <p class="mb-0">{{ track.artist }}</p>
                           </div>
                         </div>
                       </li>
@@ -110,6 +115,74 @@
                       <li class="list-group-item text-center" style="padding-left: 0;">No tracks in the queue</li>
                     {% endfor %}
                   </ul>
+                </div>
+              </div>
+              <!-- Modal for grouping speakers -->
+              <div class="modal fade"
+                   id="groupModal-{{ info.uid }}"
+                   tabindex="-1"
+                   role="dialog"
+                   aria-labelledby="group-modal-{{ info.uid }}"
+                   aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                  <div class="modal-content">
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="group-modal-{{ info.uid }}">Group Speakers for {{ info.group_label }}</h5>
+                      <button type="button"
+                              class="close"
+                              data-dismiss="modal"
+                              aria-label="Close"
+                              onclick="closeModal('{{ info.uid }}')">
+                        <span aria-hidden="true">&times;</span>
+                      </button>
+                    </div>
+                    <!-- Modal Body -->
+                    <div class="modal-body">
+                      <!-- Grouping options go here -->
+                      <!-- Adjust your switch-container to use Bootstrap switches -->
+                      {% for grouped_speaker in info.group %}
+                        {% if grouped_speaker.player_name != info.name %}
+                          <div class="custom-control custom-switch">
+                            <input type="checkbox"
+                                   class="custom-control-input"
+                                   id="group-checkbox-{{ grouped_speaker.uid }}"
+                                   checked
+                                   onclick="onCheckboxChange('{{ info.uid }}')"
+                                   data-original-state="checked"
+                                   data-speaker-name="{{ grouped_speaker.uid }}">
+                            <label class="custom-control-label"
+                                   for="group-checkbox-{{ grouped_speaker.uid }}">
+                              {{ grouped_speaker.player_name }}
+                            </label>
+                          </div>
+                        {% endif %}
+                      {% endfor %}
+                      {% for ungrouped_speaker in info.ungrouped %}
+                        <div class="custom-control custom-switch">
+                          <input type="checkbox"
+                                 class="custom-control-input"
+                                 id="group-checkbox-{{ ungrouped_speaker.uid }}"
+                                 onclick="onCheckboxChange('{{ info.uid }}')"
+                                 data-original-state="unchecked"
+                                 data-speaker-name="{{ ungrouped_speaker.uid }}">
+                          <label class="custom-control-label"
+                                 for="group-checkbox-{{ ungrouped_speaker.uid }}">
+                            {{ ungrouped_speaker.player_name }}
+                          </label>
+                        </div>
+                      {% endfor %}
+                      {% if info.ungrouped|length == 0 %}<p>All available speakers are already grouped</p>{% endif %}
+                    </div>
+                    <!-- Modal Footer -->
+                    <div class="modal-footer">
+                      <button id="apply-button-{{ info.uid }}"
+                              type="button"
+                              class="btn btn-primary"
+                              onclick="applyGroupChanges('{{ info.uid }}')"
+                              disabled>Apply</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
