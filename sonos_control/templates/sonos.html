@@ -7,15 +7,16 @@
       body {
           font-family: Arial, sans-serif;
           background-color: #000000; /* Black background for the entire page */
-          margin: 0;
-          padding: 20px;
+          padding-top: 100px;
           overflow: hidden;
       }
     
-        .sonos-content, .spotify-content {
-            height: 100vh; /* Full height of the viewport */
-            overflow-y: auto; /* Allow vertical scrolling */
-        }
+      .sonos-content, .spotify-content {
+        height: calc(100vh - 100px); /* Subtract the 100px padding from the full viewport height */
+        overflow-y: auto; /* Allow scrolling inside these containers */
+        padding-bottom: 20px; /* Optional: Add some bottom padding for better scroll experience */
+        -webkit-overflow-scrolling: touch; /* Enable smooth scrolling on touch devices */
+    }
 
       h1 {
           text-align: center;
