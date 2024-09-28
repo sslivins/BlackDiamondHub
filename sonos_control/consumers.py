@@ -133,6 +133,7 @@ class SonosConsumer(AsyncWebsocketConsumer):
             for info in speakers_info:
                 if info['is_coordinator']:
                     speaker_data[info['uid']] = {
+                        'group_label': info['group_label'],
                         'track': info['track'],
                         'artist': info['artist'],
                         'album': info['album'],

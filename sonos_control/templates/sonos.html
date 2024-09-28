@@ -289,13 +289,14 @@
         </div>
     </body>
     <script>
+    const modalInstances = {};
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    let socket = null;    
+
     document.addEventListener("DOMContentLoaded", function() {
         initWebSocket(); // Initialize WebSocket after DOM is ready
     });
 
-    // Establish a WebSocket connection
-    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-    let socket = null;
 
     function initWebSocket() {
 
@@ -478,25 +479,27 @@
         // Get the speaker tile and modal
         const tile = document.getElementById(`speaker-content-${speakerUUID}`);
         const modalElement = document.getElementById(`groupModal-${speakerUUID}`);
-        const modal = new bootstrap.Modal(modalElement);
 
-        // Check if both tile and modal exist
-        if (tile && modalElement) {
-
-            // Show the modal to make it visible (we need this to calculate its dimensions)
-            modal.show();
-
+        if (modalElement) {
+            // Initialize the modal and store the instance in modalInstances object
+            const modal = new bootstrap.Modal(modalElement);
+            modalInstances[speakerUUID] = modal;
+    
             // Store the original state of each checkbox when the modal is opened
-            const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
+            const checkboxes = modalElement.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
-            checkbox.setAttribute('data-original-state', checkbox.checked ? 'checked' : 'unchecked');
+                checkbox.setAttribute('data-original-state', checkbox.checked ? 'checked' : 'unchecked');
             });
-
+    
             // Add blur effect to the tile
-            tile.classList.add('blur-background');
-
+            if (tile) {
+                tile.classList.add('blur-background');
+            }
+    
+            // Show the modal
+            modal.show();
         } else {
-            console.error(`Could not find the tile or modal for speaker: ${speakerUUID}`);
+            console.error(`Could not find the modal for speaker: ${speakerUUID}`);
         }
     }
 
@@ -568,63 +571,187 @@
         });
     }
 
-    function closeModal(speakerUUID) {
+function closeModal(speakerUUID) {
+    const tile = document.getElementById(`speaker-content-${speakerUUID}`);
+    const modalElement = document.getElementById(`groupModal-${speakerUUID}`);
 
-        const modal = document.getElementById(`groupModal-${speakerUUID}`);
-        const tile = document.getElementById(`speaker-content-${speakerUUID}`);
-    
-        // Reset the checkboxes to their original state
-        const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
-        checkboxes.forEach(checkbox => {
-            const originalState = checkbox.getAttribute('data-original-state');
-            checkbox.checked = originalState === 'checked'; // Revert to original state
-        });
-    
+    if (modalElement) {
+        // Retrieve the Bootstrap modal instance from modalInstances object
+        const modal = modalInstances[speakerUUID];
+
         if (modal) {
-            modal.style.display = 'none';  // Close the modal
+            // Close the modal
+            modal.hide();
+
+            // Clean up: remove the modal instance from the modalInstances object
+            delete modalInstances[speakerUUID];
+        } else {
+            console.error('Modal instance not found');
         }
-    
+
         // Remove blur effect from the tile
         if (tile) {
             tile.classList.remove('blur-background');
         }
+    } else {
+        console.error(`Could not find the modal for speaker: ${speakerUUID}`);
     }
+}
+    
 
     function updateSpeakerData(speakerData) {
         console.log('Got Speaker Update');
 
+        updateSpeakerTabs(speakerData);        
+
         for (const speakerId in speakerData) {
+            console.log(`Updating Speaker ${speakerId}`);
             const data = speakerData[speakerId];
             updateSpeakerContent(speakerId, data);
         }
 
+        // Activate the first tab by default
+        activateSpeakerTab(Object.keys(speakerData)[0]);
     }
 
-    function updateSpeakerContent(speakerId, data) {
-        // Update track info
-        document.querySelector(`#speaker-content-${speakerId} .track-title`).innerText = data.track;
-        document.querySelector(`#speaker-content-${speakerId} .track-artist`).innerText = data.artist;
-        document.querySelector(`#speaker-content-${speakerId} .track-album`).innerText = data.album;
+    function updateSpeakerTabs(speakerData) {
+        // Select the container for the speaker tabs
+        const speakerTabsContainer = document.getElementById('speaker-tabs');
+    
+        // Clear the existing tabs
+        speakerTabsContainer.innerHTML = '';
+    
+        // Loop through the speakerData and add tabs for each coordinator
+        let isFirstTab = true; // Track the first tab to mark it as active
+        for (const speakerId in speakerData) {
+            const speakerInfo = speakerData[speakerId];
 
+            console.log(`Creating tab for ${speakerId}`);
+            const tab = document.createElement('a');
+            tab.classList.add('nav-link');
+            if (isFirstTab) {
+                tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
+                isFirstTab = false;
+            } else {
+                tab.setAttribute('aria-selected', 'false');
+            }
+
+            tab.setAttribute('id', `speaker-tab-${speakerId}`);
+            tab.setAttribute('data-toggle', 'pill');
+            tab.setAttribute('href', `#speaker-content-${speakerId}`);
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-controls', `speaker-content-${speakerId}`);
+            tab.textContent = speakerInfo.group_label;
+
+            // Append the tab to the container
+            speakerTabsContainer.appendChild(tab);
+        }
+    }    
+
+    function updateSpeakerContent(speakerId, data) {
+        // Check if the speaker content exists
+        let speakerContent = document.getElementById(`speaker-content-${speakerId}`);
+    
+        // If the speaker content doesn't exist, create it dynamically
+        if (!speakerContent) {
+            const tabContent = document.getElementById('speaker-tabContent');
+            
+            // Create new speaker content
+            speakerContent = document.createElement('div');
+            speakerContent.id = `speaker-content-${speakerId}`;
+            speakerContent.classList.add('tab-pane', 'fade');
+            speakerContent.setAttribute('role', 'tabpanel');
+            speakerContent.setAttribute('aria-labelledby', `speaker-tab-${speakerId}`);
+    
+            // Add the new speaker content to the tab content container
+            speakerContent.innerHTML = `
+                <div class="card mb-3">
+                    <div class="row no-gutters">
+                        <div class="col-md-12">
+                            <h2 class="mt-8 text-center">${data.group_label}</h2>
+                            <div class="album-art-container position-relative">
+                                <img src="${data.album_art || '{% static "default_album_art.webp" %}'}" class="img-fluid album-art" alt="Album Art" onerror="this.onerror=null;this.src='{% static "default_album_art.webp" %}';">
+                                <button class="btn play-pause-btn position-absolute" id="play-pause-button-${speakerId}" onclick="togglePlayPause('${speakerId}', '${data.play_state}')">
+                                    ${data.play_state === 'PLAYING' ? '&#10074;&#10074;' : '&#9654;'}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <h5 class="track-title"><strong>Title:</strong> ${data.track}</h5>
+                            <p class="track-artist"><strong>Artist:</strong> ${data.artist}</p>
+                            <p class="track-album"><strong>Album:</strong> ${data.album}</p>
+                        </div>
+                        <div class="col-md-9">
+                            <button class="volume-btn volume-down" onclick="adjustVolume('${speakerId}', decreaseVolume('${speakerId}'))">
+                                <i class="fas fa-volume-down"></i>
+                            </button>
+                            <input type="range" class="volume-slider" min="0" max="100" value="${data.volume}" id="volume-slider-${speakerId}" onchange="adjustVolume('${speakerId}', this.value)">
+                            <button class="volume-btn volume-up" onclick="adjustVolume('${speakerId}', increaseVolume('${speakerId}'))">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button onclick="openModal('${speakerId}')" class="btn group-btn">Group</button>
+                        </div>
+                    </div>
+                    <hr class="my-4">
+                    <div class="queue-container">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="d-inline">Queue:</h5>
+                            <button class="btn btn-danger" onclick="clearQueue('${speakerId}')">Clear Queue</button>
+                        </div>
+                        <ul class="queue-list list-group" style="padding-left: 0; margin-left: 0"></ul>
+                    </div>
+                </div>`;
+            
+            tabContent.appendChild(speakerContent);
+    
+            // Also add a new tab for this speaker if it doesn't exist
+            const tabList = document.getElementById('speaker-tabs');
+            const newTab = document.createElement('a');
+            newTab.classList.add('nav-link');
+            newTab.id = `speaker-tab-${speakerId}`;
+            newTab.setAttribute('data-toggle', 'pill');
+            newTab.setAttribute('href', `#speaker-content-${speakerId}`);
+            newTab.setAttribute('role', 'tab');
+            newTab.setAttribute('aria-controls', `speaker-content-${speakerId}`);
+            newTab.setAttribute('aria-selected', 'false');
+            newTab.innerText = data.group_label;
+            
+            tabList.appendChild(newTab);
+        }
+    
+        // Proceed with updating the existing or newly created speaker content
+        const groupLabelElem = document.querySelector(`#speaker-content-${speakerId} h2.text-center`);
+        if (groupLabelElem) {
+            groupLabelElem.innerText = data.group_label; // Update the title with the new group label
+        }
+    
         // Update album art
         const albumArtImg = document.querySelector(`#speaker-content-${speakerId} .album-art`);
         albumArtImg.src = data.album_art || '{% static "default_album_art.webp" %}';
-
+    
         // Update play/pause button
         const playPauseButton = document.getElementById(`play-pause-button-${speakerId}`);
-        if (data.play_state === 'PLAYING') {
-            playPauseButton.innerHTML = '&#10074;&#10074;'; // Pause icon
-            playPauseButton.setAttribute('onclick', `togglePlayPause('${speakerId}', 'PLAYING')`);
-        } else {
-            playPauseButton.innerHTML = '&#9654;'; // Play icon
-            playPauseButton.setAttribute('onclick', `togglePlayPause('${speakerId}', 'STOPPED')`);
+        playPauseButton.innerHTML = data.play_state === 'PLAYING' ? '&#10074;&#10074;' : '&#9654;';
+        playPauseButton.setAttribute('onclick', `togglePlayPause('${speakerId}', '${data.play_state}')`);
+    
+        // Update track info
+        const trackTitleElem = document.querySelector(`#speaker-content-${speakerId} .track-title strong`);
+        const trackArtistElem = document.querySelector(`#speaker-content-${speakerId} .track-artist strong`);
+        const trackAlbumElem = document.querySelector(`#speaker-content-${speakerId} .track-album strong`);
+        
+        if (trackTitleElem && trackArtistElem && trackAlbumElem) {
+            trackTitleElem.nextSibling.textContent = ` ${data.track}`;
+            trackArtistElem.nextSibling.textContent = ` ${data.artist}`;
+            trackAlbumElem.nextSibling.textContent = ` ${data.album}`;
         }
-
+    
         // Update volume
         const volumeSlider = document.getElementById(`volume-slider-${speakerId}`);
-        const volumeOutput = document.getElementById(`volume-output-${speakerId}`);
         volumeSlider.value = data.volume;
-
+    
         // Update queue
         const queueList = document.querySelector(`#speaker-content-${speakerId} .queue-list`);
         queueList.innerHTML = ''; // Clear existing queue items
@@ -634,23 +761,18 @@
                 const queueItem = document.createElement('li');
                 queueItem.classList.add('list-group-item');
                 queueItem.setAttribute('onclick', `playTrack('${speakerId}', ${index})`);
-        
+    
                 // Create row structure for album art and text
                 queueItem.innerHTML = `
                     <div class="row align-items-center">
-                        <!-- Album Art on the left -->
                         <div class="col-auto">
-                            <img src="${track.album_art || '{% static "default_album_art.webp" %}'}" class="img-fluid" alt="Album Art" style="width: 60px; height: 60px;" onerror="this.onerror=null;this.src='{% static "default_album_art.webp" %}';">
+                            <img src="${track.album_art || '{% static "default_album_art.webp" %}'}" class="img-fluid" alt="Album Art" style="width: 60px; height: 60px;">
                         </div>
-        
-                        <!-- Title and Artist on the right -->
                         <div class="col">
                             <h6 class="mb-1">${track.title}</h6>
                             <p class="mb-0">${track.artist}</p>
                         </div>
-                    </div>
-                `;
-        
+                    </div>`;
                 queueList.appendChild(queueItem);
             });
         } else {
@@ -659,8 +781,37 @@
             emptyItem.innerText = 'No tracks in the queue';
             queueList.appendChild(emptyItem);
         }
+    }
+    
+    
+    function activateSpeakerTab(speakerId) {
+        // Remove 'active' class from any currently active tab and content
+        const activeTab = document.querySelector('#speaker-tabs .nav-link.active');
+        const activeContent = document.querySelector('.tab-pane.show.active');
+    
+        if (activeTab) {
+            activeTab.classList.remove('active');
+            activeTab.setAttribute('aria-selected', 'false');
+        }
         
-    }    
+        if (activeContent) {
+            activeContent.classList.remove('show', 'active');
+        }
+    
+        // Activate the selected tab and its corresponding content
+        const newActiveTab = document.getElementById(`speaker-tab-${speakerId}`);
+        const newActiveContent = document.getElementById(`speaker-content-${speakerId}`);
+    
+        if (newActiveTab) {
+            newActiveTab.classList.add('active');
+            newActiveTab.setAttribute('aria-selected', 'true');
+        }
+    
+        if (newActiveContent) {
+            newActiveContent.classList.add('show', 'active');
+        }
+    }
+        
 
     </script>
 {% endblock %}

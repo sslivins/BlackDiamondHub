@@ -117,74 +117,6 @@
                   </ul>
                 </div>
               </div>
-              <!-- Modal for grouping speakers -->
-              <div class="modal fade"
-                   id="groupModal-{{ info.uid }}"
-                   tabindex="-1"
-                   role="dialog"
-                   aria-labelledby="group-modal-{{ info.uid }}"
-                   aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                  <div class="modal-content">
-                    <!-- Modal Header -->
-                    <div class="modal-header">
-                      <h5 class="modal-title" id="group-modal-{{ info.uid }}">Group Speakers for {{ info.group_label }}</h5>
-                      <button type="button"
-                              class="close"
-                              data-dismiss="modal"
-                              aria-label="Close"
-                              onclick="closeModal('{{ info.uid }}')">
-                        <span aria-hidden="true">&times;</span>
-                      </button>
-                    </div>
-                    <!-- Modal Body -->
-                    <div class="modal-body">
-                      <!-- Grouping options go here -->
-                      <!-- Adjust your switch-container to use Bootstrap switches -->
-                      {% for grouped_speaker in info.group %}
-                        {% if grouped_speaker.player_name != info.name %}
-                          <div class="custom-control custom-switch">
-                            <input type="checkbox"
-                                   class="custom-control-input"
-                                   id="group-checkbox-{{ grouped_speaker.uid }}"
-                                   checked
-                                   onclick="onCheckboxChange('{{ info.uid }}')"
-                                   data-original-state="checked"
-                                   data-speaker-name="{{ grouped_speaker.uid }}">
-                            <label class="custom-control-label"
-                                   for="group-checkbox-{{ grouped_speaker.uid }}">
-                              {{ grouped_speaker.player_name }}
-                            </label>
-                          </div>
-                        {% endif %}
-                      {% endfor %}
-                      {% for ungrouped_speaker in info.ungrouped %}
-                        <div class="custom-control custom-switch">
-                          <input type="checkbox"
-                                 class="custom-control-input"
-                                 id="group-checkbox-{{ ungrouped_speaker.uid }}"
-                                 onclick="onCheckboxChange('{{ info.uid }}')"
-                                 data-original-state="unchecked"
-                                 data-speaker-name="{{ ungrouped_speaker.uid }}">
-                          <label class="custom-control-label"
-                                 for="group-checkbox-{{ ungrouped_speaker.uid }}">
-                            {{ ungrouped_speaker.player_name }}
-                          </label>
-                        </div>
-                      {% endfor %}
-                      {% if info.ungrouped|length == 0 %}<p>All available speakers are already grouped</p>{% endif %}
-                    </div>
-                    <!-- Modal Footer -->
-                    <div class="modal-footer">
-                      <button id="apply-button-{{ info.uid }}"
-                              type="button"
-                              class="btn btn-primary"
-                              onclick="applyGroupChanges('{{ info.uid }}')"
-                              disabled>Apply</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           {% endif %}
         {% endfor %}
@@ -192,3 +124,69 @@
     </div>
   </div>
 </div>
+{% for info in speaker_info %}
+  <!-- Modal for grouping speakers -->
+  <div class="modal fade"
+       id="groupModal-{{ info.uid }}"
+       tabindex="-1"
+       role="dialog"
+       aria-labelledby="group-modal-{{ info.uid }}"
+       aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h5 class="modal-title" id="group-modal-{{ info.uid }}">Group Speakers for {{ info.group_label }}</h5>
+          <button type="button"
+                  class="close"
+                  data-dismiss="modal"
+                  aria-label="Close"
+                  onclick="closeModal('{{ info.uid }}')">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <!-- Modal Body -->
+        <div class="modal-body">
+          <!-- Grouping options go here -->
+          <!-- Adjust your switch-container to use Bootstrap switches -->
+          {% for grouped_speaker in info.group %}
+            {% if grouped_speaker.player_name != info.name %}
+              <div class="custom-control custom-switch">
+                <input type="checkbox"
+                       class="custom-control-input"
+                       id="group-checkbox-{{ grouped_speaker.uid }}"
+                       checked
+                       onclick="onCheckboxChange('{{ info.uid }}')"
+                       data-original-state="checked"
+                       data-speaker-name="{{ grouped_speaker.uid }}">
+                <label class="custom-control-label"
+                       for="group-checkbox-{{ grouped_speaker.uid }}">{{ grouped_speaker.player_name }}</label>
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% for ungrouped_speaker in info.ungrouped %}
+            <div class="custom-control custom-switch">
+              <input type="checkbox"
+                     class="custom-control-input"
+                     id="group-checkbox-{{ ungrouped_speaker.uid }}"
+                     onclick="onCheckboxChange('{{ info.uid }}')"
+                     data-original-state="unchecked"
+                     data-speaker-name="{{ ungrouped_speaker.uid }}">
+              <label class="custom-control-label"
+                     for="group-checkbox-{{ ungrouped_speaker.uid }}">{{ ungrouped_speaker.player_name }}</label>
+            </div>
+          {% endfor %}
+          {% if info.ungrouped|length == 0 %}<p>All available speakers are already grouped</p>{% endif %}
+        </div>
+        <!-- Modal Footer -->
+        <div class="modal-footer">
+          <button id="apply-button-{{ info.uid }}"
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="applyGroupChanges('{{ info.uid }}')"
+                  disabled>Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
