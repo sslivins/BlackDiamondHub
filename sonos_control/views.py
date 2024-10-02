@@ -502,6 +502,8 @@ def spotify_auth_status(request):
     #print(f"Session ID: {session_id}, Token Info: {token_info}")
 
     if token_info:
+        #authenticate the current session
+        
         #print("Token info found in cache")
         # Tokens are available, user is authenticated
         return JsonResponse({'authorized': True})
