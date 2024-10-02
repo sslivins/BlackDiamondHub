@@ -113,11 +113,8 @@ SOCIAL_AUTH_DISCONNECT_PIPELINE = (
     'social_core.pipeline.disconnect.get_entries',    
     'social_core.pipeline.disconnect.revoke_tokens',
     'social_core.pipeline.disconnect.disconnect',
-    #'sonos_control.pipeline.revoke_tokens',
     'sonos_control.pipeline.clear_session_and_logout',
 )
-
-
 
 
 # Database
@@ -224,3 +221,8 @@ SOCIAL_AUTH_SPOTIFY_KEY =  os.getenv('SPOTIFY_CLIENT_ID')
 SOCIAL_AUTH_SPOTIFY_SECRET =  os.getenv('SPOTIFY_CLIENT_SECRET')
 SOCIAL_AUTH_SPOTIFY_REDIRECT_URI = 'http://192.168.1.162:8080/auth/complete/spotify/'
 SOCIAL_AUTH_SPOTIFY_SCOPE = ['user-read-email', 'user-read-private', 'user-read-recently-played', 'user-library-read']
+
+SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
+SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
+SPOTIFY_REDIRECT_URI = 'http://192.168.1.162:8080/sonos_control/spotify/auth/callback/'
+SPOTIFY_SCOPE= ['user-read-email', 'user-read-private', 'user-read-recently-played', 'user-library-read']

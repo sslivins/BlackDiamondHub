@@ -12,6 +12,16 @@ from social_django.models import UserSocialAuth
 import time
 from datetime import datetime
 from social_django.utils import load_strategy
+from django.contrib.auth import logout
+from spotipy.oauth2 import SpotifyOAuth
+from django.conf import settings
+import qrcode
+import io
+import base64
+import uuid
+from django.core.cache import cache
+from .utils import generate_auth_url, generate_qr_code
+from .cache_handler import ServerCacheHandler
 
 def sonos_control_view(request):
     speakers_info = get_sonos_speaker_info()
@@ -391,7 +401,150 @@ def get_sonos_speaker_info():
 # Spotify Integration
 ####################################################
 
+def spotify_view(request):
+    if request.user.is_authenticated:
+        # User is authenticated; render the template as before
+        return render(request, 'spotify.html')
+    else:
+        # Generate a unique session ID and store it
+        session_id = str(uuid.uuid4())
+        request.session['session_id'] = session_id
+
+        # Generate the Spotify authorization URL with the state parameter
+        auth_url = generate_auth_url(session_id)
+
+        # Generate the QR code image
+        qr_code_img = generate_qr_code(auth_url)
+
+        # Pass the QR code image and session ID to the template
+        context = {
+            'qr_code_img': qr_code_img,
+            'session_id': session_id,
+        }
+        return render(request, 'partials/spotify.html', context)
+    
+def spotify_auth_qrcode(request):
+    # Generate a unique session ID and store it
+    session_id = str(uuid.uuid4())
+    
+    # Generate the Spotify authorization URL with the state parameter
+    auth_manager = SpotifyOAuth(
+        client_id=settings.SPOTIFY_CLIENT_ID,
+        client_secret=settings.SPOTIFY_CLIENT_SECRET,
+        redirect_uri=settings.SPOTIFY_REDIRECT_URI,
+        scope=settings.SPOTIFY_SCOPE,
+        state=session_id,
+        cache_handler=ServerCacheHandler(session_id),
+    )
+    auth_url = auth_manager.get_authorize_url()
+
+    # Generate the QR code image
+    qr_code_img = generate_qr_code(auth_url)
+
+    # Return the QR code image and session ID as JSON
+    response_data = {
+        'qr_code_img': qr_code_img,
+        'session_id': session_id,
+    }
+
+    return JsonResponse(response_data)    
+
+def logout_and_disconnect_spotify(request):
+    
+    print("Logging out and disconnecting Spotify...")
+    # Disconnect Spotify social account
+    try:
+        user_social_auth = request.user.social_auth.get(provider='spotify')
+        print(f'Revoking tokens')
+        user_social_auth.delete()
+        
+        token_info = user_social_auth.extra_data
+        print(f"Revoking access token: {token_info['access_token']}")
+        
+    except UserSocialAuth.DoesNotExist:
+        print("User does not have a Spotify social authentication.")
+        pass
+
+    # Log out the user
+    logout(request)
+    print(f"Token revoked: {token_info['access_token']}")
+    return redirect('sonos_control')
+
 def get_spotify_instance(user):
+    try:
+        sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+            client_id=settings.SPOTIFY_CLIENT_ID,
+            client_secret=settings.SPOTIFY_CLIENT_SECRET,
+            redirect_uri=settings.SPOTIFY_REDIRECT_URI,
+            scope=settings.SPOTIFY_SCOPE,
+        ))
+    except spotipy.exceptions.SpotifyException as e:
+        print(f"Error: {e}")
+        
+    return sp
+
+def spotify_login(request):
+    # This will redirect to Spotify if the token is invalid or missing
+    sp = get_spotify_instance(request)
+    if isinstance(sp, spotipy.Spotify):
+        # Already authenticated
+        return redirect('spotify_home')
+    else:
+        # Redirected to Spotify's auth page
+        return sp
+
+def spotify_auth_status(request):
+    session_id = request.GET.get('session_id')
+
+    cache_handler = ServerCacheHandler(session_id)
+    token_info = cache_handler.get_cached_token()
+    
+    #print(f"Session ID: {session_id}, Token Info: {token_info}")
+
+    if token_info:
+        #print("Token info found in cache")
+        # Tokens are available, user is authenticated
+        return JsonResponse({'authorized': True})
+    else:
+        return JsonResponse({'authorized': False})
+ 
+def spotify_callback(request):
+    code = request.GET.get('code')
+    state = request.GET.get('state')
+
+    cache_handler = ServerCacheHandler(state)
+    auth_manager = SpotifyOAuth(
+        client_id=settings.SPOTIFY_CLIENT_ID,
+        client_secret=settings.SPOTIFY_CLIENT_SECRET,
+        redirect_uri=settings.SPOTIFY_REDIRECT_URI,
+        state=state,
+        cache_handler=cache_handler
+    )
+
+
+    try:
+        # Exchange the code for access token, token_info is saved in the cache
+        token_info = auth_manager.get_access_token(code)
+        #print(f"Token info: {token_info}")
+    except Exception as e:
+        print(f"Error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+    # Token info is automatically saved in the session via cache_handler
+
+    return JsonResponse({'Success': True})
+
+    
+def spotify_home(request):
+    sp = get_spotify_instance(request)
+    if isinstance(sp, spotipy.Spotify):
+        # Fetch user data or playlists
+        user_profile = sp.current_user()
+        return render(request, 'spotify.html', {'user_profile': user_profile})
+    else:
+        # Redirect to login if not authenticated
+        return sp    
+
+def get_spotify_instance_old(user):
 
     social = user.social_auth.get(provider='spotify')
     token_info = social.extra_data
