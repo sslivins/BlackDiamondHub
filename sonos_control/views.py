@@ -32,13 +32,13 @@ def sonos_control_view(request):
 
     return render(request, 'sonos.html', context)
 
-def get_sonos_status_partial(request):
-    speakers_info = get_sonos_speaker_info()
+# def get_sonos_status_partial(request):
+#     speakers_info = get_sonos_speaker_info()
 
-    # Render the partial HTML for the speakers
-    rendered_html = render(request, 'partials/sonos_speakers.html', {'speaker_info': speakers_info})
+#     # Render the partial HTML for the speakers
+#     rendered_html = render(request, 'partials/sonos_speakers.html', {'speaker_info': speakers_info})
 
-    return JsonResponse({'status': 'success', 'html': rendered_html.content.decode('utf-8')})
+#     return JsonResponse({'status': 'success', 'html': rendered_html.content.decode('utf-8')})
 
 
 def toggle_group(request):
@@ -88,9 +88,6 @@ def toggle_group(request):
         return JsonResponse({'status': 'success', 'message': status})
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
-
-from django.http import JsonResponse
-import soco
 
 def adjust_volume(request):
     if request.method == 'POST':
@@ -434,7 +431,7 @@ def spotify_auth_qrcode(request):
         redirect_uri=settings.SPOTIFY_REDIRECT_URI,
         scope=settings.SPOTIFY_SCOPE,
         state=session_id,
-        cache_handler=ServerCacheHandler(session_id),
+        cache_handler=ServerCacheHandler(),
     )
     auth_url = auth_manager.get_authorize_url()
 
@@ -449,35 +446,24 @@ def spotify_auth_qrcode(request):
 
     return JsonResponse(response_data)    
 
-def logout_and_disconnect_spotify(request):
+def spotify_logout(request):
     
-    print("Logging out and disconnecting Spotify...")
-    # Disconnect Spotify social account
-    try:
-        user_social_auth = request.user.social_auth.get(provider='spotify')
-        print(f'Revoking tokens')
-        user_social_auth.delete()
-        
-        token_info = user_social_auth.extra_data
-        print(f"Revoking access token: {token_info['access_token']}")
-        
-    except UserSocialAuth.DoesNotExist:
-        print("User does not have a Spotify social authentication.")
-        pass
-
-    # Log out the user
-    logout(request)
-    print(f"Token revoked: {token_info['access_token']}")
+    # Clear the Spotify token info from the session
+    if 'spotify_token_info' in request.session:
+        del request.session['spotify_token_info']
+    
     return redirect('sonos_control')
 
-def get_spotify_instance(user):
+def get_spotify_instance(request):
     try:
-        sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-            client_id=settings.SPOTIFY_CLIENT_ID,
-            client_secret=settings.SPOTIFY_CLIENT_SECRET,
-            redirect_uri=settings.SPOTIFY_REDIRECT_URI,
-            scope=settings.SPOTIFY_SCOPE,
-        ))
+        access_token = request.session['spotify_token_info']['access_token']
+        
+        print(f"Access token: {access_token}")  
+        
+        sp = spotipy.Spotify(auth=access_token)
+        
+        print(f"spotify instance: {sp}")
+        
     except spotipy.exceptions.SpotifyException as e:
         print(f"Error: {e}")
         
@@ -496,13 +482,13 @@ def spotify_login(request):
 def spotify_auth_status(request):
     session_id = request.GET.get('session_id')
 
-    cache_handler = ServerCacheHandler(session_id)
+    cache_handler = ServerCacheHandler()
     token_info = cache_handler.get_cached_token()
-    
-    #print(f"Session ID: {session_id}, Token Info: {token_info}")
 
     if token_info:
-        #authenticate the current session
+        #add the token info to the session
+        request.session['spotify_token_info'] = token_info
+        cache_handler.delete_cached_token()
         
         #print("Token info found in cache")
         # Tokens are available, user is authenticated
@@ -514,7 +500,7 @@ def spotify_callback(request):
     code = request.GET.get('code')
     state = request.GET.get('state')
 
-    cache_handler = ServerCacheHandler(state)
+    cache_handler = ServerCacheHandler()
     auth_manager = SpotifyOAuth(
         client_id=settings.SPOTIFY_CLIENT_ID,
         client_secret=settings.SPOTIFY_CLIENT_SECRET,
@@ -522,7 +508,6 @@ def spotify_callback(request):
         state=state,
         cache_handler=cache_handler
     )
-
 
     try:
         # Exchange the code for access token, token_info is saved in the cache
@@ -581,38 +566,38 @@ def get_spotify_instance_old(user):
     return sp
 
 def fetch_spotify_data(request):
-    if request.user.is_authenticated:
-        try:
-            sp = get_spotify_instance(request.user)
-            
-            # Fetch recently played tracks
-            recently_played_results = sp.current_user_recently_played(limit=12)
-            recently_played = [{
-                'name': track['track']['name'],
-                'artist': track['track']['artists'][0]['name'],
-                'album': track['track']['album']['name'],
-                'uri': track['track']['uri'],
-                'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
-            } for track in recently_played_results['items']]
+    try:
+        sp = get_spotify_instance(request)
+        
+        # Fetch recently played tracks
+        recently_played_results = sp.current_user_recently_played(limit=12)
+        recently_played = [{
+            'name': track['track']['name'],
+            'artist': track['track']['artists'][0]['name'],
+            'album': track['track']['album']['name'],
+            'uri': track['track']['uri'],
+            'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
+        } for track in recently_played_results['items']]
+        
+        # Fetch favorite tracks
+        favorite_tracks_results = sp.current_user_saved_tracks(limit=12)
+        favorite_tracks = [{
+            'name': track['track']['name'],
+            'artist': track['track']['artists'][0]['name'],
+            'album': track['track']['album']['name'],
+            'uri': track['track']['uri'],
+            'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
+        } for track in favorite_tracks_results['items']]
 
-            # Fetch favorite tracks
-            favorite_tracks_results = sp.current_user_saved_tracks(limit=12)
-            favorite_tracks = [{
-                'name': track['track']['name'],
-                'artist': track['track']['artists'][0]['name'],
-                'album': track['track']['album']['name'],
-                'uri': track['track']['uri'],
-                'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
-            } for track in favorite_tracks_results['items']]
-
-            return JsonResponse({
-                'recently_played': recently_played,
-                'favorite_tracks': favorite_tracks,
-            })
-        except UserSocialAuth.DoesNotExist:
-            return JsonResponse({'error': 'Spotify account not connected'}, status=401)
-    else:
-        return JsonResponse({'error': 'User not authenticated'}, status=401)
+        return JsonResponse({
+            'recently_played': recently_played,
+            'favorite_tracks': favorite_tracks,
+        })
+    except Exception as e:
+        if e.http_status == 401:
+            return JsonResponse({'error': 'Spotify token expired'}, status=401)
+        else:
+            return JsonResponse({'error': str(e)}, status=500)
 
 def spotify_search(request):
     query = request.GET.get('query', '')
@@ -620,7 +605,7 @@ def spotify_search(request):
 
     try:
         # Get the Spotify instance for the authenticated user
-        sp = get_spotify_instance(request.user)
+        sp = get_spotify_instance(request)
 
         if query:
             # Search on Spotify for tracks, albums, and artists

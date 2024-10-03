@@ -4,13 +4,16 @@ from spotipy.cache_handler import CacheHandler
 from django.core.cache import cache
 
 class ServerCacheHandler(CacheHandler):
-    def __init__(self, state):
-        self.state = state  # Use state (session ID) as the key
+    def __init__(self):
+        self.token_key = "spotify_token_info"
 
     def get_cached_token(self):
-        return cache.get(self.state)
+        return cache.get(self.token_key)
 
     def save_token_to_cache(self, token_info):
         #print(f"Saving token {token_info} to cache with key {self.state}")
-        cache.set(self.state, token_info, timeout=3600)  # Tokens expire after an hour
+        cache.set(self.token_key, token_info, timeout=3600)  # Tokens expire after an hour
+    
+    def delete_cached_token(self):
+        cache.delete(self.token_key)
         

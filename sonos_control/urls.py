@@ -4,7 +4,7 @@ from . import views
 urlpatterns = [
     path('', views.sonos_control_view, name='sonos_control'),
     #path('sonos_play/', views.play_spotify_on_sonos, name='play_spotify_on_sonos'),
-    path('get_sonos_status_partial/', views.get_sonos_status_partial, name='get_sonos_status_partial'),
+    #path('get_sonos_status_partial/', views.get_sonos_status_partial, name='get_sonos_status_partial'),
     path('toggle_group/', views.toggle_group, name='toggle_group'),
     path('adjust-volume/', views.adjust_volume, name='adjust_volume'),
     path('toggle-play-pause/', views.toggle_play_pause, name='toggle_play_pause'),
@@ -18,5 +18,5 @@ urlpatterns = [
     path('spotify/auth/status', views.spotify_auth_status, name='spotify_auth_status'),
     path('spotify/', views.spotify_home, name='spotify_home'),
     path('spotify/data/', views.fetch_spotify_data, name='fetch_spotify_data'),
-    path('spotify-logout/', views.logout_and_disconnect_spotify, name='spotify_logout'),
+    path('spotify-logout/', views.spotify_logout, name='spotify_logout'),
 ]

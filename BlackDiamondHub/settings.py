@@ -72,7 +72,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'social_django.middleware.SocialAuthExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'BlackDiamondHub.urls'
@@ -90,8 +89,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'feedback.context_processors.unread_feedback_count',
-                'social_django.context_processors.backends',
-                'social_django.context_processors.login_redirect',                
+                'sonos_control.context_processors.spotify_token',
             ],
         },
     },
