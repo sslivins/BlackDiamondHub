@@ -454,30 +454,46 @@ def spotify_logout(request):
     
     return redirect('sonos_control')
 
-def get_spotify_instance(request):
+def get_spotify_instance_old(request):
     try:
         access_token = request.session['spotify_token_info']['access_token']
         
-        print(f"Access token: {access_token}")  
-        
         sp = spotipy.Spotify(auth=access_token)
-        
-        print(f"spotify instance: {sp}")
         
     except spotipy.exceptions.SpotifyException as e:
         print(f"Error: {e}")
         
     return sp
 
-def spotify_login(request):
-    # This will redirect to Spotify if the token is invalid or missing
-    sp = get_spotify_instance(request)
-    if isinstance(sp, spotipy.Spotify):
-        # Already authenticated
-        return redirect('spotify_home')
-    else:
-        # Redirected to Spotify's auth page
-        return sp
+def get_spotify_instance(request):
+    token_info = request.session.get('spotify_token_info', None)
+    if not token_info:
+        # Redirect the user to Spotify authorization page
+        return redirect('spotify_auth')
+    
+    sp_oauth = spotipy.oauth2.SpotifyOAuth(
+        client_id=settings.SPOTIFY_CLIENT_ID,
+        client_secret=settings.SPOTIFY_CLIENT_SECRET,
+        redirect_uri=settings.SPOTIFY_REDIRECT_URI)
+    
+    if sp_oauth.is_token_expired(token_info):
+        print("Token has expired; refreshing...")
+        # Token has expired; refresh it
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+        # Update the stored token_info
+        request.session['spotify_token_info'] = token_info
+        
+    return spotipy.Spotify(auth=token_info['access_token'])
+
+# def spotify_login(request):
+#     # This will redirect to Spotify if the token is invalid or missing
+#     sp = get_spotify_instance(request)
+#     if isinstance(sp, spotipy.Spotify):
+#         # Already authenticated
+#         return redirect('spotify_home')
+#     else:
+#         # Redirected to Spotify's auth page
+#         return sp
 
 def spotify_auth_status(request):
     session_id = request.GET.get('session_id')
@@ -518,7 +534,7 @@ def spotify_callback(request):
         return JsonResponse({'error': str(e)}, status=500)
     # Token info is automatically saved in the session via cache_handler
 
-    return JsonResponse({'Success': True})
+    return render(request, 'spotify_callback.html')
 
     
 def spotify_home(request):
@@ -594,7 +610,7 @@ def fetch_spotify_data(request):
             'favorite_tracks': favorite_tracks,
         })
     except Exception as e:
-        if e.http_status == 401:
+        if 'http_status' in dir(e) and e.http_status == 401:
             return JsonResponse({'error': 'Spotify token expired'}, status=401)
         else:
             return JsonResponse({'error': str(e)}, status=500)

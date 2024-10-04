@@ -292,10 +292,11 @@
     <script>
     const modalInstances = {};
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-    let socket = null;    
+    let socket = null;
+    let activeSpeaker = null;
 
     document.addEventListener("DOMContentLoaded", function() {
-        initWebSocket(); // Initialize WebSocket after DOM is ready
+        initWebSocket();
     });
 
 
@@ -572,32 +573,32 @@
         });
     }
 
-function closeModal(speakerUUID) {
-    const tile = document.getElementById(`speaker-content-${speakerUUID}`);
-    const modalElement = document.getElementById(`groupModal-${speakerUUID}`);
+    function closeModal(speakerUUID) {
+        const tile = document.getElementById(`speaker-content-${speakerUUID}`);
+        const modalElement = document.getElementById(`groupModal-${speakerUUID}`);
 
-    if (modalElement) {
-        // Retrieve the Bootstrap modal instance from modalInstances object
-        const modal = modalInstances[speakerUUID];
+        if (modalElement) {
+            // Retrieve the Bootstrap modal instance from modalInstances object
+            const modal = modalInstances[speakerUUID];
 
-        if (modal) {
-            // Close the modal
-            modal.hide();
+            if (modal) {
+                // Close the modal
+                modal.hide();
 
-            // Clean up: remove the modal instance from the modalInstances object
-            delete modalInstances[speakerUUID];
+                // Clean up: remove the modal instance from the modalInstances object
+                delete modalInstances[speakerUUID];
+            } else {
+                console.error('Modal instance not found');
+            }
+
+            // Remove blur effect from the tile
+            if (tile) {
+                tile.classList.remove('blur-background');
+            }
         } else {
-            console.error('Modal instance not found');
+            console.error(`Could not find the modal for speaker: ${speakerUUID}`);
         }
-
-        // Remove blur effect from the tile
-        if (tile) {
-            tile.classList.remove('blur-background');
-        }
-    } else {
-        console.error(`Could not find the modal for speaker: ${speakerUUID}`);
     }
-}
     
 
     function updateSpeakerData(speakerData) {
@@ -612,7 +613,13 @@ function closeModal(speakerUUID) {
         }
 
         // Activate the first tab by default
-        activateSpeakerTab(Object.keys(speakerData)[0]);
+        //if (activeSpeaker == null) {
+        //    activeSpeaker =  Object.keys(speakerData)[0];
+        //}
+        
+        activateSpeakerTab(activeSpeaker);
+        //activateSpeakerTab(Object.keys(speakerData)[0]);
+        
     }
 
     function updateSpeakerTabs(speakerData) {
@@ -630,16 +637,29 @@ function closeModal(speakerUUID) {
             console.log(`Creating tab for ${speakerId}`);
             const tab = document.createElement('a');
             tab.classList.add('nav-link');
-            if (isFirstTab) {
-                tab.classList.add('active');
-                tab.setAttribute('aria-selected', 'true');
-                isFirstTab = false;
+
+            tab.setAttribute('aria-selected', 'false');
+
+            //make the first tab active by default
+            if (activeSpeaker == null) {
+                if (isFirstTab) {
+                    tab.classList.add('active');
+                    tab.setAttribute('aria-selected', 'true');
+                    activeSpeaker = speakerId;
+                    console.log(`Setting active speaker to first speaker: ${activeSpeaker}`);
+
+                    isFirstTab = false;                    
+                }                
             } else {
-                tab.setAttribute('aria-selected', 'false');
+                if (activeSpeaker == speakerId) {
+                    console.log(`Setting active speaker to ${activeSpeaker}`);
+                    tab.classList.add('active');
+                    tab.setAttribute('aria-selected', 'true');
+                }
             }
 
             tab.setAttribute('id', `speaker-tab-${speakerId}`);
-            tab.setAttribute('data-toggle', 'pill');
+            tab.setAttribute('data-bs-toggle', 'tab');
             tab.setAttribute('href', `#speaker-content-${speakerId}`);
             tab.setAttribute('role', 'tab');
             tab.setAttribute('aria-controls', `speaker-content-${speakerId}`);
@@ -647,6 +667,23 @@ function closeModal(speakerUUID) {
 
             // Append the tab to the container
             speakerTabsContainer.appendChild(tab);
+
+            tab.addEventListener('shown.bs.tab', function(e) {
+                // e.target is the newly activated tab
+                var newActiveTabId = e.target.id;
+                console.log('Active tab changed to ' + newActiveTabId);
+    
+                // Extract speaker UID from the href attribute
+                var speakerUid = e.target.getAttribute('href').replace('#speaker-content-', '');
+                console.log('Current speaker UID: ' + speakerUid);
+    
+                // Perform any actions needed when the tab changes
+                // For example, update the active speaker variable
+                activeSpeaker = speakerUid;
+    
+                // Call a function to update the speaker content if needed
+                // updateSpeakerContent(speakerUid, speakerData[speakerUid]);
+            });            
         }
     }    
 
@@ -706,21 +743,21 @@ function closeModal(speakerUUID) {
                     </div>
                 </div>`;
             
-            tabContent.appendChild(speakerContent);
+            tabContent.appendChild(speakerContent); 
     
             // Also add a new tab for this speaker if it doesn't exist
-            const tabList = document.getElementById('speaker-tabs');
+            {% comment %} const tabList = document.getElementById('speaker-tabs');
             const newTab = document.createElement('a');
             newTab.classList.add('nav-link');
             newTab.id = `speaker-tab-${speakerId}`;
-            newTab.setAttribute('data-toggle', 'pill');
+            newTab.setAttribute('data-toggle', 'tab'); adsfsd
             newTab.setAttribute('href', `#speaker-content-${speakerId}`);
             newTab.setAttribute('role', 'tab');
             newTab.setAttribute('aria-controls', `speaker-content-${speakerId}`);
             newTab.setAttribute('aria-selected', 'false');
             newTab.innerText = data.group_label;
-            
-            tabList.appendChild(newTab);
+
+tabList.appendChild(newTab); {% endcomment %}
         }
     
         // Proceed with updating the existing or newly created speaker content

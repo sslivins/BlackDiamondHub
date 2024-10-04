@@ -66,7 +66,14 @@
   </div>
 </body>
 <script>
+
+  let contextMenuModal = null;
+
   document.addEventListener("DOMContentLoaded", function() {
+
+    var contextMenuModalElement = document.getElementById('contextMenuModal');
+    contextMenuModal = new bootstrap.Modal(contextMenuModalElement);
+
     const isAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
     if (!isAuthenticated) {
       fetchSpotifyLogin();
@@ -174,8 +181,7 @@
       if (data.recently_played.length) {
         data.recently_played.forEach(track => {
           const trackItem = createTrackItem(track, track.uri);
-          recentlyPlayedList.appendChild(trackItem);  
-          console.log(trackItem);           
+          recentlyPlayedList.appendChild(trackItem);      
         });
       } else {
         recentlyPlayedList.innerHTML = '<div class="col-12 text-white">No recently played tracks found</div>';
@@ -262,7 +268,8 @@
       selectedTrackUri = event.currentTarget.dataset.trackUri;
       pressTimer = window.setTimeout(() => {
         console.log('Long press detected');
-        $('#contextMenuModal').modal('show');
+        //$('#contextMenuModal').modal('show');
+        contextMenuModal.show();
       }, longPressDuration);
     }
   
@@ -280,17 +287,20 @@
     // ---- Modal Actions for Tracks ----
     document.getElementById('modal-play-btn').addEventListener('click', function() {
       playOnActiveSpeaker(selectedTrackUri);
-      $('#contextMenuModal').modal('hide');
+      //$('#contextMenuModal').modal('hide');
+      contextMenuModal.hide();
     });
   
     document.getElementById('modal-add-to-front-btn').addEventListener('click', function() {
       addToActiveSpeakerQueue(selectedTrackUri, 'next');
-      $('#contextMenuModal').modal('hide');
+      //$('#contextMenuModal').modal('hide');
+      contextMenuModal.hide();
     });
   
     document.getElementById('modal-add-to-back-btn').addEventListener('click', function() {
       addToActiveSpeakerQueue(selectedTrackUri, 'end');
-      $('#contextMenuModal').modal('hide');
+      //$('#contextMenuModal').modal('hide');
+      contextMenuModal.hide();
     });
   });
   
