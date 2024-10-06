@@ -43,11 +43,13 @@
                       <button class="btn play-pause-btn position-absolute"
                               id="play-pause-button-{{ info.uid }}"
                               onclick="togglePlayPause('{{ info.uid }}', '{{ info.play_state }}')">
-                        {% if info.play_state == 'PLAYING' %}
-                          &#10074;&#10074;
-                        {% else %}
-                          &#9654;
-                        {% endif %}
+                        <span class="icon">
+                          {% if info.play_state == 'PLAYING' %}
+                            &#10074;&#10074;
+                          {% else %}
+                            &#9654;
+                          {% endif %}
+                        </span>
                       </button>
                     </div>
                   </div>

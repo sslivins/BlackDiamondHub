@@ -68,12 +68,8 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%); /* Center the button in the container */
-        transition: background-color 0.3s ease; /* Optional, for hover effect */
     }
     
-    .play-pause-btn:hover {
-        background-color: rgba(0, 0, 0, 0.8); /* Darken on hover */
-    }
     
       /* Volume control styling */
 
@@ -380,11 +376,12 @@
         if (data.status === 'success') {
             console.log(`${data.action} action successful for ${data.speaker_uid}`);
             const button = document.getElementById(`play-pause-button-${data.speaker_uid}`);
+            const iconSpan = button.querySelector('.icon');
             if (data.action === 'play') {
-                button.innerHTML = '&#10074;&#10074;'; // Pause icon
+                iconSpan.innerHTML = '&#10074;&#10074;'; // Pause icon
                 button.setAttribute('onclick', `togglePlayPause('${data.speaker_uid}', 'PLAYING')`);
             } else {
-                button.innerHTML = '&#9654;'; // Play icon
+                iconSpan.innerHTML = '&#9654;'; // Play icon
                 button.setAttribute('onclick', `togglePlayPause('${data.speaker_uid}', 'STOPPED')`);
             }
         } else {
@@ -476,7 +473,6 @@
 
     // Function to open modal and blur the speaker tile
     function openModal(speakerUUID) {
-        console.log(`Opening modal for speaker: ${speakerUUID}`);
 
         // Get the speaker tile and modal
         const tile = document.getElementById(`speaker-content-${speakerUUID}`);
@@ -607,19 +603,12 @@
         updateSpeakerTabs(speakerData);        
 
         for (const speakerId in speakerData) {
-            console.log(`Updating Speaker ${speakerId}`);
+            //console.log(`Updating Speaker ${speakerId}`);
             const data = speakerData[speakerId];
             updateSpeakerContent(speakerId, data);
         }
 
-        // Activate the first tab by default
-        //if (activeSpeaker == null) {
-        //    activeSpeaker =  Object.keys(speakerData)[0];
-        //}
-        
         activateSpeakerTab(activeSpeaker);
-        //activateSpeakerTab(Object.keys(speakerData)[0]);
-        
     }
 
     function updateSpeakerTabs(speakerData) {
@@ -634,7 +623,7 @@
         for (const speakerId in speakerData) {
             const speakerInfo = speakerData[speakerId];
 
-            console.log(`Creating tab for ${speakerId}`);
+            //console.log(`Creating tab for ${speakerId}`);
             const tab = document.createElement('a');
             tab.classList.add('nav-link');
 
@@ -711,7 +700,11 @@
                             <div class="album-art-container position-relative">
                                 <img src="${data.album_art || '{% static "default_album_art.webp" %}'}" class="img-fluid album-art" alt="Album Art" onerror="this.onerror=null;this.src='{% static "default_album_art.webp" %}';">
                                 <button class="btn play-pause-btn position-absolute" id="play-pause-button-${speakerId}" onclick="togglePlayPause('${speakerId}', '${data.play_state}')">
-                                    ${data.play_state === 'PLAYING' ? '&#10074;&#10074;' : '&#9654;'}
+                                <span class="icon">
+                                    ${data.play_state === 'PLAYING' ? '&#10074;&#10074;' :
+                                    data.play_state === 'PAUSED_PLAYBACK' ? '&#9654;' :
+                                    ''}
+                                </span>
                                 </button>
                             </div>
                         </div>
@@ -744,20 +737,6 @@
                 </div>`;
             
             tabContent.appendChild(speakerContent); 
-    
-            // Also add a new tab for this speaker if it doesn't exist
-            {% comment %} const tabList = document.getElementById('speaker-tabs');
-            const newTab = document.createElement('a');
-            newTab.classList.add('nav-link');
-            newTab.id = `speaker-tab-${speakerId}`;
-            newTab.setAttribute('data-toggle', 'tab'); adsfsd
-            newTab.setAttribute('href', `#speaker-content-${speakerId}`);
-            newTab.setAttribute('role', 'tab');
-            newTab.setAttribute('aria-controls', `speaker-content-${speakerId}`);
-            newTab.setAttribute('aria-selected', 'false');
-            newTab.innerText = data.group_label;
-
-tabList.appendChild(newTab); {% endcomment %}
         }
     
         // Proceed with updating the existing or newly created speaker content
@@ -772,7 +751,11 @@ tabList.appendChild(newTab); {% endcomment %}
     
         // Update play/pause button
         const playPauseButton = document.getElementById(`play-pause-button-${speakerId}`);
-        playPauseButton.innerHTML = data.play_state === 'PLAYING' ? '&#10074;&#10074;' : '&#9654;';
+        const iconSpan = playPauseButton.querySelector('.icon');
+        iconSpan.innerHTML = ({
+                    'PLAYING': '&#10074;&#10074;',          // Pause icon
+                    'PAUSED_PLAYBACK': '&#9654;'            // Play icon
+                }[data.play_state]) || iconSpan.innerHTML;
         playPauseButton.setAttribute('onclick', `togglePlayPause('${speakerId}', '${data.play_state}')`);
     
         // Update track info

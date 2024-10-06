@@ -60,7 +60,7 @@ class SonosConsumer(AsyncWebsocketConsumer):
         elif action == 'play_track':
             speaker_uid = data.get('speaker_uid')
             track_index = data.get('track_index')            
-            # Call your logic to play the track on the speaker
+            # play the track on the speaker
             result = speaker_play_pause(speaker_uid, "play_track", track_index)
 
             # Send back a response to the client
@@ -74,7 +74,7 @@ class SonosConsumer(AsyncWebsocketConsumer):
         elif action == 'pause':
             print("Pause action received")
             speaker_uid = data.get('speaker_uid')
-            # Call your logic to pause the speaker
+            # pause the speaker
             result = speaker_play_pause(speaker_uid, "pause")
 
             # Send back a response to the client
@@ -146,6 +146,11 @@ class SonosConsumer(AsyncWebsocketConsumer):
             # Check if the data has changed
             if speaker_data != self.previous_speaker_data:
                 # Data has changed, send it to the WebSocket
+                
+                #print play_state for each speaker
+                for speaker in speaker_data:
+                    print(f"{speaker}: {speaker_data[speaker]['play_state']}")
+                
                 await self.send(text_data=json.dumps({
                     'type': 'speaker_update',
                     'speaker_data': speaker_data

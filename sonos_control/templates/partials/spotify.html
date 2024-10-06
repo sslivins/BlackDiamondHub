@@ -27,13 +27,13 @@
         <div>Loading...</div>
       </div>
     </div>
-    <form action="{% url 'spotify_logout' %}"
-          method="POST"
-          style="display: inline">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{{ request.path }}">
-      <button type="submit" class="btn btn-danger">Logout of Spotify</button>
-    </form>
+    <div class="text-end">
+      <form action="{% url 'spotify_logout' %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="btn btn-danger mt-3">Logout of Spotify</button>
+      </form>
+    </div>
   {% else %}
     <!-- Placeholder for QR code login -->
     <div id="spotify-login-placeholder">
@@ -125,7 +125,7 @@
           <div class="text-center text-white">
             <h2>Spotify Control</h2>
             <p>Scan the QR code to log in with Spotify.</p>
-            <img src="data:image/png;base64,${data.qr_code_img}" alt="QR Code">
+            <img src="data:image/png;base64,${data.qr_code_img}" alt="QR Code" style="max-width: 300px">
             <p id="status-message">Waiting for authorization...</p>
           </div>
         </div>
@@ -268,7 +268,6 @@
       selectedTrackUri = event.currentTarget.dataset.trackUri;
       pressTimer = window.setTimeout(() => {
         console.log('Long press detected');
-        //$('#contextMenuModal').modal('show');
         contextMenuModal.show();
       }, longPressDuration);
     }
@@ -287,19 +286,16 @@
     // ---- Modal Actions for Tracks ----
     document.getElementById('modal-play-btn').addEventListener('click', function() {
       playOnActiveSpeaker(selectedTrackUri);
-      //$('#contextMenuModal').modal('hide');
       contextMenuModal.hide();
     });
   
     document.getElementById('modal-add-to-front-btn').addEventListener('click', function() {
       addToActiveSpeakerQueue(selectedTrackUri, 'next');
-      //$('#contextMenuModal').modal('hide');
       contextMenuModal.hide();
     });
   
     document.getElementById('modal-add-to-back-btn').addEventListener('click', function() {
       addToActiveSpeakerQueue(selectedTrackUri, 'end');
-      //$('#contextMenuModal').modal('hide');
       contextMenuModal.hide();
     });
   });
