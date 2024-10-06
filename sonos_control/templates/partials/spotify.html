@@ -168,17 +168,20 @@
       const contentContainer = document.getElementById('spotify-content');
       // Clear current content but keep the structure
       contentContainer.innerHTML = `
-        <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
-        <div id="recently-played-list" class="row"></div>
-        <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
-        <div id="favorite-tracks-list" class="row"></div>
-      `;
+      <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
+      <div id="recently-played-list" class="track-list d-flex overflow-auto"></div>
+      <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
+      <div id="favorite-tracks-list" class="track-list d-flex overflow-auto"></div>
+      <h4 class="mt-2 text-dark bg-white p-2">Top Tracks</h4>
+      <div id="top-tracks-list" class="track-list d-flex overflow-auto"></div>      
+    `;
   
       const recentlyPlayedList = document.getElementById("recently-played-list");
       const favoriteTracksList = document.getElementById("favorite-tracks-list");
+      const topTracksList = document.getElementById("top-tracks-list");
   
       // Populate Recently Played
-      if (data.recently_played.length) {
+      if (data.recently_played && data.recently_played.length) {
         data.recently_played.forEach(track => {
           const trackItem = createTrackItem(track, track.uri);
           recentlyPlayedList.appendChild(trackItem);      
@@ -188,7 +191,7 @@
       }
   
       // Populate Favorites
-      if (data.favorite_tracks.length) {
+      if (data.favorite_tracks && data.favorite_tracks.length) {
         data.favorite_tracks.forEach(track => {
           const trackItem = createTrackItem(track, track.uri);
           favoriteTracksList.appendChild(trackItem);          
@@ -196,6 +199,16 @@
       } else {
         favoriteTracksList.innerHTML = '<div class="col-12 text-white">No favorite tracks found</div>';
       }
+
+      // Populate Top Tracks
+      if (data.top_tracks && data.top_tracks.length) {
+          data.top_tracks.forEach(track => {
+            const trackItem = createTrackItem(track, track.uri);
+            topTracksList.appendChild(trackItem);          
+          });
+        } else {
+          topTracksList.innerHTML = '<div class="col-12 text-white">No top tracks found</div>';
+        }
     }
   
     function displaySearchResults(results) {

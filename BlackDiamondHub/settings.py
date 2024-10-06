@@ -223,4 +223,4 @@ SOCIAL_AUTH_SPOTIFY_SCOPE = ['user-read-email', 'user-read-private', 'user-read-
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_REDIRECT_URI = 'http://192.168.1.162:8080/sonos_control/spotify/auth/callback/'
-SPOTIFY_SCOPE= ['user-read-email', 'user-read-private', 'user-read-recently-played', 'user-library-read']
+SPOTIFY_SCOPE= ['user-read-recently-played', 'user-top-read', 'user-library-read']

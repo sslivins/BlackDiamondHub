@@ -591,7 +591,7 @@ def fetch_spotify_data(request):
         sp = get_spotify_instance(request)
         
         # Fetch recently played tracks
-        recently_played_results = sp.current_user_recently_played(limit=12)
+        recently_played_results = sp.current_user_recently_played(limit=20)
         recently_played = [{
             'name': track['track']['name'],
             'artist': track['track']['artists'][0]['name'],
@@ -601,7 +601,7 @@ def fetch_spotify_data(request):
         } for track in recently_played_results['items']]
         
         # Fetch favorite tracks
-        favorite_tracks_results = sp.current_user_saved_tracks(limit=12)
+        favorite_tracks_results = sp.current_user_saved_tracks(limit=20)
         favorite_tracks = [{
             'name': track['track']['name'],
             'artist': track['track']['artists'][0]['name'],
@@ -609,10 +609,21 @@ def fetch_spotify_data(request):
             'uri': track['track']['uri'],
             'album_art': track['track']['album']['images'][0]['url'] if track['track']['album']['images'] else None  # Fetch album art
         } for track in favorite_tracks_results['items']]
+        
+        #fetch top tracks
+        top_tracks_results = sp.current_user_top_tracks(limit=20)
+        top_tracks = [{
+            'name': track['name'],
+            'artist': track['artists'][0]['name'],
+            'album': track['album']['name'],
+            'uri': track['uri'],
+            'album_art': track['album']['images'][0]['url'] if track['album']['images'] else None  # Fetch album art
+        } for track in top_tracks_results['items']]
 
         return JsonResponse({
             'recently_played': recently_played,
             'favorite_tracks': favorite_tracks,
+            'top_tracks': top_tracks
         })
     except Exception as e:
         if 'http_status' in dir(e) and e.http_status == 401:
