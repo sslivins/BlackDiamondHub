@@ -8,10 +8,8 @@ from soco.plugins.sharelink import SpotifyShare
 import json
 from django.http import JsonResponse
 import spotipy
-from social_django.models import UserSocialAuth
 import time
 from datetime import datetime
-from social_django.utils import load_strategy
 from spotipy.oauth2 import SpotifyOAuth
 from django.conf import settings
 import qrcode
@@ -23,7 +21,7 @@ from .utils import generate_auth_url, generate_qr_code
 from .cache_handler import ServerCacheHandler, SessionCacheHandler
 
 def sonos_control_view(request):
-    speakers_info = get_sonos_speaker_info()
+    speakers_info = sonos_get_speaker_info()
 
     context = {
         'speaker_info': speakers_info,
@@ -32,7 +30,7 @@ def sonos_control_view(request):
     return render(request, 'sonos.html', context)
 
 # def get_sonos_status_partial(request):
-#     speakers_info = get_sonos_speaker_info()
+#     speakers_info = sonos_get_speaker_info()
 
 #     # Render the partial HTML for the speakers
 #     rendered_html = render(request, 'partials/sonos_speakers.html', {'speaker_info': speakers_info})
@@ -334,7 +332,7 @@ def speaker_play_pause(speaker_uid, action, track_index=None):
     except Exception as e:
         return {'status': 'error', 'message': f'Failed to toggle play/pause: {str(e)}', 'status_code': 500}
 
-def get_sonos_speaker_info():
+def sonos_get_speaker_info():
     speakers_info = []
     speakers = soco.discover()
     all_ungrouped_speakers = []
@@ -521,40 +519,6 @@ def spotify_home(request):
     else:
         # Redirect to login if not authenticated
         return sp    
-
-def get_spotify_instance_old(user):
-
-    social = user.social_auth.get(provider='spotify')
-    token_info = social.extra_data
-    
-    try:
-        # Create Spotipy instance with current access token
-        sp = spotipy.Spotify(auth=token_info['access_token'])
-
-        # Make a test API call to check if the token is valid
-        sp.current_user()  # This will throw an exception if the token has expired
-
-    except spotipy.exceptions.SpotifyException as e:
-        if e.http_status == 401:  # 401 Unauthorized, meaning the token has expired
-            print("Token expired, refreshing...")
-            
-            # Trigger token refresh using social-auth's backend
-            strategy = load_strategy()
-            backend = social.get_backend_instance(strategy)
-            new_tokens = backend.refresh_token(token_info['refresh_token'])
-
-            # Update the tokens in the database
-            social.extra_data['access_token'] = new_tokens['access_token']
-            social.save()            
-            
-            # Recreate the Spotipy instance with the new token
-            sp = spotipy.Spotify(auth=token_info['access_token'])
-
-        else:
-            print("Error: ", e)
-            raise e  # Rethrow the exception if it's not related to token expiration
-
-    return sp
 
 def fetch_spotify_data(request):
     try:
