@@ -51,6 +51,15 @@
                           {% endif %}
                         </span>
                       </button>
+                      <div class="audio-visualizer position-absolute top-0 end-0 rounded p-1"
+                           id="audio-visualizer-{{ info.uid }}"
+                           {% if info.play_state != 'PLAYING' %}hidden{% endif %}>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                      </div>
                     </div>
                   </div>
                   <div class="col-md-12">

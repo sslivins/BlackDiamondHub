@@ -2,7 +2,7 @@
 
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from .views import get_sonos_speaker_info, adjust_speaker_volume, speaker_play_pause, sonos_clear_queue
+from .views import sonos_get_speaker_info, adjust_speaker_volume, speaker_play_pause, sonos_clear_queue
 import asyncio
 
 class SonosConsumer(AsyncWebsocketConsumer):
@@ -126,7 +126,7 @@ class SonosConsumer(AsyncWebsocketConsumer):
     async def send_speaker_updates(self):
         while True:
             # Fetch the latest speaker info
-            speakers_info = get_sonos_speaker_info()
+            speakers_info = sonos_get_speaker_info()
 
             # Prepare the new data to send
             speaker_data = {}

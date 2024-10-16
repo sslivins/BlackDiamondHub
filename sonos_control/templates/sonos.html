@@ -271,7 +271,70 @@
         bottom: 0;
         margin: auto;
         z-index: 1050; /* Ensure the modal appears on top */
-    }      
+    }
+    
+    .audio-visualizer {
+        display: flex;
+        flex-direction: row; /* Ensure horizontal alignment */
+        align-items: flex-end;
+        justify-content: space-between;
+        width: 50px;
+        height: 30px;
+        padding: 2px;
+        box-sizing: border-box;
+    }
+
+    .hidden {
+        display: none;
+    }
+    
+    .audio-visualizer .bar {
+        flex:none; 
+        flex-shrink: 0; /* Prevent bars from shrinking */
+        width: 6px;
+        height: 10px;
+        background: #007bff;
+        animation: bounce 1s infinite ease-in-out alternate;
+    }
+
+      .audio-visualizer .bar:nth-child(1) {
+        background: #dc3545; /* Blue */
+      }      
+      
+      .audio-visualizer .bar:nth-child(2) {
+        animation-delay: 0.2s;
+        background: #dc3545; 
+      }
+      
+      .audio-visualizer .bar:nth-child(3) {
+        animation-delay: 0.4s;
+        background: #dc3545; 
+      }
+      
+      .audio-visualizer .bar:nth-child(4) {
+        animation-delay: 0.6s;
+        background: #dc3545; 
+      }
+      
+      .audio-visualizer .bar:nth-child(5) {
+        animation-delay: 0.8s;
+        background: #dc3545;
+      }
+      
+      @keyframes bounce {
+        0% {
+          transform: scaleY(1);
+        }
+        50% {
+          transform: scaleY(2);
+        }
+        100% {
+          transform: scaleY(1);
+        }
+      }
+      
+      
+       
    
         </style>
     </head>
@@ -706,6 +769,14 @@
                                     ''}
                                 </span>
                                 </button>
+                                <div class="audio-visualizer position-absolute top-0 end-0 rounded p-1" id="audio-visualizer-{{ info.uid }}" {% if info.play_state != 'PLAYING' %}hidden{% endif %}>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>                                    
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -757,6 +828,20 @@
                     'PAUSED_PLAYBACK': '&#9654;'            // Play icon
                 }[data.play_state]) || iconSpan.innerHTML;
         playPauseButton.setAttribute('onclick', `togglePlayPause('${speakerId}', '${data.play_state}')`);
+
+        const visualizer = document.getElementById(`audio-visualizer-${speakerId}`);        
+
+        if (visualizer){
+            if (data.play_state === 'PLAYING') {
+                console.log('Displaying visualizer');
+                visualizer.classList.remove('hidden');
+            } else {
+                visualizer.classList.add('hidden');
+            }
+        }
+        else {
+            console.log('No visualizer found');
+        }
     
         // Update track info
         const trackTitleElem = document.querySelector(`#speaker-content-${speakerId} .track-title strong`);
