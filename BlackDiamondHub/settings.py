@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-*-@iek83wyv#jk^*h_wnxj93&hn#%==cqoyfey17r_b6jy43$r
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.1.162"]
+ALLOWED_HOSTS = [os.getenv('ALLOWED_HOSTS')]
 
 
 # Application definition
@@ -98,7 +98,7 @@ WSGI_APPLICATION = 'BlackDiamondHub.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'sunpeaks_inventory',
+        'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
