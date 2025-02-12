@@ -40,14 +40,19 @@ jobs:
           wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
           sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
           sudo apt-get update
-          #install chrome
+          # Install Google Chrome
           sudo apt-get install -y google-chrome-stable
-          wget -N https://storage.googleapis.com/chrome-for-testing-public/128.0.6613.86/linux64/chromedriver-linux64.zip -P ~/
+          # Fetch the installed Chrome version
+          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+          # Fetch the matching ChromeDriver version from the JSON file
+          CHROMEDRIVER_VERSION=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json | jq -r --arg CHROME_VERSION "$CHROME_VERSION" '.versions[] | select(.version | startswith($CHROME_VERSION)) | .downloads.chromedriver[] | select(.platform == "linux64").url')
+          # Download and install ChromeDriver
+          wget -N $CHROMEDRIVER_VERSION -P ~/
           unzip ~/chromedriver-linux64.zip -d ~/
           sudo mv -f ~/chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
           sudo chown root:root /usr/local/bin/chromedriver
           sudo chmod 0755 /usr/local/bin/chromedriver
-          #install libzbar shared library
+          # Install libzbar shared library
           sudo apt-get install libzbar0
 
     - name: Install Python dependencies
