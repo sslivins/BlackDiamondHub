@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     services:
       postgres:
@@ -69,4 +69,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-screenshot
-        path: "**/*.png"     
+        path: "**/*.png"
