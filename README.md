@@ -15,6 +15,7 @@ BlackDiamondHub is a Django-based web application designed to manage inventory, 
 - PostgreSQL
 - Google Chrome and ChromeDriver
 - libzbar0 (for barcode scanning)
+- libpq-dev
 
 ## Installation
 
