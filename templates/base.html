@@ -12,7 +12,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="{% static 'android-chrome-192x192.png' %}">
     <link rel="icon" type="image/png" sizes="512x512" href="{% static 'android-chrome-512x512.png' %}">
     <link rel="manifest" href="{% static 'site.webmanifest' %}">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* General Styles */
@@ -75,12 +76,12 @@
             color: #ffffff; /* White text */
             border: 2px solid #ffffff; /* White border */
             border-radius: 5px;
-            {% comment %} font-size: 16px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             text-decoration: none;
             padding: 10px 20px;
-margin: 5px; {% endcomment %}
+            margin: 5px;
         }
 
         .btn:hover {
@@ -94,7 +95,7 @@ margin: 5px; {% endcomment %}
             background-color: #000000; /* Ensure consistent color on focus */
             color: #ffffff;
             border: 2px solid #ffffff;
-} 
+        } 
         .feedback-button {
             position: fixed;
             bottom: 20px;
@@ -306,8 +307,8 @@ margin: 5px; {% endcomment %}
             <button type="button"
                     class="btn feedback-button"
                     id='feedback-button'
-                    data-toggle="modal"
-                    data-target="#feedback-modal">Give Feedback</button>
+                    data-bs-toggle="modal"
+                    data-bs-target="#feedback-modal">Give Feedback</button>
             <!-- Feedback Modal -->
             <div class="modal fade feedback-modal"
                  id="feedback-modal"
@@ -321,11 +322,9 @@ margin: 5px; {% endcomment %}
                             <h5 class="modal-title" id="feedbackModalLabel">We Value Your Feedback</h5>
                             <button type="button"
                                     id="feedback-modal-close"
-                                    class="close"
-                                    data-dismiss="modal"
-                                    aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <form id="feedback-form" method="POST" action="{% url 'submit_feedback' %}">
@@ -431,7 +430,6 @@ margin: 5px; {% endcomment %}
         
                     // Close the modal after a delay (e.g., 2 seconds)
                     setTimeout(() => {
-                        //$('#feedback-modal').modal('hide'); // Close the modal
                         feedbackModal.hide();
                     }, 2000);
                 }

@@ -48,8 +48,6 @@ BlackDiamondHub is a Django-based web application designed to manage inventory, 
     DB_NAME=your_db_name
     DB_USER=your_db_user
     DB_PASSWORD=your_db_password
-    ADMIN_USER=your_admin_user
-    ADMIN_PASSWORD=your_admin_password
     SPOTIFY_CLIENT_ID=your_spotify_client_id
     SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
     ```

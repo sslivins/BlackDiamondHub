@@ -208,7 +208,24 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
         #message
         message = modal.find_element(By.ID, 'feedbackMessage').text
         self.assertEqual(message, 'Message 50')
+
+    def test_table_background_color(self):
+        """Test that the table background color is black."""
+        self.browser.get(self.live_server_url + reverse('view_feedback'))
         
+        # Wait until the table is loaded
+        WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
+        )
+        
+        # Find the table element
+        table = self.browser.find_element(By.CSS_SELECTOR, '.table')
+        
+        # Get the background color of the table
+        background_color = table.value_of_css_property('background-color')
+        
+        # Assert that the background color is dark grey (rgba(26, 26, 26, 1))
+        self.assertEqual(background_color, 'rgba(26, 26, 26, 1)')
 
 class FeedbackPaginationTest(StaticLiveServerTestCase):
 
