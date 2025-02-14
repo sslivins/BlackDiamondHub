@@ -1,0 +1,923 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Sonos Control{% endblock %}
+{% block content %}
+    <head>
+        <style>
+      body {
+          font-family: Arial, sans-serif;
+          background-color: #000000; /* Black background for the entire page */
+          padding-top: 100px;
+          overflow: hidden;
+      }
+    
+      .sonos-content, .spotify-content {
+        height: calc(100vh - 100px); 
+        overflow-y: auto; 
+        padding-bottom: 20px; 
+        -webkit-overflow-scrolling: touch; 
+    }
+
+      h1 {
+          text-align: center;
+          margin-bottom: 20px;
+          font-size: 2rem;
+      }
+
+      .speaker-tabs {
+          color: #fff;
+          border-radius: 10px;
+          background-color: #333;
+      }
+
+      .tab-content {
+          padding: 20px;
+          border-radius: 10px;
+          background-color: #fff;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          position: relative; /* Container for both tile and modal */
+          display: flex;
+          justify-content: center;
+          align-items: center;
+      }
+
+
+    .album-art-container {
+        width: 100%; /* Adjust as needed */
+        height: 300px; /* Set a height for the album art container */
+        overflow: hidden;
+    }
+    
+    .album-art {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ensures the album art covers the container */
+        border-radius: 10px; /* Optional, for rounded corners */
+    }
+    
+    .play-pause-btn {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+        color: white;
+        font-size: 4rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%); /* Center the button in the container */
+    }
+    
+    
+      /* Volume control styling */
+
+      
+      /* Styling for buttons */
+      .volume-btn {
+          background-color: transparent;
+          border: none;
+          color: #007bff; /* You can change this color */
+          font-size: 24px;
+          max-width: 15%;
+          cursor: pointer;  
+      }
+      
+      /* Slider styling */
+      .volume-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 60%;
+          height: 25px;
+          background: #ddd;
+          border-radius: 10px;
+          outline: none;
+          opacity: 0.7;
+          transition: opacity .15s ease-in-out;        
+      }
+      
+
+
+      .output {
+          margin-left: 15px;
+          font-size: 1.4rem;
+      }
+
+      /* Grouping UI */
+      .group-selection {
+          margin-top: 15px;
+      }
+
+      .group-btn:disabled {
+          background-color: #aaa;
+          cursor: not-allowed;
+      }
+
+      /* modal styling */
+      
+    .close {
+        color: #aaa;
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    
+    .close:hover,
+    .close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    
+    /* Blur effect for the tile */
+    .blur-background {
+        filter: blur(5px);
+        transition: filter 0.3s ease;
+    }
+      
+
+      /* The switch - the container */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+      }
+      
+      /* Hide the default HTML checkbox */
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      
+      /* The slider */
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 34px;
+      }
+      
+      /* The slider when checked (background color change) */
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+      
+      /* When the checkbox is checked, animate the slider */
+      input:checked + .slider {
+        background-color: #007bff;
+      }
+      
+      input:checked + .slider:before {
+        transform: translateX(26px);
+      }
+      
+      /* Rounded slider */
+      .slider.round {
+        border-radius: 34px;
+      }
+      
+      .slider.round:before {
+        border-radius: 50%;
+      }
+      
+      /* Style for the label next to the switch */
+      .switch-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      
+      .switch-container label {
+        margin-left: 10px;
+        font-size: 1.1rem;
+      }
+
+    .queue-list {
+        max-height: 25vh; /* Limit the height of the queue list */
+        overflow-y: auto; /* Enable vertical scrolling */
+        margin-top: 20px;
+        border-radius: 10px;
+    }
+    
+    .queue-list::-webkit-scrollbar {
+        width: 12px; /* Adjust this value to make it thicker */
+    }
+    
+    .queue-list::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.3); /* Color of the scrollbar handle */
+        border-radius: 10px; /* Rounded edges for the scrollbar handle */
+    }
+    
+    .queue-list::-webkit-scrollbar-track {
+        background-color: rgba(0, 0, 0, 0.1); /* Background of the scrollbar track */
+    }
+      
+      .queue-album-art {
+        width: 60px;                   /* Fixed size for album art */
+        height: 60px;
+        border-radius: 5px;
+        object-fit: cover;             /* Ensure the image fits without distortion */
+      }
+      
+      .queue-info {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;       /* Align text vertically */
+        overflow: hidden;              /* Prevent text from overflowing */
+      }
+      
+      .queue-track-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin: 0;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;       /* Show "..." for overflowed text */
+      }
+      
+      .queue-track-artist {
+        font-size: 1rem;
+        color: #777;
+        margin: 5px 0 0 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;       /* Show "..." for overflowed text */
+      }
+      
+      .tab-content .modal-dialog {
+        border-radius: 25px;
+        top: 100px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: auto;
+        z-index: 1050; /* Ensure the modal appears on top */
+    }
+    
+    .audio-visualizer {
+        display: flex;
+        flex-direction: row; /* Ensure horizontal alignment */
+        align-items: flex-end;
+        justify-content: space-between;
+        width: 50px;
+        height: 30px;
+        padding: 2px;
+        box-sizing: border-box;
+    }
+
+    .hidden {
+        display: none;
+    }
+    
+    .audio-visualizer .bar {
+        flex:none; 
+        flex-shrink: 0; /* Prevent bars from shrinking */
+        width: 6px;
+        height: 10px;
+        background: #007bff;
+        animation: bounce 1s infinite ease-in-out alternate;
+    }
+
+      .audio-visualizer .bar:nth-child(1) {
+        background: #dc3545; /* Blue */
+      }      
+      
+      .audio-visualizer .bar:nth-child(2) {
+        animation-delay: 0.2s;
+        background: #dc3545; 
+      }
+      
+      .audio-visualizer .bar:nth-child(3) {
+        animation-delay: 0.4s;
+        background: #dc3545; 
+      }
+      
+      .audio-visualizer .bar:nth-child(4) {
+        animation-delay: 0.6s;
+        background: #dc3545; 
+      }
+      
+      .audio-visualizer .bar:nth-child(5) {
+        animation-delay: 0.8s;
+        background: #dc3545;
+      }
+      
+      @keyframes bounce {
+        0% {
+          transform: scaleY(1);
+        }
+        50% {
+          transform: scaleY(2);
+        }
+        100% {
+          transform: scaleY(1);
+        }
+      }
+      
+      
+       
+   
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sonos Control Side -->
+                <div class="col-md-4 sonos-content">{% include "partials/sonos_speakers.html" %}</div>
+                <!-- Spotify Control Side -->
+                <div class="col-md-8 spotify-content">{% include "partials/spotify.html" %}</div>
+            </div>
+        </div>
+    </body>
+    <script>
+    const modalInstances = {};
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    let socket = null;
+    let activeSpeaker = null;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        initWebSocket();
+    });
+
+
+    function initWebSocket() {
+
+        if (!socket || socket.readyState === WebSocket.CLOSED) {
+          socket = new WebSocket(wsScheme + '://' + window.location.host + '/ws/sonos_updates/');
+      
+          socket.onopen = function () {
+            console.log('WebSocket connection opened');
+          };
+      
+          socket.onclose = function () {
+            console.log('WebSocket connection closed');
+          };
+      
+          socket.onerror = function (error) {
+            console.error('WebSocket Error:', error);
+          };
+      
+          socket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+
+            if(data.type === 'response') {
+                if (data.action === 'volume') {
+                    console.log('Volume update response:', data);
+                } else if (data.action === 'play') {
+                    play_pause_response(event);
+                }
+                else if (data.action === 'pause') 
+                {
+                    play_pause_response(event);
+                } 
+                else if (data.action === 'play_track') {
+                    console.log('Play track response:', data);
+                }
+                else if (data.action === 'clear_queue') {
+                    console.log('Clear queue response:', data);
+                }
+                else {
+                    console.warn('Unhandled WebSocket response:', data);
+                }
+            } 
+            else if (data.type === 'speaker_update') {
+                const speakerData = data.speaker_data;
+                updateSpeakerData(speakerData);
+            } else {
+                console.warn('Unhandled WebSocket message:', data);
+            }
+        };          
+
+        }
+      }        
+
+      function togglePlayPause(speakerUid, currentState) {
+        // Determine whether to play or pause based on the current state
+        let action = (currentState === 'PLAYING') ? 'pause' : 'play';
+    
+        // Ensure WebSocket connection is open
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket connection is not open');
+            return;
+        }
+    
+        // Create a data object for WebSocket
+        const playPauseData = {
+            speaker_uid: speakerUid,
+            action: action
+        };
+    
+        // Send the data as a JSON string over WebSocket
+        socket.send(JSON.stringify(playPauseData));
+    
+        console.log(`Requested to ${action} the speaker ${speakerUid}`);
+    }
+
+    // You can handle the WebSocket response in the 'onmessage' handler
+    // Update the UI based on WebSocket response
+    function play_pause_response (response) {
+        const data = JSON.parse(response.data);
+        if (data.status === 'success') {
+            console.log(`${data.action} action successful for ${data.speaker_uid}`);
+            const button = document.getElementById(`play-pause-button-${data.speaker_uid}`);
+            const iconSpan = button.querySelector('.icon');
+            if (data.action === 'play') {
+                iconSpan.innerHTML = '&#10074;&#10074;'; // Pause icon
+                button.setAttribute('onclick', `togglePlayPause('${data.speaker_uid}', 'PLAYING')`);
+            } else {
+                iconSpan.innerHTML = '&#9654;'; // Play icon
+                button.setAttribute('onclick', `togglePlayPause('${data.speaker_uid}', 'STOPPED')`);
+            }
+        } else {
+            console.error('Failed to toggle play/pause state:', data.message);
+        }
+    };
+
+    function clearQueue(speakerUid) {
+        console.log(`Clearing queue for ${speakerUid}`);
+      
+        // Ensure WebSocket is open
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          console.error('WebSocket connection is not open');
+          return;
+        }
+      
+        // Create a JSON object to send through WebSocket
+        const clearQueueData = {
+          speaker_uid: speakerUid,
+          action: 'clear_queue' // Specify action type
+        };
+      
+        // Send clear queue data as a JSON string
+        socket.send(JSON.stringify(clearQueueData));
+      
+        console.log(`Clear queue data sent over WebSocket for ${speakerUid}`);
+    }
+    
+    function playTrack(speakerUid, trackIndex) {
+        // Check if the WebSocket connection is open
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket connection is not open');
+            return;
+        }
+    
+        // Create the data object for WebSocket
+        const playTrackData = {
+            speaker_uid: speakerUid,
+            track_index: trackIndex,
+            action: 'play_track' // Specify action type
+        };
+    
+        // Send the data as a JSON string over the WebSocket connection
+        socket.send(JSON.stringify(playTrackData));
+    
+        console.log(`Requested to play track ${trackIndex} on ${speakerUid}`);
+    }
+
+
+   // Decrease volume function
+    function decreaseVolume(sliderId) {
+        const slider = document.getElementById('volume-slider-' + sliderId);
+        let currentVolume = parseInt(slider.value);
+        let newVolume = Math.max(currentVolume - 10, 0); // Decrease by 10, but don't go below 0
+        slider.value = newVolume;
+        return newVolume;
+    }
+
+    // Increase volume function
+    function increaseVolume(sliderId) {
+        const slider = document.getElementById('volume-slider-' + sliderId);
+        let currentVolume = parseInt(slider.value);
+        let newVolume = Math.min(currentVolume + 10, 100); // Increase by 10, but don't go above 100
+        slider.value = newVolume;
+        return newVolume;
+    }
+
+    function adjustVolume(speakerUid, volume) {
+        console.log(`Adjusting volume for ${speakerUid} to: ${volume}`);
+      
+        // Ensure WebSocket is open
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          console.error('WebSocket connection is not open');
+          return;
+        }
+      
+        // Create a JSON object to send through WebSocket
+        const volumeData = {
+          speaker_uid: speakerUid,
+          volume: volume,
+          action: 'volume' // Specify action type
+        };
+      
+        // Send volume data as a JSON string
+        socket.send(JSON.stringify(volumeData));
+      
+        console.log(`Volume data sent over WebSocket for ${speakerUid}`);
+    }
+
+    // Function to open modal and blur the speaker tile
+    function openModal(speakerUUID) {
+
+        // Get the speaker tile and modal
+        const tile = document.getElementById(`speaker-content-${speakerUUID}`);
+        const modalElement = document.getElementById(`groupModal-${speakerUUID}`);
+
+        if (modalElement) {
+            // Initialize the modal and store the instance in modalInstances object
+            const modal = new bootstrap.Modal(modalElement);
+            modalInstances[speakerUUID] = modal;
+    
+            // Store the original state of each checkbox when the modal is opened
+            const checkboxes = modalElement.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.setAttribute('data-original-state', checkbox.checked ? 'checked' : 'unchecked');
+            });
+    
+            // Add blur effect to the tile
+            if (tile) {
+                tile.classList.add('blur-background');
+            }
+    
+            // Show the modal
+            modal.show();
+        } else {
+            console.error(`Could not find the modal for speaker: ${speakerUUID}`);
+        }
+    }
+
+
+    // Function to track changes in the checkboxes
+    function onCheckboxChange(speakerUUID) {
+        const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
+        const applyButton = document.getElementById(`apply-button-${speakerUUID}`);
+        let changesDetected = false;
+
+        checkboxes.forEach(checkbox => {
+            const originalState = checkbox.getAttribute('data-original-state');
+            const currentState = checkbox.checked ? 'checked' : 'unchecked';
+
+            console.log(`Speaker: ${checkbox.getAttribute('data-speaker-name')}, Original: ${originalState}, Current: ${currentState}`);
+
+            if (originalState !== currentState) {
+                changesDetected = true;
+            }
+        });
+
+        // Enable or disable the apply button based on changes
+        if (changesDetected) {
+            applyButton.disabled = false;
+        } else {
+            applyButton.disabled = true;
+        }
+    }
+
+    // Function to apply group changes when the 'Apply' button is clicked
+    function applyGroupChanges(speakerUUID) {
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        const checkboxes = document.querySelectorAll(`#groupModal-${speakerUUID} input[type="checkbox"]`);
+        const formData = new FormData();
+        formData.append('speaker_uuid', speakerUUID);  // Use UUID for backend
+        formData.append('action', 'toggle_group');
+        formData.append('csrfmiddlewaretoken', csrfToken);
+    
+        checkboxes.forEach(checkbox => {
+            const targetSpeakerUUID = checkbox.getAttribute('data-speaker-name');
+            const originalState = checkbox.getAttribute('data-original-state');
+            const currentState = checkbox.checked ? 'checked' : 'unchecked';
+
+            console.log(`Speaker: ${targetSpeakerUUID}, Original: ${originalState}, Current: ${currentState}`);
+    
+            // Only send data for speakers that have changed
+            if (originalState !== currentState) {
+                console.log(`Adding target speaker: ${targetSpeakerUUID}`);
+                formData.append('target_speaker_uuid[]', targetSpeakerUUID);  // Use UUID for backend
+            }
+        });
+    
+        fetch('toggle_group/', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('Group updated');
+                closeModal(speakerUUID);
+            } else {
+                console.error('Failed to update group:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+
+        });
+    }
+
+    function closeModal(speakerUUID) {
+        const tile = document.getElementById(`speaker-content-${speakerUUID}`);
+        const modalElement = document.getElementById(`groupModal-${speakerUUID}`);
+
+        if (modalElement) {
+            // Retrieve the Bootstrap modal instance from modalInstances object
+            const modal = modalInstances[speakerUUID];
+
+            if (modal) {
+                // Close the modal
+                modal.hide();
+
+                // Clean up: remove the modal instance from the modalInstances object
+                delete modalInstances[speakerUUID];
+            } else {
+                console.error('Modal instance not found');
+            }
+
+            // Remove blur effect from the tile
+            if (tile) {
+                tile.classList.remove('blur-background');
+            }
+        } else {
+            console.error(`Could not find the modal for speaker: ${speakerUUID}`);
+        }
+    }
+    
+
+    function updateSpeakerData(speakerData) {
+        console.log('Got Speaker Update');
+
+        updateSpeakerTabs(speakerData);        
+
+        for (const speakerId in speakerData) {
+            //console.log(`Updating Speaker ${speakerId}`);
+            const data = speakerData[speakerId];
+            updateSpeakerContent(speakerId, data);
+        }
+
+        activateSpeakerTab(activeSpeaker);
+    }
+
+    function updateSpeakerTabs(speakerData) {
+        // Select the container for the speaker tabs
+        const speakerTabsContainer = document.getElementById('speaker-tabs');
+    
+        // Clear the existing tabs
+        speakerTabsContainer.innerHTML = '';
+    
+        // Loop through the speakerData and add tabs for each coordinator
+        let isFirstTab = true; // Track the first tab to mark it as active
+        for (const speakerId in speakerData) {
+            const speakerInfo = speakerData[speakerId];
+
+            //console.log(`Creating tab for ${speakerId}`);
+            const tab = document.createElement('a');
+            tab.classList.add('nav-link');
+
+            tab.setAttribute('aria-selected', 'false');
+
+            //make the first tab active by default
+            if (activeSpeaker == null) {
+                if (isFirstTab) {
+                    tab.classList.add('active');
+                    tab.setAttribute('aria-selected', 'true');
+                    activeSpeaker = speakerId;
+                    console.log(`Setting active speaker to first speaker: ${activeSpeaker}`);
+
+                    isFirstTab = false;                    
+                }                
+            } else {
+                if (activeSpeaker == speakerId) {
+                    console.log(`Setting active speaker to ${activeSpeaker}`);
+                    tab.classList.add('active');
+                    tab.setAttribute('aria-selected', 'true');
+                }
+            }
+
+            tab.setAttribute('id', `speaker-tab-${speakerId}`);
+            tab.setAttribute('data-bs-toggle', 'tab');
+            tab.setAttribute('href', `#speaker-content-${speakerId}`);
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-controls', `speaker-content-${speakerId}`);
+            tab.textContent = speakerInfo.group_label;
+
+            // Append the tab to the container
+            speakerTabsContainer.appendChild(tab);
+
+            tab.addEventListener('shown.bs.tab', function(e) {
+                // e.target is the newly activated tab
+                var newActiveTabId = e.target.id;
+                console.log('Active tab changed to ' + newActiveTabId);
+    
+                // Extract speaker UID from the href attribute
+                var speakerUid = e.target.getAttribute('href').replace('#speaker-content-', '');
+                console.log('Current speaker UID: ' + speakerUid);
+    
+                // Perform any actions needed when the tab changes
+                // For example, update the active speaker variable
+                activeSpeaker = speakerUid;
+    
+                // Call a function to update the speaker content if needed
+                // updateSpeakerContent(speakerUid, speakerData[speakerUid]);
+            });            
+        }
+    }    
+
+    function updateSpeakerContent(speakerId, data) {
+        // Check if the speaker content exists
+        let speakerContent = document.getElementById(`speaker-content-${speakerId}`);
+    
+        // If the speaker content doesn't exist, create it dynamically
+        if (!speakerContent) {
+            const tabContent = document.getElementById('speaker-tabContent');
+            
+            // Create new speaker content
+            speakerContent = document.createElement('div');
+            speakerContent.id = `speaker-content-${speakerId}`;
+            speakerContent.classList.add('tab-pane', 'fade');
+            speakerContent.setAttribute('role', 'tabpanel');
+            speakerContent.setAttribute('aria-labelledby', `speaker-tab-${speakerId}`);
+    
+            // Add the new speaker content to the tab content container
+            speakerContent.innerHTML = `
+                <div class="card mb-3">
+                    <div class="row no-gutters">
+                        <div class="col-md-12">
+                            <h2 class="mt-8 text-center">${data.group_label}</h2>
+                            <div class="album-art-container position-relative">
+                                <img src="${data.album_art || '{% static "default_album_art.webp" %}'}" class="img-fluid album-art" alt="Album Art" onerror="this.onerror=null;this.src='{% static "default_album_art.webp" %}';">
+                                <button class="btn play-pause-btn position-absolute" id="play-pause-button-${speakerId}" onclick="togglePlayPause('${speakerId}', '${data.play_state}')">
+                                <span class="icon">
+                                    ${data.play_state === 'PLAYING' ? '&#10074;&#10074;' :
+                                    data.play_state === 'PAUSED_PLAYBACK' ? '&#9654;' :
+                                    ''}
+                                </span>
+                                </button>
+                                <div class="audio-visualizer position-absolute top-0 end-0 rounded p-1" id="audio-visualizer-{{ info.uid }}" {% if info.play_state != 'PLAYING' %}hidden{% endif %}>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>                                    
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <h5 class="track-title"><strong>Title:</strong> ${data.track}</h5>
+                            <p class="track-artist"><strong>Artist:</strong> ${data.artist}</p>
+                            <p class="track-album"><strong>Album:</strong> ${data.album}</p>
+                        </div>
+                        <div class="col-md-9">
+                            <button class="volume-btn volume-down" onclick="adjustVolume('${speakerId}', decreaseVolume('${speakerId}'))">
+                                <i class="fas fa-volume-down"></i>
+                            </button>
+                            <input type="range" class="volume-slider" min="0" max="100" value="${data.volume}" id="volume-slider-${speakerId}" onchange="adjustVolume('${speakerId}', this.value)">
+                            <button class="volume-btn volume-up" onclick="adjustVolume('${speakerId}', increaseVolume('${speakerId}'))">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button onclick="openModal('${speakerId}')" class="btn group-btn">Group</button>
+                        </div>
+                    </div>
+                    <hr class="my-4">
+                    <div class="queue-container">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="d-inline">Queue:</h5>
+                            <button class="btn btn-danger" onclick="clearQueue('${speakerId}')">Clear Queue</button>
+                        </div>
+                        <ul class="queue-list list-group" style="padding-left: 0; margin-left: 0"></ul>
+                    </div>
+                </div>`;
+            
+            tabContent.appendChild(speakerContent); 
+        }
+    
+        // Proceed with updating the existing or newly created speaker content
+        const groupLabelElem = document.querySelector(`#speaker-content-${speakerId} h2.text-center`);
+        if (groupLabelElem) {
+            groupLabelElem.innerText = data.group_label; // Update the title with the new group label
+        }
+    
+        // Update album art
+        const albumArtImg = document.querySelector(`#speaker-content-${speakerId} .album-art`);
+        albumArtImg.src = data.album_art || '{% static "default_album_art.webp" %}';
+    
+        // Update play/pause button
+        const playPauseButton = document.getElementById(`play-pause-button-${speakerId}`);
+        const iconSpan = playPauseButton.querySelector('.icon');
+        iconSpan.innerHTML = ({
+                    'PLAYING': '&#10074;&#10074;',          // Pause icon
+                    'PAUSED_PLAYBACK': '&#9654;'            // Play icon
+                }[data.play_state]) || iconSpan.innerHTML;
+        playPauseButton.setAttribute('onclick', `togglePlayPause('${speakerId}', '${data.play_state}')`);
+
+        const visualizer = document.getElementById(`audio-visualizer-${speakerId}`);        
+
+        if (visualizer){
+            if (data.play_state === 'PLAYING') {
+                console.log('Displaying visualizer');
+                visualizer.classList.remove('hidden');
+            } else {
+                visualizer.classList.add('hidden');
+            }
+        }
+        else {
+            console.log('No visualizer found');
+        }
+    
+        // Update track info
+        const trackTitleElem = document.querySelector(`#speaker-content-${speakerId} .track-title strong`);
+        const trackArtistElem = document.querySelector(`#speaker-content-${speakerId} .track-artist strong`);
+        const trackAlbumElem = document.querySelector(`#speaker-content-${speakerId} .track-album strong`);
+        
+        if (trackTitleElem && trackArtistElem && trackAlbumElem) {
+            trackTitleElem.nextSibling.textContent = ` ${data.track}`;
+            trackArtistElem.nextSibling.textContent = ` ${data.artist}`;
+            trackAlbumElem.nextSibling.textContent = ` ${data.album}`;
+        }
+    
+        // Update volume
+        const volumeSlider = document.getElementById(`volume-slider-${speakerId}`);
+        volumeSlider.value = data.volume;
+    
+        // Update queue
+        const queueList = document.querySelector(`#speaker-content-${speakerId} .queue-list`);
+        queueList.innerHTML = ''; // Clear existing queue items
+        
+        if (data.queue && data.queue.length > 0) {
+            data.queue.forEach((track, index) => {
+                const queueItem = document.createElement('li');
+                queueItem.classList.add('list-group-item');
+                queueItem.setAttribute('onclick', `playTrack('${speakerId}', ${index})`);
+    
+                // Create row structure for album art and text
+                queueItem.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <img src="${track.album_art || '{% static "default_album_art.webp" %}'}" class="img-fluid" alt="Album Art" style="width: 60px; height: 60px;">
+                        </div>
+                        <div class="col">
+                            <h6 class="mb-1">${track.title}</h6>
+                            <p class="mb-0">${track.artist}</p>
+                        </div>
+                    </div>`;
+                queueList.appendChild(queueItem);
+            });
+        } else {
+            const emptyItem = document.createElement('li');
+            emptyItem.classList.add('list-group-item');
+            emptyItem.innerText = 'No tracks in the queue';
+            queueList.appendChild(emptyItem);
+        }
+    }
+    
+    
+    function activateSpeakerTab(speakerId) {
+        // Remove 'active' class from any currently active tab and content
+        const activeTab = document.querySelector('#speaker-tabs .nav-link.active');
+        const activeContent = document.querySelector('.tab-pane.show.active');
+    
+        if (activeTab) {
+            activeTab.classList.remove('active');
+            activeTab.setAttribute('aria-selected', 'false');
+        }
+        
+        if (activeContent) {
+            activeContent.classList.remove('show', 'active');
+        }
+    
+        // Activate the selected tab and its corresponding content
+        const newActiveTab = document.getElementById(`speaker-tab-${speakerId}`);
+        const newActiveContent = document.getElementById(`speaker-content-${speakerId}`);
+    
+        if (newActiveTab) {
+            newActiveTab.classList.add('active');
+            newActiveTab.setAttribute('aria-selected', 'true');
+        }
+    
+        if (newActiveContent) {
+            newActiveContent.classList.add('show', 'active');
+        }
+    }
+        
+
+    </script>
+{% endblock %}

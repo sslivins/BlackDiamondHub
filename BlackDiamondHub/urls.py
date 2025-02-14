@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth import views as auth_views
 
 from . import views
 
@@ -28,6 +29,8 @@ urlpatterns = [
     path('inventory/', include('inventory.urls')),
     path('sunpeaks_webcams/', include('sunpeaks_webcams.urls')),
     path('feedback/', include('feedback.urls')),
+    path('sonos_control/', include('sonos_control.urls')),
+    path('auth/', include('social_django.urls', namespace='social'))
 ]
 
 if settings.DEBUG:

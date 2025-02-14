@@ -39,17 +39,29 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
+    'channels',
+    'social_django',
     'django_tables2',
     'crispy_forms',
     'crispy_bootstrap5',
     'inventory',
     'sunpeaks_webcams',
     'feedback',
+    'sonos_control',
 ]
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+ASGI_APPLICATION = 'BlackDiamondHub.asgi.application'
+WSGI_APPLICATION = 'BlackDiamondHub.wsgi.application'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -76,12 +88,30 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'feedback.context_processors.unread_feedback_count',
+                'sonos_control.context_processors.spotify_token',
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'BlackDiamondHub.wsgi.application'
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.spotify.SpotifyOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+# SOCIAL_AUTH_PIPELINE = (
+#     'social_core.pipeline.social_auth.social_details',
+#     'sonos_control.pipeline.custom_redirect',  # Add this step to handle the next parameter
+#     # other pipeline steps...
+# )
+
+SOCIAL_AUTH_DISCONNECT_PIPELINE = (
+    'sonos_control.pipeline.custom_allowed_to_disconnect',
+    'social_core.pipeline.disconnect.get_entries',    
+    'social_core.pipeline.disconnect.revoke_tokens',
+    'social_core.pipeline.disconnect.disconnect',
+    'sonos_control.pipeline.clear_session_and_logout',
+)
 
 
 # Database
@@ -157,3 +187,39 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
+
+########################
+# Social Auth Settings #
+########################
+SOCIAL_AUTH_AUTHENTICATION_BACKENDS = (
+    'social_core.backends.spotify.SpotifyOAuth2',
+)
+
+SOCIAL_AUTH_SPOTIFY_EXTRA_DATA = [
+    ('access_token', 'access_token'),
+    ('refresh_token', 'refresh_token'),
+    ('token_type', 'token_type'),
+    ('expires_in', 'expires_in'), 
+    ('id', 'id'),
+    ('email', 'email'),
+]
+
+SOCIAL_AUTH_STRATEGY = "social_django.strategy.DjangoStrategy"
+SOCIAL_AUTH_STORAGE = "social_django.models.DjangoStorage"
+
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
+SOCIAL_AUTH_DEBUG = True
+SOCIAL_AUTH_REVOKE_TOKENS_ON_DISCONNECT = True
+SOCIAL_AUTH_REFRESH_TOKENS = True
+SOCIAL_AUTH_SESSION_EXPIRATION = True
+
+# social auth for spotify settings
+SOCIAL_AUTH_SPOTIFY_KEY =  os.getenv('SPOTIFY_CLIENT_ID')
+SOCIAL_AUTH_SPOTIFY_SECRET =  os.getenv('SPOTIFY_CLIENT_SECRET')
+SOCIAL_AUTH_SPOTIFY_REDIRECT_URI = 'http://homehub-backend.mi:8080/auth/complete/spotify/'
+SOCIAL_AUTH_SPOTIFY_SCOPE = ['user-read-email', 'user-read-private', 'user-read-recently-played', 'user-library-read']
+
+SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
+SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
+SPOTIFY_REDIRECT_URI = 'http://homehub-backend.mi:8080/sonos_control/spotify/auth/callback/'
+SPOTIFY_SCOPE= ['user-read-recently-played', 'user-top-read', 'user-library-read']

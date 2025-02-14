@@ -1,0 +1,414 @@
+<body data-authenticated="{% if has_spotify_token %}true{% else %}false{% endif %}">
+  {% if has_spotify_token %}
+    <div class="d-flex justify-content-between">
+      <form id="spotify-search-form" method="GET" class="d-flex w-100">
+        <input type="text"
+               id="spotify-search-input"
+               name="query"
+               placeholder="Search for songs, albums, artists"
+               class="form-control mr-2"
+               style="width: 60%">
+        <button type="submit"
+                id="spotify-search-button"
+                class="btn btn-primary btn-sm mx-1">Search</button>
+        <button type="button"
+                id="clear-search-button"
+                class="btn btn-secondary btn-sm mx-1">Clear</button>
+      </form>
+    </div>
+    <!-- Placeholder for dynamic content -->
+    <div id="spotify-content">
+      <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
+      <div id="recently-played-list" class="row">
+        <div>Loading...</div>
+      </div>
+      <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
+      <div id="favorite-tracks-list" class="row">
+        <div>Loading...</div>
+      </div>
+      <h4 class="mt-2 text-dark bg-white p-2">Top Tracks</h4>
+      <div id="top-tracks-list" class="row">
+        <div>Loading...</div>
+      </div>
+    </div>
+    <div class="text-end">
+      <form action="{% url 'spotify_logout' %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="btn btn-danger mt-3">Logout of Spotify</button>
+      </form>
+    </div>
+  {% else %}
+    <!-- Placeholder for QR code login -->
+    <div id="spotify-login-placeholder">
+      <p>Loading Spotify login...</p>
+    </div>
+  {% endif %}
+  <!-- Long Press Context Menu Modal -->
+  <div class="modal fade"
+       id="contextMenuModal"
+       tabindex="-1"
+       role="dialog"
+       aria-labelledby="contextMenuModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="contextMenuModalLabel">Choose an Action</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <button class="btn btn-primary d-block w-100 mb-2" id="modal-play-btn">Play Now</button>
+          <button class="btn btn-primary d-block w-100 mb-2"
+                  id="modal-add-to-front-btn">Play Next</button>
+          <button class="btn btn-primary d-block w-100" id="modal-add-to-back-btn">Add to Queue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+
+  let contextMenuModal = null;
+
+  document.addEventListener("DOMContentLoaded", function() {
+
+    var contextMenuModalElement = document.getElementById('contextMenuModal');
+    contextMenuModal = new bootstrap.Modal(contextMenuModalElement);
+
+    const isAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
+    if (!isAuthenticated) {
+      fetchSpotifyLogin();
+    } 
+    else {
+ 
+      
+      const searchForm = document.getElementById('spotify-search-form');
+      const clearButton = document.getElementById('clear-search-button');
+    
+      // ---- Fetch the Initial Spotify Data ----
+      fetchSpotifyData();
+    
+      // ---- Handle Form Submission for Both Enter Key and Button ----
+      searchForm.addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent the form from submitting and reloading the page
+    
+        const query = document.getElementById('spotify-search-input').value.trim();
+        if (!query) {
+          alert('Please enter a search term');
+          return;
+        }
+    
+        fetchSearchResults(query);
+      });
+    
+      // ---- Handle Clearing Search Results ----
+      clearButton.addEventListener('click', function() {
+        //clear the search text
+        document.getElementById('spotify-search-input').value = '';
+        fetchSpotifyData();  // Re-fetch and restore original content
+      });
+    }
+
+    function fetchSpotifyLogin() {
+      fetch("{% url 'spotify_auth_qrcode' %}")
+        .then(response => response.json())
+        .then(data => {
+          displaySpotifyLogin(data);
+          checkAuthorizationStatus(data.session_id);
+        })
+        .catch(error => console.error('Error fetching Spotify QR code:', error));
+    }
+
+    function displaySpotifyLogin(data) {
+      const placeholder = document.getElementById('spotify-login-placeholder');
+      placeholder.innerHTML = `
+        <div class="d-flex justify-content-center align-items-center" style="height: calc(100vh - 200px)">
+          <div class="text-center text-white">
+            <h2>Spotify Control</h2>
+            <p>Scan the QR code to log in with Spotify.</p>
+            <img src="data:image/png;base64,${data.qr_code_img}" alt="QR Code" style="max-width: 300px">
+            <p id="status-message">Waiting for authorization...</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function checkAuthorizationStatus(sessionId) {
+      fetch("{% url 'spotify_auth_status' %}?session_id=" + sessionId)
+        .then(response => response.json())
+        .then(data => {
+          if (data.authorized) {
+            window.location.reload();  // Reload the page to show the authenticated content
+          } else {
+            setTimeout(() => checkAuthorizationStatus(sessionId), 3000);
+          }
+        })
+        .catch(error => console.error('Error checking authorization status:', error));
+    }    
+  
+    // ---- Spotify Data Fetching and Display ----
+    function fetchSpotifyData() {
+      fetch("{% url 'fetch_spotify_data' %}")
+        .then(response => response.json())
+        .then(data => {
+          populateSpotifyData(data);  // Populate Recently Played and Favorites
+        })
+        .catch(error => console.error('Error fetching Spotify data:', error));
+    }
+  
+    function fetchSearchResults(query) {
+      fetch(`{% url 'spotify_search' %}?query=${query}`)
+        .then(response => response.json())
+        .then(data => {
+          displaySearchResults(data.search_results);  // Display search results in content container
+        })
+        .catch(error => console.error('Error fetching search results:', error));
+    }
+  
+    function populateSpotifyData(data) {
+      const contentContainer = document.getElementById('spotify-content');
+      // Clear current content but keep the structure
+      contentContainer.innerHTML = `
+      <h4 class="mt-2 text-dark bg-white p-2">Recently Played</h4>
+      <div id="recently-played-list" class="track-list d-flex overflow-auto"></div>
+      <h4 class="mt-2 text-dark bg-white p-2">Favorites</h4>
+      <div id="favorite-tracks-list" class="track-list d-flex overflow-auto"></div>
+      <h4 class="mt-2 text-dark bg-white p-2">Top Tracks</h4>
+      <div id="top-tracks-list" class="track-list d-flex overflow-auto"></div>      
+    `;
+  
+      const recentlyPlayedList = document.getElementById("recently-played-list");
+      const favoriteTracksList = document.getElementById("favorite-tracks-list");
+      const topTracksList = document.getElementById("top-tracks-list");
+  
+      // Populate Recently Played
+      if (data.recently_played && data.recently_played.length) {
+        data.recently_played.forEach(track => {
+          const trackItem = createTrackItem(track, track.uri);
+          recentlyPlayedList.appendChild(trackItem);      
+        });
+      } else {
+        recentlyPlayedList.innerHTML = '<div class="col-12 text-white">No recently played tracks found</div>';
+      }
+  
+      // Populate Favorites
+      if (data.favorite_tracks && data.favorite_tracks.length) {
+        data.favorite_tracks.forEach(track => {
+          const trackItem = createTrackItem(track, track.uri);
+          favoriteTracksList.appendChild(trackItem);          
+        });
+      } else {
+        favoriteTracksList.innerHTML = '<div class="col-12 text-white">No favorite tracks found</div>';
+      }
+
+      // Populate Top Tracks
+      if (data.top_tracks && data.top_tracks.length) {
+          data.top_tracks.forEach(track => {
+            const trackItem = createTrackItem(track, track.uri);
+            topTracksList.appendChild(trackItem);          
+          });
+        } else {
+          topTracksList.innerHTML = '<div class="col-12 text-white">No top tracks found</div>';
+        }
+    }
+  
+    function displaySearchResults(results) {
+      const contentContainer = document.getElementById('spotify-content'); // Make sure this is defined
+    
+      // Clear current content and display search results
+      contentContainer.innerHTML = ''; // Clear content
+      
+      if (results.length === 0) {
+        const noResultsMessage = document.createElement('p');
+        noResultsMessage.textContent = 'No results found for your search.';
+        contentContainer.appendChild(noResultsMessage);
+      } else {
+        const header = document.createElement('h4');
+        header.textContent = 'Search Results:';
+        contentContainer.appendChild(header);
+    
+        const rowDiv = document.createElement('div');
+        rowDiv.classList.add('row'); // Create a div for the row layout
+    
+        results.forEach(track => {
+          const trackItem = createTrackItem(track, track.uri); // Create track item using the modified function
+          rowDiv.appendChild(trackItem); // Append the track item to the row div
+        });
+    
+        contentContainer.appendChild(rowDiv); // Append the row div to the content container
+      }
+    }
+    
+  
+    function createTrackItem(track, trackUri) {
+      const albumArt = track.album_art
+        ? `<a href="javascript:void(0);">
+             <img src="${track.album_art}" alt="${track.name} Album Art" class="img-fluid album-art">
+           </a>`
+        : '';
+    
+      // Create a wrapper element
+      const trackElement = document.createElement('div');
+      trackElement.classList.add('col-2', 'd-flex', 'flex-column', 'align-items-center', 'mb-1', 'track-item');
+      trackElement.setAttribute('data-track-uri', trackUri);
+    
+      // Add inner HTML (album art and track name)
+      trackElement.innerHTML = `
+        ${albumArt}
+        <span class="mt-2 text-center text-white">${track.name}</span>
+      `;
+    
+      // Add the event listeners for long press and click events
+      trackElement.addEventListener('mousedown', handlePressStart);
+      trackElement.addEventListener('touchstart', handlePressStart);
+      trackElement.addEventListener('touchmove', handlePressEnd);
+    
+      trackElement.addEventListener('mouseup', handlePressEnd);
+      trackElement.addEventListener('mouseleave', handlePressEnd);
+      trackElement.addEventListener('touchend', handlePressEnd);
+    
+      trackElement.addEventListener('click', handleClick); // Handle short click event
+    
+      return trackElement;
+    }
+    
+  
+    // Long press and click functions
+    let pressTimer;
+    let longPressDuration = 500; // 500ms for long press detection
+    let selectedTrackUri = '';  // Store the currently selected track URI
+  
+    function handlePressStart(event) {
+      selectedTrackUri = event.currentTarget.dataset.trackUri;
+      pressTimer = window.setTimeout(() => {
+        console.log('Long press detected');
+        contextMenuModal.show();
+      }, longPressDuration);
+    }
+  
+    function handlePressEnd() {
+      clearTimeout(pressTimer);
+    }
+  
+    function handleClick() {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        playOnActiveSpeaker(selectedTrackUri);  // Short click: Play track
+      }
+    }
+  
+    // ---- Modal Actions for Tracks ----
+    document.getElementById('modal-play-btn').addEventListener('click', function() {
+      playOnActiveSpeaker(selectedTrackUri);
+      contextMenuModal.hide();
+    });
+  
+    document.getElementById('modal-add-to-front-btn').addEventListener('click', function() {
+      addToActiveSpeakerQueue(selectedTrackUri, 'next');
+      contextMenuModal.hide();
+    });
+  
+    document.getElementById('modal-add-to-back-btn').addEventListener('click', function() {
+      addToActiveSpeakerQueue(selectedTrackUri, 'end');
+      contextMenuModal.hide();
+    });
+  });
+  
+function addToActiveSpeakerQueue(trackUri, position='end') {
+    // Assuming you have an active speaker identified
+    const speakerUid = getActiveSpeaker();  // You need to implement this function to return the speaker's UID
+    const service = "spotify";  // Fixed value for Spotify service
+
+    if (!speakerUid) {
+        alert('No active speaker selected');
+        return;
+    }
+    else
+    {
+        console.log(`Adding track to queue: ${trackUri}`);
+    } 
+
+    // Prepare the POST request data
+    const data = new FormData();
+    data.append('speakerUid', speakerUid);
+    data.append('service', service);
+    data.append('track_uri', trackUri);
+    data.append('position', position);
+
+    // Get CSRF token from the form (if available)
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Send the POST request to the Django view
+    fetch("{% url 'queue_track' %}", {
+        method: 'POST',
+        body: data,
+        headers: {
+            'X-CSRFToken': csrfToken  // CSRF token for security
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Track added to Sonos queue:', data.message);
+        } else {
+            console.error('Error adding track:', data.message);
+        }
+    })
+    .catch(error => console.error('Error in request:', error));
+  }
+
+  function playOnActiveSpeaker(trackUri) {
+    const speakerUid = getActiveSpeaker();  // You need to implement this function to return the speaker's UID
+    const service = "spotify";  // Fixed value for Spotify service
+
+    if (!speakerUid) {
+        alert('No active speaker selected');
+        return;
+    }
+
+    // Prepare the POST request data
+    const data = new FormData();
+    data.append('speakerUid', speakerUid);
+    data.append('service', service);
+    data.append('track_uri', trackUri);
+
+    // Get CSRF token from the form (if available)
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Send the POST request to the Django view
+    fetch("{% url 'play_uri' %}", {
+        method: 'POST',
+        body: data,
+        headers: {
+            'X-CSRFToken': csrfToken  // CSRF token for security
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Track added to Sonos queue:', data.message);
+        } else {
+            console.error('Error adding track:', data.message);
+        }
+    })
+    .catch(error => console.error('Error in request:', error));
+  }  
+
+function getActiveSpeaker() {
+  // Get the currently active tab using the 'active' class
+  const activeTab = document.querySelector('.nav-link.active');
+  
+  if (activeTab) {
+      // Retrieve the speaker UID from the active tab's ID or data attribute
+      const speakerUid = activeTab.id.replace('speaker-tab-', '');  // Strip 'speaker-tab-' from the ID to get the UID
+      return speakerUid;
+  } else {
+      console.error('No active speaker found');
+      return null;
+  }
+}
+  
+</script>

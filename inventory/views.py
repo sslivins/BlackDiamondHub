@@ -117,8 +117,6 @@ def update_item(request, id):
         # Parse the JSON data from the request body
         data = json.loads(request.body)
         
-        print(f"Updating item: {item}, data: {data}")
-
         # Update the item fields with the provided data
         item.room = data.get('room', item.room)
         item.description = data.get('description', item.description)

@@ -1,0 +1,203 @@
+{% load static %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- Speaker Tabs -->
+    <div class="col-md-3">
+      <div class="nav flex-column nav-tabs"
+           id="speaker-tabs"
+           role="tablist"
+           aria-orientation="vertical">
+        {% for info in speaker_info %}
+          {% if info.is_coordinator %}
+            <a class="nav-link {% if forloop.first %}active{% endif %}"
+               id="speaker-tab-{{ info.uid }}"
+               data-bs-toggle="tab"
+               href="#speaker-content-{{ info.uid }}"
+               role="tab"
+               aria-controls="speaker-content-{{ info.uid }}"
+               aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">{{ info.group_label }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <!-- Speaker Content -->
+    <div class="col-md-9 speaker-dropzone">
+      <div class="tab-content" id="speaker-tabContent">
+        {% for info in speaker_info %}
+          {% if info.is_coordinator %}
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                 id="speaker-content-{{ info.uid }}"
+                 role="tabpanel"
+                 aria-labelledby="speaker-tab-{{ info.uid }}"
+                 ondragover="handleDragOver(event)"
+                 ondrop="handleDrop(event, '{{ info.uid }}')">
+              <div class="card mb-3">
+                <div class="row no-gutters">
+                  <div class="col-md-12">
+                    <h2 class="mt-8 text-center">{{ info.group_label }}</h2>
+                    <div class="album-art-container position-relative">
+                      <img src="{{ info.album_art }}"
+                           class="img-fluid album-art"
+                           alt="Album Art"
+                           onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                      <button class="btn play-pause-btn position-absolute"
+                              id="play-pause-button-{{ info.uid }}"
+                              onclick="togglePlayPause('{{ info.uid }}', '{{ info.play_state }}')">
+                        <span class="icon">
+                          {% if info.play_state == 'PLAYING' %}
+                            &#10074;&#10074;
+                          {% else %}
+                            &#9654;
+                          {% endif %}
+                        </span>
+                      </button>
+                      <div class="audio-visualizer position-absolute top-0 end-0 rounded p-1"
+                           id="audio-visualizer-{{ info.uid }}"
+                           {% if info.play_state != 'PLAYING' %}hidden{% endif %}>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-12">
+                    <h5 class="track-title">
+                      <strong>Title:</strong> {{ info.track }}
+                    </h5>
+                    <p class="track-artist">
+                      <strong>Artist:</strong> {{ info.artist }}
+                    </p>
+                    <p class="track-album">
+                      <strong>Album:</strong> {{ info.album }}
+                    </p>
+                  </div>
+                  <div class="col-md-9">
+                    <!-- Volume Controls -->
+                    <button class="volume-btn volume-down"
+                            onclick="adjustVolume('{{ info.uid }}', decreaseVolume('{{ info.uid }}'))">
+                      <i class="fas fa-volume-down"></i>
+                    </button>
+                    <input type="range"
+                           class="volume-slider"
+                           min="0"
+                           max="100"
+                           value="{{ info.volume }}"
+                           id="volume-slider-{{ info.uid }}"
+                           onchange="adjustVolume('{{ info.uid }}', this.value)">
+                    <button class="volume-btn volume-up"
+                            onclick="adjustVolume('{{ info.uid }}', increaseVolume('{{ info.uid }}'))">
+                      <i class="fas fa-volume-up"></i>
+                    </button>
+                  </div>
+                  <div class="col-md-3">
+                    <button onclick="openModal('{{ info.uid }}')" class="btn group-btn">Group</button>
+                  </div>
+                </div>
+                <!-- Queue Section -->
+                <hr class="my-4">
+                <div class="queue-container">
+                  <div class="d-flex justify-content-between">
+                    <h5 class="d-inline">Queue:</h5>
+                    <button class="btn btn-danger" onclick="clearQueue('{{ info.uid }}')">Clear Queue</button>
+                  </div>
+                  <ul class="queue-list list-group" style="padding-left: 0; margin-left: 0">
+                    {% for track in info.queue %}
+                      <li class="list-group-item" style="padding-left: 0;">
+                        <div class="row align-items-center">
+                          <!-- Album Art on the left -->
+                          <div class="col-auto">
+                            <img src="{{ track.album_art }}"
+                                 class="img-fluid"
+                                 alt="Album Art"
+                                 style="width: 60px;
+                                        height: 60px"
+                                 onerror="this.onerror=null;this.src='{% static 'default_album_art.webp' %}';">
+                          </div>
+                          <!-- Title and Artist on the right -->
+                          <div class="col">
+                            <h6 class="mb-1">{{ track.title }}</h6>
+                            <p class="mb-0">{{ track.artist }}</p>
+                          </div>
+                        </div>
+                      </li>
+                    {% empty %}
+                      <li class="list-group-item text-center" style="padding-left: 0;">No tracks in the queue</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% for info in speaker_info %}
+  <!-- Modal for grouping speakers -->
+  <div class="modal fade"
+       id="groupModal-{{ info.uid }}"
+       tabindex="-1"
+       role="dialog"
+       aria-labelledby="group-modal-{{ info.uid }}"
+       aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h5 class="modal-title" id="group-modal-{{ info.uid }}">Group Speakers for {{ info.group_label }}</h5>
+          <button type="button"
+                  class="close"
+                  data-dismiss="modal"
+                  aria-label="Close"
+                  onclick="closeModal('{{ info.uid }}')">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <!-- Modal Body -->
+        <div class="modal-body">
+          <!-- Grouping options go here -->
+          <!-- Adjust your switch-container to use Bootstrap switches -->
+          {% for grouped_speaker in info.group %}
+            {% if grouped_speaker.player_name != info.name %}
+              <div class="custom-control custom-switch">
+                <input type="checkbox"
+                       class="custom-control-input"
+                       id="group-checkbox-{{ grouped_speaker.uid }}"
+                       checked
+                       onclick="onCheckboxChange('{{ info.uid }}')"
+                       data-original-state="checked"
+                       data-speaker-name="{{ grouped_speaker.uid }}">
+                <label class="custom-control-label"
+                       for="group-checkbox-{{ grouped_speaker.uid }}">{{ grouped_speaker.player_name }}</label>
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% for ungrouped_speaker in info.ungrouped %}
+            <div class="custom-control custom-switch">
+              <input type="checkbox"
+                     class="custom-control-input"
+                     id="group-checkbox-{{ ungrouped_speaker.uid }}"
+                     onclick="onCheckboxChange('{{ info.uid }}')"
+                     data-original-state="unchecked"
+                     data-speaker-name="{{ ungrouped_speaker.uid }}">
+              <label class="custom-control-label"
+                     for="group-checkbox-{{ ungrouped_speaker.uid }}">{{ ungrouped_speaker.player_name }}</label>
+            </div>
+          {% endfor %}
+          {% if info.ungrouped|length == 0 %}<p>All available speakers are already grouped</p>{% endif %}
+        </div>
+        <!-- Modal Footer -->
+        <div class="modal-footer">
+          <button id="apply-button-{{ info.uid }}"
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="applyGroupChanges('{{ info.uid }}')"
+                  disabled>Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}

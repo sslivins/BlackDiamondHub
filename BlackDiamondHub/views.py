@@ -4,6 +4,8 @@ from requests.exceptions import RequestException
 from django.http import HttpResponse
 from bs4 import BeautifulSoup
 import re
+from social_django.utils import load_strategy
+from social_core.backends.spotify import SpotifyOAuth2
 
 def landing_page(request):
     url = 'https://www.sunpeaksresort.com/bike-hike/weather-webcams/weather'  # Replace with the URL you want to fetch
@@ -53,3 +55,17 @@ def landing_page(request):
         'sunpeaks_weather': weather_data
     }
     return render(request, 'index.html', context)
+
+def refresh_spotify_token(user):
+    social_auth = user.social_auth.get(provider='spotify')
+    strategy = load_strategy()
+    spotify_backend = SpotifyOAuth2(strategy=strategy)
+
+    # Check if the token has expired
+    if spotify_backend.access_token_expired(social_auth):
+        new_token = spotify_backend.refresh_token(social_auth.extra_data['refresh_token'])
+        social_auth.extra_data['access_token'] = new_token['access_token']
+        social_auth.save()
+        return new_token['access_token']
+    return social_auth.extra_data['access_token']
+
