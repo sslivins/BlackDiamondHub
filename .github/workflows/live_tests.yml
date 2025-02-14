@@ -1,4 +1,4 @@
-name: Daily Django Tests
+name: Daily Tests
 
 on:
   schedule:
@@ -7,7 +7,20 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5    
 
     steps:
       - name: Checkout repository
@@ -16,7 +29,29 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y wget unzip xvfb libxi6 libgconf-2-4
+            wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+            sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+            sudo apt-get update
+            # Install Google Chrome
+            sudo apt-get install -y google-chrome-stable
+            # Fetch the installed Chrome version
+            CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+            # Fetch the matching ChromeDriver version from the JSON file
+            CHROMEDRIVER_VERSION=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json | jq -r --arg CHROME_VERSION "$CHROME_VERSION" '.versions[] | select(.version | startswith($CHROME_VERSION)) | .downloads.chromedriver[] | select(.platform == "linux64").url')
+            # Download and install ChromeDriver
+            wget -N $CHROMEDRIVER_VERSION -P ~/
+            unzip ~/chromedriver-linux64.zip -d ~/
+            sudo mv -f ~/chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
+            sudo chown root:root /usr/local/bin/chromedriver
+            sudo chmod 0755 /usr/local/bin/chromedriver
+            # Install libzbar shared library
+            sudo apt-get install libzbar0          
 
       - name: Install dependencies
         run: |
@@ -24,7 +59,21 @@ jobs:
           pip install -r requirements.txt
 
       - name: Verify Temperature Parsing from Sunpeaks Website
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+          ALLOWED_HOSTS: localhost
+          DB_NAME: test_db
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASSWORD: postgres      
         run: python manage.py test BlackDiamondHub.tests.LandingPageLiveTests -v 2
 
       - name: Verify Webcam Parsing from Sunpeaks Website
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+          ALLOWED_HOSTS: localhost
+          DB_NAME: test_db
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASSWORD: postgres      
         run: python manage.py test sunpeaks_webcams.tests.CheckForNewWebcamsTests -v 2
