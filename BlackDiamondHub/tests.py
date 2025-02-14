@@ -5,6 +5,53 @@ from selenium.webdriver.support import expected_conditions as EC
 from django.test import LiveServerTestCase
 from selenium.webdriver.chrome.options import Options
 from django.contrib.auth.models import User
+from django.test import TestCase, Client
+from django.urls import reverse
+
+class LandingPageLiveTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_landing_page_live_data(self):
+        response = self.client.get(reverse('landing_page'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('sunpeaks_weather', response.context)
+        weather_data = response.context['sunpeaks_weather']
+
+        # Verify that there are 4 entries.
+        self.assertEqual(len(weather_data), 4, "Expected exactly 4 weather entries.")
+
+        # Expected values for location and elevation (elevation as integer)
+        expected_entries = [
+            {'location': 'Top of the World', 'elevation': 2080},
+            {'location': 'Mid-mountain', 'elevation': 1855},
+            {'location': 'Top of Morrisey', 'elevation': 1675},
+            {'location': 'Valley', 'elevation': 1255}
+        ]
+        
+        for expected in expected_entries:
+            found = any(
+                entry['location'] == expected['location'] and entry['elevation'] == expected['elevation']
+                for entry in weather_data
+            )
+            self.assertTrue(found, f"Did not find expected entry: {expected}")
+
+        # Verify that each weather entry has a temperature value.
+        # Temperature can be "N/A" (indicating live data issues) or a valid number.
+        for entry in weather_data:
+            temp = entry.get('temperature')
+            self.assertIsNotNone(temp, f"No temperature value found for entry: {entry}")
+
+            if temp != "N/A":
+                try:
+                    temp_val = float(temp)
+                    # Check that the temperature falls within a reasonable range.
+                    self.assertTrue(
+                        -50 <= temp_val <= 150,
+                        f"Temperature {temp_val} out of expected range for entry: {entry}"
+                    )
+                except ValueError:
+                    self.fail(f"Temperature value is not a valid number: {temp}")
 
 class WeatherUnitToggleTest(LiveServerTestCase):
     @classmethod
