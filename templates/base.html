@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BlackDiamondHub</title>
-    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+    <link rel="shortcut icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32x32.png' %}">
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon-16x16.png' %}">
@@ -284,12 +284,12 @@
             </div>
         </div>
         <div class="login-logout-buttons">
-            {% if user.is_authenticated and user.is_staff %}
+            {% if user.is_authenticated %}
                 <a href="{% url 'view_feedback' %}" class="notification-icon">
                     <i class="fas fa-envelope"></i>
                     {% if unread_feedback_count > 0 %}<span class="badge">{{ unread_feedback_count }}</span>{% endif %}
                 </a>
-                <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                <form method="post" action="{% url 'logout' %}?next={{ request.path }}" style="display:inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn" id='logout-button'>Logout</button>
                 </form>

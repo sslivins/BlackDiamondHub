@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'sunpeaks_webcams',
     'feedback',
     'sonos_control',
+    'wifi',
 ]
 
 CHANNEL_LAYERS = {
@@ -223,3 +224,12 @@ SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_REDIRECT_URI = 'http://homehub-backend.mi:8080/sonos_control/spotify/auth/callback/'
 SPOTIFY_SCOPE= ['user-read-recently-played', 'user-top-read', 'user-library-read']
+
+#############################
+### Wifi App Settings #######
+#############################
+WIFI_NETWORKS_AUTH = os.environ.get('WIFI_NETWORKS_AUTH', 'bdl_guest').split(',')
+WIFI_NETWORKS_PUBLIC = os.environ.get('WIFI_NETWORKS_PUBLIC', 'bdl_guest').split(',')
+WIFI_PASSWORD_FOR_BDL = os.environ.get('WIFI_PASSWORD_FOR_BDL', 'default_password')
+WIFI_PASSWORD_FOR_BDL_TO_MI = os.environ.get('WIFI_PASSWORD_FOR_BDL_TO_MI', 'default_password')
+WIFI_PASSWORD_FOR_BDL_GUEST = os.environ.get('WIFI_PASSWORD_FOR_BDL_GUEST', 'default_password')

@@ -30,7 +30,8 @@ urlpatterns = [
     path('sunpeaks_webcams/', include('sunpeaks_webcams.urls')),
     path('feedback/', include('feedback.urls')),
     path('sonos_control/', include('sonos_control.urls')),
-    path('auth/', include('social_django.urls', namespace='social'))
+    path('auth/', include('social_django.urls', namespace='social')),
+    path('wifi/', include('wifi.urls')),
 ]
 
 if settings.DEBUG:
