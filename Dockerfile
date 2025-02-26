@@ -7,25 +7,28 @@ FROM python:3.12.9-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# 3. Create and set the working directory inside the container
+# 3. Install system dependencies needed for psycopg2
+RUN apt-get update && \
+    apt-get install -y libpq-dev gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+# 4. Create and set the working directory inside the container
 WORKDIR /app
 
-# 4. Copy your requirements and install them
+# 5. Copy your requirements and install them
 COPY requirements.txt /app/
 
-# 4. Install dependencies
-RUN   python -m venv /app/.venv && \
-      . /app/.venv/bin/activate && \
-      pip install --upgrade pip && \
-      pip install -r requirements.txt
+# 6. Install dependencies
+RUN python -m venv /app/.venv && \
+    . /app/.venv/bin/activate && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-# 5. Copy the rest of your Django project code into the container
+# 7. Copy the rest of your Django project code into the container
 COPY . /app/
 
-# 6. Expose the default Django port (change if needed)
+# 8. Expose the default Django port (change if needed)
 EXPOSE 8000
 
-# 7. Set the default command to run the Django development server or gunicorn
-# Here we run the built-in dev server for simplicity.
+# 9. Set the default command to run the Django development server or gunicorn
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-
