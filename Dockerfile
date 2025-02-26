@@ -12,7 +12,12 @@ WORKDIR /app
 
 # 4. Copy your requirements and install them
 COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# 4. Install dependencies
+RUN   python -m venv /app/.venv && \
+      . /app/.venv/bin/activate && \
+      pip install --upgrade pip && \
+      pip install -r requirements.txt
 
 # 5. Copy the rest of your Django project code into the container
 COPY . /app/
