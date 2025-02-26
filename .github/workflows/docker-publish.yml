@@ -22,12 +22,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3. Build and push the Docker image
+      # 3. Set a lowercase repository name in an environment variable
+      - name: Convert repository name to lowercase
+        id: set_repo
+        run: echo "REPO=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV          
+
+      # 4. Build and push the Docker image using the lowercase repository name
       - name: Build and Push
         uses: docker/build-push-action@v3
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}/bacldiamondhub:latest
+          tags: ghcr.io/${{ env.REPO }}/blackdiamondhub:latest
 
 
