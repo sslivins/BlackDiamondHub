@@ -1,7 +1,7 @@
 # Dockerfile
 
 # 1. Choose a small Python base image
-FROM python:3.9-slim
+FROM python:3.12.9-slim
 
 # 2. Prevent Python from writing .pyc files to disk and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1
