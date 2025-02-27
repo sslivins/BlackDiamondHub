@@ -40,9 +40,10 @@ services:
     # If you want Watchtower to watch only your "djangoapp" container:
     command: ["BlackDiamondHub"]
     # If your Docker registry is private, provide credentials:
-    # environment:
+    environment:
     #   WATCHTOWER_USERNAME: "${REGISTRY_USERNAME}"
     #   WATCHTOWER_PASSWORD: "${REGISTRY_PASSWORD}"
+      - WATCHTOWER_POLL_INTERVAL=300
     # 
     # Keep watchtower running unless it crashes/restarts
     restart: unless-stopped
