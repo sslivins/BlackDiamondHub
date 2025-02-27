@@ -3,7 +3,7 @@ version: "3.8"
 services:
   djangoapp:
     # Use the Docker image you’ve published to GHCR (or Docker Hub, etc.)
-    image: ghcr.io/sslivins/BlackDiamondHub:latest
+    image: ghcr.io/sslivins/blackdiamondhub/blackdiamondhub:latest
     container_name: BlackDiamondHub
     # Pass environment variables (secrets) to Django
     environment:
@@ -38,7 +38,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     # If you want Watchtower to watch only your "djangoapp" container:
-    command: ["djangoapp"]
+    command: ["BlackDiamondHub"]
     # If your Docker registry is private, provide credentials:
     # environment:
     #   WATCHTOWER_USERNAME: "${REGISTRY_USERNAME}"
