@@ -20,7 +20,7 @@ COPY requirements.txt /app/
 
 # 6. Install dependencies
 RUN python -m venv /app/.venv && \
-    source /app/.venv/bin/activate && \
+    . /app/.venv/bin/activate && \
     pip install --upgrade pip && \
     pip install -r requirements.txt
 
