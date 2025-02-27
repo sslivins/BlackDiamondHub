@@ -20,15 +20,15 @@ COPY requirements.txt /app/
 
 # 6. Install dependencies
 RUN python -m venv /app/.venv && \
-    . /app/.venv/bin/activate && \
+    source /app/.venv/bin/activate && \
     pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # 7. Copy the rest of your Django project code into the container
 COPY . /app/
 
-# 8. Expose the default Django port (change if needed)
+# 8. Expose the default Django port 
 EXPOSE 8000
 
-# 9. Set the default command to run the Django development server or gunicorn
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# 9.run the server
+CMD ["/bin/bash", "-c", "source /app/.venv/bin/activate && python manage.py runserver 0.0.0.0:8000"]
