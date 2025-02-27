@@ -20,7 +20,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.BDL_PACKAGE_PAT }}
 
       # 3. Set a lowercase repository name in an environment variable
       - name: Convert repository name to lowercase
