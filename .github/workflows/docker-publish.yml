@@ -1,0 +1,38 @@
+name: Build and Push to GHCR
+
+on:
+  push:
+    branches: [ "main" ]  # or any other branches you want to build on
+  # You can also add tags: [ "*" ] for building on any git tag.
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      # 1. Check out the repo code
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      # 2. Log in to GitHub Container Registry (GHCR)
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.BDL_PACKAGE_PAT }}
+
+      # 3. Set a lowercase repository name in an environment variable
+      - name: Convert repository name to lowercase
+        id: set_repo
+        run: echo "REPO=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV          
+
+      # 4. Build and push the Docker image using the lowercase repository name
+      - name: Build and Push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ env.REPO }}/blackdiamondhub:latest
+
+
