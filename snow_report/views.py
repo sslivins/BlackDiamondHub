@@ -11,7 +11,7 @@ def snow_report(request):
     
     weather_data = parse_weather_html(html_content)
     
-    #print(weather_data)
+    print(weather_data)
     
     return render(request, 'snow_report.html', weather_data)
 
@@ -32,6 +32,7 @@ def parse_weather_html(html):
         location = temp.find('h3').text.strip() if temp.find('h3') else ''
         elevation_text = temp.find('p').text.strip() if temp.find('p') else ''
         elevation = re.sub(r'[^\d]', '', elevation_text)  # Remove non-numeric characters
+        elevation_unit = temp.find('span', class_='unit_switch').text.strip() if temp.find('span', class_='unit_switch') else ''
         value_span = temp.select_one('span.value_switch.value_deg')
         if not value_span:
             value_span = temp.select_one('span[class*="value_switch"][class*="value_deg"]')
@@ -41,6 +42,7 @@ def parse_weather_html(html):
         temperatures.append({
             'location': location,
             'elevation': elevation,
+            'elevation_unit': elevation_unit,
             'value': value,
             'unit': unit,
         })

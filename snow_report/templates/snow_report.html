@@ -51,8 +51,8 @@
             border-radius: 10px;
             text-align: center;
         }
-        .temp-value {
-            font-size: 48px;
+        .primary-value {
+            font-size: 32px;
             font-weight: bold;
             color: #FFD700;
         }
@@ -96,9 +96,9 @@
         <div class="grid">
             {% for temp in temperatures %}
             <div class="box">
-                <div class="temp-value">{{ temp.value }} {{ temp.unit }}</div>
+                <div class="primary-value">{{ temp.value }} {{ temp.unit }}</div>
                 <div class="temp-location">{{ temp.location }}</div>
-                <div class="temp-elevation">{{ temp.elevation }}m</div>
+                <div class="temp-elevation">{{ temp.elevation }} {{ temp.elevation_unit }}</div>
             </div>
             {% endfor %}
         </div>
@@ -110,7 +110,7 @@
         <div class="grid">
             {% for snow in snow_conditions %}
             <div class="box">
-                <div class="temp-value">{{ snow.value }} {{ snow.unit }}</div>
+                <div class="primary-value">{{ snow.value }} {{ snow.unit }}</div>
                 <div class="temp-location">{{ snow.period }}</div>
             </div>
             {% endfor %}
@@ -123,7 +123,7 @@
         <div class="grid">
             {% for base_snow in base_snow_conditions %}
             <div class="box">
-                <div class="temp-value">{{ base_snow.value }} {{ base_snow.unit }}</div>
+                <div class="primary-value">{{ base_snow.value }} {{ base_snow.unit }}</div>
                 <div class="temp-location">{{ base_snow.period }}</div>
             </div>
             {% endfor %}
@@ -136,7 +136,7 @@
         <div class="grid">
             {% for wind in wind_speeds %}
             <div class="box">
-                <div class="temp-value">{{ wind.speed_average }} {{ wind.speed_unit }}</div>
+                <div class="primary-value">{{ wind.speed_average }} {{ wind.speed_unit }}</div>
                 <div class="temp-location">{{ wind.location }}</div>
                 <div class="temp-elevation">{{ wind.elevation }}{{ wind.elevation_unit }}</div>
                 <div class="temp-location">{{ wind.speed_direction }}</div>
