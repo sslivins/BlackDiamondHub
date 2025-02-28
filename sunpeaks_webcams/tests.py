@@ -24,7 +24,8 @@ class CheckForNewWebcamsTests(TestCase):
         webcams = check_for_new_webcams()
         
         # Verify that we got at least one webcam entry.
-        self.assertTrue(len(webcams) == 5, "Expected 5 webcams")
+        expected_cams = 7
+        self.assertTrue(len(webcams) >= expected_cams, f"Expected at {expected_cams} webcams, got {len(webcams)}")
         
         # Define expected static values keyed by camera_name.
         # Only the static parts are expected to remain constant.

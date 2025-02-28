@@ -1,0 +1,112 @@
+<!-- filepath: /j:/blackdiamondlodge/BlackDiamondHub/snow_report/templates/snowreport.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snow Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        h1, h2 {
+            margin: 10px 0;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            width: 90%;
+        }
+        .section {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px;
+            flex: 1 1 30%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .section ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .section li {
+            margin: 5px 0;
+        }
+        .icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Snow Report</h1>
+    <div class="container">
+        <div class="section">
+            <h2>Today's Weather</h2>
+            <div>
+                <span class="icon {{ today_icon }}"></span>
+                <p>{{ today_description }}</p>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Temperatures</h2>
+            <ul>
+                {% for temp in temperatures %}
+                    <li>{{ temp.location }} ({{ temp.elevation }}m): {{ temp.value }}{{ temp.unit }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="section">
+            <h2>Snow Conditions</h2>
+            <ul>
+                {% for snow in snow_conditions %}
+                    <li>{{ snow.period }}: {{ snow.value }}{{ snow.unit }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="section">
+            <h2>Base Snow Conditions</h2>
+            <ul>
+                {% for base_snow in base_snow_conditions %}
+                    <li>{{ base_snow.period }}: {{ base_snow.value }}{{ base_snow.unit }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="section">
+            <h2>Wind Speeds</h2>
+            <ul>
+                {% for wind in wind_speeds %}
+                    <li>{{ wind.location }} ({{ wind.elevation }}{{ wind.elevation_unit }}): {{ wind.speed_direction }} at {{ wind.speed_average }}{{ wind.speed_unit }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="section">
+            <h2>5-Day Forecast</h2>
+            <ul>
+                {% for day in forecast %}
+                    <li>{{ day.day_name }}: <span class="icon {{ day.icon }}"></span> {{ day.description }} (Low: {{ day.low }}°{{ day.unit }}, High: {{ day.high }}°{{ day.unit }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="section">
+            <h2>Synopsis</h2>
+            <p>{{ synopsis }}</p>
+        </div>
+        <div class="section">
+            <h2>Extended Outlook</h2>
+            <p>{{ extended_outlook }}</p>
+        </div>
+    </div>
+</body>
+</html>
