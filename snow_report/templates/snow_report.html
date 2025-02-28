@@ -1,3 +1,8 @@
+{% extends 'base.html' %}
+
+{% block title %}Snow Report{% endblock %}
+
+{% block content %}
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -5,8 +10,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snow Report - Sun Peaks</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    {% comment %} <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> {% endcomment %}
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -66,7 +71,7 @@
             border-radius: 10px;
         }
         .forecast-icon {
-            font-size: 48px;
+            font-size: 64px;
             margin-bottom: 10px;
         }
     </style>
@@ -140,14 +145,20 @@
         </div>
     </div>
 
-    <!-- 5-Day Forecast (Grid Layout) -->
+    <!-- 5-Day Forecast (Now With Icons) -->
     <div class="section">
         <h2>📅 5-Day Forecast</h2>
         <div class="grid">
             {% for day in forecast %}
             <div class="forecast-day">
                 <h3>{{ day.day_name }}</h3>
-                <p><span class="forecast-icon {{ day.icon }}"></span></p>
+                <p>
+                    {% if day.icon %}
+                        <span class="forecast-icon {{ day.icon }}"></span>
+                    {% else %}
+                        🌤 <!-- Fallback icon -->
+                    {% endif %}
+                </p>
                 <p>{{ day.description }}</p>
                 <p>🌡 Low: {{ day.low_temp_value }} {{ day.low_temp_unit }} | High: {{ day.high_temp_value }} {{ day.high_temp_unit }}</p>
             </div>
@@ -170,3 +181,4 @@
 
 </body>
 </html>
+{% endblock %}

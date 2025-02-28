@@ -11,7 +11,7 @@ def snow_report(request):
     
     weather_data = parse_weather_html(html_content)
     
-    print(weather_data)
+    #print(weather_data)
     
     return render(request, 'snow_report.html', weather_data)
 
@@ -20,7 +20,8 @@ def parse_weather_html(html):
 
     # Extract today's weather
     today_weather = soup.find('div', class_='current-condition')
-    today_icon = today_weather.find('span', class_='icon')['class'][1]
+    sunpeaks_today_icon = today_weather.find('span', class_='icon')['class'][1]
+    today_icon = map_weather_icon(sunpeaks_today_icon)
     today_description = today_weather.find('p', class_='today-description').text.strip()
 
     # Extract temperatures
@@ -107,7 +108,11 @@ def parse_weather_html(html):
         day_name = day_name.capitalize()
         
         icon_span = day.find('div', class_='day_conditions').find('span')
-        icon_class = next((cls for cls in icon_span.get('class', []) if cls.startswith('icon-')), None)
+        sunpeaks_icon_class = next((cls for cls in icon_span.get('class', []) if cls.startswith('icon-')), None)
+        icon_class = map_weather_icon(sunpeaks_icon_class) if sunpeaks_icon_class else "fas fa-question-circle"
+        
+        if icon_class == "fas fa-question-circle":
+            print(f"Icon class not found for day: class: {sunpeaks_icon_class}")
         
         description_div = day.find('div', class_='day_description')
         description = description_div.get_text(strip=True) if description_div else None
@@ -148,3 +153,24 @@ def parse_weather_html(html):
         'synopsis': synopsis,
         'extended_outlook': extended_outlook,
     }
+    
+def map_weather_icon(sunpeaks_icon):
+    """Maps Sun Peaks weather icon classes to FontAwesome or Weather Icons."""
+    icon_mapping = {
+        "icon-sunny_clear_skies": "fas fa-sun",  # Daytime clear sky
+        "icon-clear_skies_night": "fas fa-moon",  # Nighttime clear sky
+        "icon-partly_cloudy": "fas fa-cloud-sun",  # Partly cloudy
+        "icon-mainly_cloudy": "fas fa-cloud",  # Mainly cloudy (more cloud cover than 'partly')
+        "icon-cloudy": "fas fa-cloud",  # Cloudy
+        "icon-overcast": "fas fa-smog",  # Overcast
+        "icon-light_rain_showers": "fas fa-cloud-showers-light",  # Light rain
+        "icon-rain_showers": "fas fa-cloud-rain",  # Rain showers
+        "icon-snow_showers": "fas fa-snowflake",  # Snow showers
+        "icon-light_snow": "fas fa-snowflake",  # Light snow
+        "icon-snow": "fas fa-snowman",  # Snow
+        "icon-heavy_snow": "fas fa-snowman",  # Heavy snow
+        "icon-thunderstorm": "fas fa-bolt",  # Thunderstorm
+        "icon-fog": "fas fa-smog",  # Fog
+    }
+    return icon_mapping.get(sunpeaks_icon, "fas fa-question-circle")  # Default to '?' if not found
+
