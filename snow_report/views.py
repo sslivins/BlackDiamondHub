@@ -11,7 +11,7 @@ def snow_report(request):
     
     weather_data = parse_weather_html(html_content)
     
-    #print(weather_data)
+    print(weather_data)
     
     return render(request, 'snow_report.html', weather_data)
 
@@ -25,7 +25,8 @@ def parse_weather_html(html):
 
     # Extract temperatures
     temperatures = []
-    for temp in soup.select('ul.list-temps li'):
+    current_temps_section = soup.find('div', class_='half current-temps')
+    for temp in current_temps_section.select('ul.list-temps li'):
         #print(temp.prettify())
         location = temp.find('h3').text.strip() if temp.find('h3') else ''
         elevation_text = temp.find('p').text.strip() if temp.find('p') else ''
@@ -47,6 +48,8 @@ def parse_weather_html(html):
     snow_conditions = []
     for snow in soup.select('div#snow-conditions ul.list-snow:not(.snow-base) li'):
         period = snow.find('h4').text.strip() if snow.find('h4') else ''
+        #if the period contains a trailing " *" remove it
+        period = period.replace(' *', '')
         value_span = snow.find('span', class_='value_switch')
         value = value_span.text.strip() if value_span else 'N/A'
         unit_span = snow.find('span', class_='unit_switch')
