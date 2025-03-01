@@ -24,6 +24,7 @@ def convert_kph_to_mph(kph):
 def snow_report(request):
     """Handles the snow report and allows unit switching via query parameter."""
     units = request.GET.get("units", "metric")  # Default to metric
+
     url = "https://www.sunpeaksresort.com/ski-ride/weather-conditions-cams/weather-snow-report"
     response = requests.get(url)
     html_content = response.content
@@ -39,36 +40,37 @@ def parse_weather_html(html, units):
 
     # Extract today's weather
     today_weather = soup.find("div", class_="current-condition")
-    sunpeaks_today_icon = today_weather.find("span", class_="icon")["class"][1]
-    today_icon = map_weather_icon(sunpeaks_today_icon)
-    today_description = today_weather.find("p", class_="today-description").text.strip()
+    sunpeaks_today_icon = today_weather.find("span", class_="icon")["class"][1] if today_weather else ""
+    today_icon = map_weather_icon(sunpeaks_today_icon) if sunpeaks_today_icon else ""
+    today_description = today_weather.find("p", class_="today-description").text.strip() if today_weather else ""
 
     # Extract temperatures
     temperatures = []
     current_temps_section = soup.find("div", class_="half current-temps")
-    for temp in current_temps_section.select("ul.list-temps li"):
-        location = temp.find("h3").text.strip() if temp.find("h3") else ""
-        elevation_text = temp.find("p").text.strip() if temp.find("p") else ""
-        elevation = re.sub(r"[^\d]", "", elevation_text)
-        value_span = temp.select_one("span.value_switch.value_deg")
-        value = value_span.text.strip() if value_span else None
+    if current_temps_section:
+        for temp in current_temps_section.select("ul.list-temps li"):
+            location = temp.find("h3").text.strip() if temp.find("h3") else ""
+            elevation_text = temp.find("p").text.strip() if temp.find("p") else ""
+            elevation = re.sub(r"[^\d]", "", elevation_text) if elevation_text else ""
+            value_span = temp.select_one("span.value_switch.value_deg")
+            value = value_span.text.strip() if value_span else ""
 
-        if units == "imperial":
-            value = convert_celsius_to_fahrenheit(value)
-            elevation = convert_meters_to_feet(elevation)
-            temp_unit = "°F"
-            elevation_unit = "ft"
-        else:
-            temp_unit = "°C"
-            elevation_unit = "m"
+            if units == "imperial":
+                value = convert_celsius_to_fahrenheit(value) if value else ""
+                elevation = convert_meters_to_feet(elevation) if elevation else ""
+                temp_unit = "°F"
+                elevation_unit = "ft"
+            else:
+                temp_unit = "°C"
+                elevation_unit = "m"
 
-        temperatures.append({
-            "location": location,
-            "elevation": elevation,
-            "elevation_unit": elevation_unit,
-            "value": value,
-            "unit": temp_unit,
-        })
+            temperatures.append({
+                "location": location,
+                "elevation": elevation,
+                "elevation_unit": elevation_unit,
+                "value": value,
+                "unit": temp_unit,
+            })
 
     # Extract snow conditions
     snow_conditions = []
@@ -79,7 +81,7 @@ def parse_weather_html(html, units):
         value = value_span.text.strip() if value_span else "N/A"
 
         if units == "imperial":
-            value = convert_cm_to_inches(value)
+            value = convert_cm_to_inches(value) if value != "N/A" else "N/A"
             snow_unit = "in"
         else:
             snow_unit = "cm"
@@ -101,7 +103,7 @@ def parse_weather_html(html, units):
         value = value_span.text.strip() if value_span else ""
 
         if units == "imperial":
-            value = convert_cm_to_inches(value)
+            value = convert_cm_to_inches(value) if value else ""
             unit = "in"
         else:
             unit = "cm"
@@ -117,14 +119,14 @@ def parse_weather_html(html, units):
     for wind in soup.find_all("div", class_="wind"):
         location = wind.find("h3").text.strip() if wind.find("h3") else ""
         elevation_text = wind.find("p").text.strip() if wind.find("p") else ""
-        elevation = re.sub(r"[^\d]", "", elevation_text)
+        elevation = re.sub(r"[^\d]", "", elevation_text) if elevation_text else ""
         speed_direction = wind.select_one("div.weather-value").text.strip() if wind.select_one("div.weather-value") else ""
         average_span = wind.select_one("span.value_switch.value_kph")
         speed_average = average_span.text.strip() if average_span else ""
 
         if units == "imperial":
-            elevation = convert_meters_to_feet(elevation)
-            speed_average = convert_kph_to_mph(speed_average)
+            elevation = convert_meters_to_feet(elevation) if elevation else ""
+            speed_average = convert_kph_to_mph(speed_average) if speed_average else ""
             elevation_unit = "ft"
             speed_unit = "mph"
         else:
@@ -143,22 +145,22 @@ def parse_weather_html(html, units):
     # Extract 5-day forecast
     forecast = []
     for day in soup.select("div#forecast div.third"):
-        day_name = day.find("h4").text.strip().capitalize()
-        icon_span = day.find("div", class_="day_conditions").find("span")
-        sunpeaks_icon_class = next((cls for cls in icon_span.get("class", []) if cls.startswith("icon-")), None)
-        icon_class = map_weather_icon(sunpeaks_icon_class)
+        day_name = day.find("h4").text.strip().capitalize() if day.find("h4") else ""
+        icon_span = day.find("div", class_="day_conditions").find("span") if day.find("div", class_="day_conditions") else None
+        sunpeaks_icon_class = next((cls for cls in icon_span.get("class", []) if cls.startswith("icon-")), None) if icon_span else ""
+        icon_class = map_weather_icon(sunpeaks_icon_class) if sunpeaks_icon_class else ""
 
         description_div = day.find("div", class_="day_description")
-        description = description_div.get_text(strip=True) if description_div else None
+        description = description_div.get_text(strip=True) if description_div else ""
 
         low_temp_span = day.find("span", class_="day_low")
-        low_temp_value = low_temp_span.find("span", class_="value_switch").get_text(strip=True) if low_temp_span else None
+        low_temp_value = low_temp_span.find("span", class_="value_switch").get_text(strip=True) if low_temp_span else ""
         high_temp_span = day.find("span", class_="day_high")
-        high_temp_value = high_temp_span.find("span", class_="value_switch").get_text(strip=True) if high_temp_span else None
+        high_temp_value = high_temp_span.find("span", class_="value_switch").get_text(strip=True) if high_temp_span else ""
 
         if units == "imperial":
-            low_temp_value = convert_celsius_to_fahrenheit(low_temp_value)
-            high_temp_value = convert_celsius_to_fahrenheit(high_temp_value)
+            low_temp_value = convert_celsius_to_fahrenheit(low_temp_value) if low_temp_value else ""
+            high_temp_value = convert_celsius_to_fahrenheit(high_temp_value) if high_temp_value else ""
             temp_unit = "°F"
         else:
             temp_unit = "°C"
