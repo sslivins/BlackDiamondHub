@@ -145,7 +145,7 @@ class OfflineParseWeatherHtmlTests(TestCase):
         for snow in weather_data_metric["snow_conditions"]:
           print(snow)
           if snow["period"] == "24 Hr":
-              self.assertEqual(snow["value"], "", f"24 hr snow condition should be empty but found: {snow['value']}")
+              self.assertEqual(snow["value"], "N/A", f"24 hr snow condition should be empty but found: {snow['value']}")
               found = True
               break
               
