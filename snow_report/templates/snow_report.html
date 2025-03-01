@@ -10,70 +10,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snow Report - Sun Peaks</title>
-    {% comment %} <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> {% endcomment %}
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        html, body {
+            height: 100%;
+            margin: 0;
             background-color: #222;
             color: #fff;
-            margin: 0;
-            padding: 20px;
+            font-family: Arial, sans-serif;
         }
+
         .container {
             max-width: 1920px;
             margin: 0 auto;
             padding: 20px;
         }
+
         .section {
             background: #333;
             padding: 20px;
             margin-bottom: 20px;
             border-radius: 10px;
         }
+
         h1, h2 {
             text-align: center;
             color: #FFD700;
         }
-        .icon {
-            font-size: 48px;
-            margin-right: 10px;
+
+        .unit-toggle-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
         }
-        /* Grid layout for wider screens */
+
+        .unit-toggle-button {
+            background-color: #FFD700;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
         }
+
         .box {
             background: #444;
             padding: 15px;
             border-radius: 10px;
             text-align: center;
         }
+
         .primary-value {
             font-size: 32px;
             font-weight: bold;
             color: #FFD700;
         }
+
         .temp-location {
             font-size: 20px;
             margin-top: 5px;
         }
+
         .temp-elevation {
             font-size: 16px;
             color: #bbb;
         }
+
         .forecast-day {
             text-align: center;
             background: #555;
             padding: 20px;
             border-radius: 10px;
         }
+
         .forecast-icon {
             font-size: 64px;
             margin-bottom: 10px;
         }
+
+        .unit-toggle-container {
+            display: flex;
+            justify-content: flex-end;  /* Right-align */
+            margin-bottom: 10px;
+        }
+        
+        .unit-toggle-button {
+            background-color: #FFD700;
+            color: black;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 5px;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .unit-toggle-button i {
+            font-size: 16px;
+        }
+        
+        .unit-toggle-button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+        
     </style>
 </head>
 <body>
@@ -81,11 +132,22 @@
 <div class="container">
     <h1>❄ Sun Peaks Snow Report</h1>
 
+    <!-- Unit Toggle Button -->
+    <div class="unit-toggle-container">
+        <button class="unit-toggle-button" onclick="window.location.href='?units=metric'" {% if units == "metric" %}disabled{% endif %}>
+            <i class="fas fa-ruler-combined"></i> °C, m
+        </button>
+        <button class="unit-toggle-button" onclick="window.location.href='?units=imperial'" {% if units == "imperial" %}disabled{% endif %}>
+            <i class="fas fa-ruler-combined"></i> °F, ft
+        </button>
+    </div>
+    
+
     <!-- Current Weather -->
     <div class="section">
         <h2>🌤 Current Conditions</h2>
         <div class="box">
-            <p><span class="icon {{ today_icon }}"></span></p>
+            <p><span class="forecast-icon {{ today_icon }}"></span></p>
             <p>{{ today_description }}</p>
         </div>
     </div>
@@ -98,7 +160,7 @@
             <div class="box">
                 <div class="primary-value">{{ temp.value }} {{ temp.unit }}</div>
                 <div class="temp-location">{{ temp.location }}</div>
-                <div class="temp-elevation">{{ temp.elevation }} {{ temp.elevation_unit }}</div>
+                <div class="temp-elevation">Elevation: {{ temp.elevation }} {{ temp.elevation_unit }}</div>
             </div>
             {% endfor %}
         </div>
@@ -138,45 +200,28 @@
             <div class="box">
                 <div class="primary-value">{{ wind.speed_average }} {{ wind.speed_unit }}</div>
                 <div class="temp-location">{{ wind.location }}</div>
-                <div class="temp-elevation">{{ wind.elevation }}{{ wind.elevation_unit }}</div>
+                <div class="temp-elevation">Elevation: {{ wind.elevation }} {{ wind.elevation_unit }}</div>
                 <div class="temp-location">{{ wind.speed_direction }}</div>
             </div>
             {% endfor %}
         </div>
     </div>
 
-    <!-- 5-Day Forecast (Now With Icons) -->
+    <!-- 5-Day Forecast -->
     <div class="section">
         <h2>📅 5-Day Forecast</h2>
         <div class="grid">
             {% for day in forecast %}
             <div class="forecast-day">
                 <h3>{{ day.day_name }}</h3>
-                <p>
-                    {% if day.icon %}
-                        <span class="forecast-icon {{ day.icon }}"></span>
-                    {% else %}
-                        🌤 <!-- Fallback icon -->
-                    {% endif %}
-                </p>
+                <p><i class="{{ day.icon }} forecast-icon"></i></p>
                 <p>{{ day.description }}</p>
-                <p>🌡 Low: {{ day.low_temp_value }} {{ day.low_temp_unit }} | High: {{ day.high_temp_value }} {{ day.high_temp_unit }}</p>
+                <p>🌡 Low: {{ day.low_temp_value }} {{ day.temp_unit }} | High: {{ day.high_temp_value }} {{ day.temp_unit }}</p>
             </div>
             {% endfor %}
         </div>
     </div>
 
-    <!-- Synopsis -->
-    <div class="section">
-        <h2>📋 Synopsis</h2>
-        <p>{{ synopsis }}</p>
-    </div>
-
-    <!-- Extended Outlook -->
-    <div class="section">
-        <h2>🔮 Extended Outlook</h2>
-        <p>{{ extended_outlook }}</p>
-    </div>
 </div>
 
 </body>

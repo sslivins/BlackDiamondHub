@@ -3,176 +3,203 @@ from bs4 import BeautifulSoup
 import requests
 import re
 
+# Conversion Functions
+def convert_celsius_to_fahrenheit(celsius):
+    """Convert Celsius to Fahrenheit."""
+    return round((float(celsius) * 9/5) + 32) if celsius else None
+
+def convert_meters_to_feet(meters):
+    """Convert meters to feet."""
+    return round(float(meters) * 3.28084) if meters else None
+
+def convert_cm_to_inches(cm):
+    """Convert cm to inches."""
+    return round(float(cm) * 0.393701) if cm else None
+
+def convert_kph_to_mph(kph):
+    """Convert kilometers per hour to miles per hour."""
+    return round(float(kph) * 0.621371) if kph else None
+
+# Main View
 def snow_report(request):
-    # Fetch the HTML content from the URL
-    url = 'https://www.sunpeaksresort.com/ski-ride/weather-conditions-cams/weather-snow-report'
+    """Handles the snow report and allows unit switching via query parameter."""
+    units = request.GET.get("units", "metric")  # Default to metric
+    url = "https://www.sunpeaksresort.com/ski-ride/weather-conditions-cams/weather-snow-report"
     response = requests.get(url)
     html_content = response.content
-    
-    weather_data = parse_weather_html(html_content)
-    
-    print(weather_data)
-    
-    return render(request, 'snow_report.html', weather_data)
 
-def parse_weather_html(html):
-    soup = BeautifulSoup(html, 'html.parser')
+    weather_data = parse_weather_html(html_content, units)
+
+    return render(request, "snow_report.html", weather_data)
+
+# Data Extraction & Parsing
+def parse_weather_html(html, units):
+    """Parses HTML and converts values based on the selected unit system."""
+    soup = BeautifulSoup(html, "html.parser")
 
     # Extract today's weather
-    today_weather = soup.find('div', class_='current-condition')
-    sunpeaks_today_icon = today_weather.find('span', class_='icon')['class'][1]
+    today_weather = soup.find("div", class_="current-condition")
+    sunpeaks_today_icon = today_weather.find("span", class_="icon")["class"][1]
     today_icon = map_weather_icon(sunpeaks_today_icon)
-    today_description = today_weather.find('p', class_='today-description').text.strip()
+    today_description = today_weather.find("p", class_="today-description").text.strip()
 
     # Extract temperatures
     temperatures = []
-    current_temps_section = soup.find('div', class_='half current-temps')
-    for temp in current_temps_section.select('ul.list-temps li'):
-        #print(temp.prettify())
-        location = temp.find('h3').text.strip() if temp.find('h3') else ''
-        elevation_text = temp.find('p').text.strip() if temp.find('p') else ''
-        elevation = re.sub(r'[^\d]', '', elevation_text)  # Remove non-numeric characters
-        elevation_unit = temp.find('span', class_='unit_switch').text.strip() if temp.find('span', class_='unit_switch') else ''
-        value_span = temp.select_one('span.value_switch.value_deg')
-        if not value_span:
-            value_span = temp.select_one('span[class*="value_switch"][class*="value_deg"]')
-        value = value_span.text.strip() if value_span else ''
-        unit_span = temp.find('span', class_='unit_switch unit_deg')
-        unit = unit_span.text.strip() if unit_span else ''
+    current_temps_section = soup.find("div", class_="half current-temps")
+    for temp in current_temps_section.select("ul.list-temps li"):
+        location = temp.find("h3").text.strip() if temp.find("h3") else ""
+        elevation_text = temp.find("p").text.strip() if temp.find("p") else ""
+        elevation = re.sub(r"[^\d]", "", elevation_text)
+        value_span = temp.select_one("span.value_switch.value_deg")
+        value = value_span.text.strip() if value_span else None
+
+        if units == "imperial":
+            value = convert_celsius_to_fahrenheit(value)
+            elevation = convert_meters_to_feet(elevation)
+            temp_unit = "°F"
+            elevation_unit = "ft"
+        else:
+            temp_unit = "°C"
+            elevation_unit = "m"
+
         temperatures.append({
-            'location': location,
-            'elevation': elevation,
-            'elevation_unit': elevation_unit,
-            'value': value,
-            'unit': unit,
+            "location": location,
+            "elevation": elevation,
+            "elevation_unit": elevation_unit,
+            "value": value,
+            "unit": temp_unit,
         })
-        
+
     # Extract snow conditions
     snow_conditions = []
-    for snow in soup.select('div#snow-conditions ul.list-snow:not(.snow-base) li'):
-        period = snow.find('h4').text.strip() if snow.find('h4') else ''
-        #if the period contains a trailing " *" remove it
-        period = period.replace(' *', '')
-        value_span = snow.find('span', class_='value_switch')
-        value = value_span.text.strip() if value_span else 'N/A'
-        unit_span = snow.find('span', class_='unit_switch')
-        unit = unit_span.text.strip() if unit_span else ''
+    for snow in soup.select("div#snow-conditions ul.list-snow:not(.snow-base) li"):
+        period = snow.find("h4").text.strip() if snow.find("h4") else ""
+        period = period.replace(" *", "")
+        value_span = snow.find("span", class_="value_switch")
+        value = value_span.text.strip() if value_span else "N/A"
+
+        if units == "imperial":
+            value = convert_cm_to_inches(value)
+            snow_unit = "in"
+        else:
+            snow_unit = "cm"
+
         snow_conditions.append({
-            'period': period,
-            'value': value,
-            'unit': unit,
+            "period": period,
+            "value": value,
+            "unit": snow_unit,
         })
 
     # Extract base snow conditions
     base_snow_conditions = []
-    for base_snow in soup.select('ul.list-snow.snow-base li'):
-        h4_element = base_snow.find('h4')
+    for base_snow in soup.select("ul.list-snow.snow-base li"):
+        h4_element = base_snow.find("h4")
         if not h4_element or not h4_element.text.strip():
-            continue  # Skip empty <li> elements
+            continue
         period = h4_element.text.strip()
-        value_span = base_snow.find('span', class_='value_switch')
-        value = value_span.text.strip() if value_span else ''
-        unit_span = base_snow.find('span', class_='unit_switch')
-        unit = unit_span.text.strip() if unit_span else ''
+        value_span = base_snow.find("span", class_="value_switch")
+        value = value_span.text.strip() if value_span else ""
+
+        if units == "imperial":
+            value = convert_cm_to_inches(value)
+            unit = "in"
+        else:
+            unit = "cm"
+
         base_snow_conditions.append({
-            'period': period,
-            'value': value,
-            'unit': unit,
+            "period": period,
+            "value": value,
+            "unit": unit,
         })
 
     # Extract wind speeds
     wind_speeds = []
-    for wind in soup.find_all('div', class_='wind'):
-        #print(wind.prettify())
-        location = wind.find('h3').text.strip() if wind.find('h3') else ''
-        elevation_text = wind.find('p').text.strip() if wind.find('p') else ''
-        elevation = re.sub(r'[^\d]', '', elevation_text)  # Remove non-numeric characters
-        elevation_unit = wind.find('span', class_='unit_switch').text.strip() if wind.find('span', class_='unit_switch') else ''
-        speed_direction = wind.select_one('div.weather-value').text.strip() if wind.select_one('div.weather-value') else ''
-        average_span = wind.select_one('span.value_switch.value_kph')
-        speed_average = average_span.text.strip() if average_span else ''
-        unit_span = wind.select_one('span.unit_switch.unit_kph')
-        speed_unit = unit_span.text.strip() if unit_span else ''
+    for wind in soup.find_all("div", class_="wind"):
+        location = wind.find("h3").text.strip() if wind.find("h3") else ""
+        elevation_text = wind.find("p").text.strip() if wind.find("p") else ""
+        elevation = re.sub(r"[^\d]", "", elevation_text)
+        speed_direction = wind.select_one("div.weather-value").text.strip() if wind.select_one("div.weather-value") else ""
+        average_span = wind.select_one("span.value_switch.value_kph")
+        speed_average = average_span.text.strip() if average_span else ""
+
+        if units == "imperial":
+            elevation = convert_meters_to_feet(elevation)
+            speed_average = convert_kph_to_mph(speed_average)
+            elevation_unit = "ft"
+            speed_unit = "mph"
+        else:
+            elevation_unit = "m"
+            speed_unit = "kph"
+
         wind_speeds.append({
-            'location': location,
-            'elevation': elevation,
-            'elevation_unit': elevation_unit,
-            'speed_direction': speed_direction,
-            'speed_average': speed_average,
-            'speed_unit': speed_unit,
+            "location": location,
+            "elevation": elevation,
+            "elevation_unit": elevation_unit,
+            "speed_direction": speed_direction,
+            "speed_average": speed_average,
+            "speed_unit": speed_unit,
         })
-        
+
     # Extract 5-day forecast
     forecast = []
-    for day in soup.select('div#forecast div.third'):
-        #print(day.prettify())
-        day_name = day.find('h4').text.strip() if day.find('h4') else ''
-        day_name = day_name.capitalize()
-        
-        icon_span = day.find('div', class_='day_conditions').find('span')
-        sunpeaks_icon_class = next((cls for cls in icon_span.get('class', []) if cls.startswith('icon-')), None)
+    for day in soup.select("div#forecast div.third"):
+        day_name = day.find("h4").text.strip().capitalize()
+        icon_span = day.find("div", class_="day_conditions").find("span")
+        sunpeaks_icon_class = next((cls for cls in icon_span.get("class", []) if cls.startswith("icon-")), None)
         icon_class = map_weather_icon(sunpeaks_icon_class) if sunpeaks_icon_class else "fas fa-question-circle"
-        
-        if icon_class == "fas fa-question-circle":
-            print(f"Icon class not found for day: class: {sunpeaks_icon_class}")
-        
-        description_div = day.find('div', class_='day_description')
-        description = description_div.get_text(strip=True) if description_div else None
-        
-        low_temp_span = day.find('span', class_='day_low')
-        low_temp_value = low_temp_span.find('span', class_='value_switch').get_text(strip=True) if low_temp_span else None
-        low_temp_unit = low_temp_span.find('span', class_='unit_switch').get_text(strip=True) if low_temp_span else None
 
-        high_temp_span = day.find('span', class_='day_high')
-        high_temp_value = high_temp_span.find('span', class_='value_switch').get_text(strip=True) if high_temp_span else None
-        high_temp_unit = high_temp_span.find('span', class_='unit_switch').get_text(strip=True) if high_temp_span else None
+        description_div = day.find("div", class_="day_description")
+        description = description_div.get_text(strip=True) if description_div else None
+
+        low_temp_span = day.find("span", class_="day_low")
+        low_temp_value = low_temp_span.find("span", class_="value_switch").get_text(strip=True) if low_temp_span else None
+        high_temp_span = day.find("span", class_="day_high")
+        high_temp_value = high_temp_span.find("span", class_="value_switch").get_text(strip=True) if high_temp_span else None
+
+        if units == "imperial":
+            low_temp_value = convert_celsius_to_fahrenheit(low_temp_value)
+            high_temp_value = convert_celsius_to_fahrenheit(high_temp_value)
+            temp_unit = "°F"
+        else:
+            temp_unit = "°C"
 
         forecast.append({
-            'day_name': day_name,
-            'icon': icon_class,
-            'description': description,
-            'low_temp_value': low_temp_value,
-            'low_temp_unit': low_temp_unit,
-            'high_temp_value': high_temp_value,
-            'high_temp_unit': high_temp_unit,
+            "day_name": day_name,
+            "icon": icon_class,
+            "description": description,
+            "low_temp_value": low_temp_value,
+            "high_temp_value": high_temp_value,
+            "temp_unit": temp_unit,
         })
 
-    # Extract synopsis
-    synopsis_div = soup.find('div', class_='field--name-field-synopsis')
-    synopsis = synopsis_div.text.strip().replace('Synopsis:\xa0 ', '')
-
-    # Extract extended outlook
-    extended_outlook = soup.find('div', class_='field--name-field-extended-outlook').text.strip()
-
     return {
-        'today_icon': today_icon,
-        'today_description': today_description,
-        'temperatures': temperatures,
-        'snow_conditions': snow_conditions,
-        'base_snow_conditions': base_snow_conditions,
-        'wind_speeds': wind_speeds,
-        'forecast': forecast,
-        'synopsis': synopsis,
-        'extended_outlook': extended_outlook,
+        "today_icon": today_icon,
+        "today_description": today_description,
+        "temperatures": temperatures,
+        "snow_conditions": snow_conditions,
+        "base_snow_conditions": base_snow_conditions,
+        "wind_speeds": wind_speeds,
+        "forecast": forecast,
+        "units": units,  # Pass units to template
     }
-    
+
+# Weather Icon Mapping
 def map_weather_icon(sunpeaks_icon):
     """Maps Sun Peaks weather icon classes to FontAwesome or Weather Icons."""
     icon_mapping = {
-        "icon-sunny_clear_skies": "fas fa-sun",  # Daytime clear sky
-        "icon-clear_skies_night": "fas fa-moon",  # Nighttime clear sky
-        "icon-partly_cloudy": "fas fa-cloud-sun",  # Partly cloudy
-        "icon-mainly_cloudy": "fas fa-cloud",  # Mainly cloudy (more cloud cover than 'partly')
-        "icon-cloudy": "fas fa-cloud",  # Cloudy
-        "icon-overcast": "fas fa-smog",  # Overcast
-        "icon-light_rain_showers": "fas fa-cloud-showers-light",  # Light rain
-        "icon-rain_showers": "fas fa-cloud-rain",  # Rain showers
-        "icon-snow_showers": "fas fa-snowflake",  # Snow showers
-        "icon-light_snow": "fas fa-snowflake",  # Light snow
-        "icon-snow": "fas fa-snowman",  # Snow
-        "icon-heavy_snow": "fas fa-snowman",  # Heavy snow
-        "icon-thunderstorm": "fas fa-bolt",  # Thunderstorm
-        "icon-fog": "fas fa-smog",  # Fog
+        "icon-sunny_clear_skies": "fas fa-sun",
+        "icon-clear_skies_night": "fas fa-moon",
+        "icon-partly_cloudy": "fas fa-cloud-sun",
+        "icon-mainly_cloudy": "fas fa-cloud",
+        "icon-cloudy": "fas fa-cloud",
+        "icon-overcast": "fas fa-smog",
+        "icon-light_rain_showers": "fas fa-cloud-showers-light",
+        "icon-rain_showers": "fas fa-cloud-rain",
+        "icon-snow_showers": "fas fa-snowflake",
+        "icon-light_snow": "fas fa-snowflake",
+        "icon-snow": "fas fa-snowman",
+        "icon-heavy_snow": "fas fa-snowman",
+        "icon-thunderstorm": "fas fa-bolt",
+        "icon-fog": "fas fa-smog",
     }
-    return icon_mapping.get(sunpeaks_icon, "fas fa-question-circle")  # Default to '?' if not found
-
+    return icon_mapping.get(sunpeaks_icon, "fas fa-question-circle")
