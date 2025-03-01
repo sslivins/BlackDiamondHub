@@ -146,7 +146,7 @@ def parse_weather_html(html, units):
         day_name = day.find("h4").text.strip().capitalize()
         icon_span = day.find("div", class_="day_conditions").find("span")
         sunpeaks_icon_class = next((cls for cls in icon_span.get("class", []) if cls.startswith("icon-")), None)
-        icon_class = map_weather_icon(sunpeaks_icon_class) if sunpeaks_icon_class else "fas fa-question-circle"
+        icon_class = map_weather_icon(sunpeaks_icon_class)
 
         description_div = day.find("div", class_="day_description")
         description = description_div.get_text(strip=True) if description_div else None
@@ -188,7 +188,6 @@ def map_weather_icon(sunpeaks_icon):
     """Maps Sun Peaks weather icon classes to FontAwesome or Weather Icons."""
     icon_mapping = {
         "icon-sunny_clear_skies": "fas fa-sun",
-        "icon-clear_skies_night": "fas fa-moon",
         "icon-partly_cloudy": "fas fa-cloud-sun",
         "icon-mainly_cloudy": "fas fa-cloud",
         "icon-cloudy": "fas fa-cloud",
@@ -201,5 +200,12 @@ def map_weather_icon(sunpeaks_icon):
         "icon-heavy_snow": "fas fa-snowman",
         "icon-thunderstorm": "fas fa-bolt",
         "icon-fog": "fas fa-smog",
+        "icon-clear_skies_night": "fas fa-moon",
+        "icon-partly_cloudy_night": "fas fa-cloud-moon",
     }
-    return icon_mapping.get(sunpeaks_icon, "fas fa-question-circle")
+    
+    icon = icon_mapping.get(sunpeaks_icon, "fas fa-question-circle")
+    if icon == "fas fa-question-circle":
+        print(f"Unknown icon class: {sunpeaks_icon}")
+    
+    return icon
