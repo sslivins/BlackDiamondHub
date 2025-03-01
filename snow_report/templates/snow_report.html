@@ -1,3 +1,4 @@
+<!-- filepath: /j:/blackdiamondlodge/BlackDiamondHub/snow_report/templates/snow_report.html -->
 {% extends 'base.html' %}
 
 {% block title %}Snow Report{% endblock %}
@@ -10,6 +11,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snow Report - Sun Peaks</title>
+    <!-- Include FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         html, body {
             height: 100%;
@@ -147,15 +150,15 @@
     <div class="section">
         <h2>🌤 Current Conditions</h2>
         <div class="box">
-            <p><span class="forecast-icon {{ today_icon }}"></span></p>
-            <p>{{ today_description }}</p>
+            <p><span class="forecast-icon {{ today_icon }}" id="today_icon"></span></p>
+            <p id="today_description">{{ today_description }}</p>
         </div>
     </div>
 
     <!-- Temperatures (Grid Layout) -->
     <div class="section">
         <h2>🌡 Temperatures</h2>
-        <div class="grid">
+        <div class="grid" id="temperatures">
             {% for temp in temperatures %}
             <div class="box">
                 <div class="primary-value">{{ temp.value }} {{ temp.unit }}</div>
@@ -169,7 +172,7 @@
     <!-- Snow Conditions (Grid Layout) -->
     <div class="section">
         <h2>❄ Snow Conditions</h2>
-        <div class="grid">
+        <div class="grid" id="snow_conditions">
             {% for snow in snow_conditions %}
             <div class="box">
                 <div class="primary-value">{{ snow.value }} {{ snow.unit }}</div>
@@ -182,7 +185,7 @@
     <!-- Base Snow Conditions (Grid Layout) -->
     <div class="section">
         <h2>🏔 Base Snow</h2>
-        <div class="grid">
+        <div class="grid" id="base_snow_conditions">
             {% for base_snow in base_snow_conditions %}
             <div class="box">
                 <div class="primary-value">{{ base_snow.value }} {{ base_snow.unit }}</div>
@@ -195,7 +198,7 @@
     <!-- Wind Speeds (Grid Layout) -->
     <div class="section">
         <h2>💨 Wind Speeds</h2>
-        <div class="grid">
+        <div class="grid" id="wind_speeds">
             {% for wind in wind_speeds %}
             <div class="box">
                 <div class="primary-value">{{ wind.speed_average }} {{ wind.speed_unit }}</div>
@@ -210,7 +213,7 @@
     <!-- 5-Day Forecast -->
     <div class="section">
         <h2>📅 5-Day Forecast</h2>
-        <div class="grid">
+        <div class="grid" id="forecast">
             {% for day in forecast %}
             <div class="forecast-day">
                 <h3>{{ day.day_name }}</h3>
@@ -223,6 +226,39 @@
     </div>
 
 </div>
+
+<script>
+    async function fetchData() {
+        const response = await fetch(window.location.href);
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Update today's weather
+        document.getElementById('today_icon').className = 'forecast-icon ' + doc.querySelector('#today_icon').className;
+        document.getElementById('today_description').textContent = doc.querySelector('#today_description').textContent;
+
+        // Update temperatures
+        document.getElementById('temperatures').innerHTML = doc.querySelector('#temperatures').innerHTML;
+
+        // Update snow conditions
+        document.getElementById('snow_conditions').innerHTML = doc.querySelector('#snow_conditions').innerHTML;
+
+        // Update base snow conditions
+        document.getElementById('base_snow_conditions').innerHTML = doc.querySelector('#base_snow_conditions').innerHTML;
+
+        // Update wind speeds
+        document.getElementById('wind_speeds').innerHTML = doc.querySelector('#wind_speeds').innerHTML;
+
+        // Update 5-day forecast
+        document.getElementById('forecast').innerHTML = doc.querySelector('#forecast').innerHTML;
+
+        console.log('Data updated successfully!');
+    }
+
+    // udpate every 1 minutes
+    setInterval(fetchData, 60000);
+</script>
 
 </body>
 </html>
