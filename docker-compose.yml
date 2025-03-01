@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  djangoapp:
+    # Use the Docker image you’ve published to GHCR (or Docker Hub, etc.)
+    image: ghcr.io/sslivins/blackdiamondhub/blackdiamondhub:latest
+    container_name: BlackDiamondHub
+    # Pass environment variables (secrets) to Django
+    environment:
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      HOST: ${HOST}
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ADMIN_USER: ${ADMIN_USER}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      # Spotify API credentials
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
+
+      # Wifi App Settings
+      WIFI_NETWORKS_AUTH: ${WIFI_NETWORKS_AUTH}
+      WIFI_NETWORKS_PUBLIC: ${WIFI_NETWORKS_PUBLIC}
+
+      WIFI_PASSWORD_FOR_BDL: ${WIFI_PASSWORD_FOR_BDL}
+      WIFI_PASSWORD_FOR_BDL_TO_MI: ${WIFI_PASSWORD_FOR_BDL_TO_MI}
+      WIFI_PASSWORD_FOR_BDL_GUEST: ${WIFI_PASSWORD_FOR_BDL_GUEST}
+
+    ports:
+      - "8000:8000"
+
+    
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    # Mount the Docker socket so Watchtower can manage containers
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # If you want Watchtower to watch only your "djangoapp" container:
+    command: ["BlackDiamondHub"]
+    # If your Docker registry is private, provide credentials:
+    environment:
+    #   WATCHTOWER_USERNAME: "${REGISTRY_USERNAME}"
+    #   WATCHTOWER_PASSWORD: "${REGISTRY_PASSWORD}"
+      - WATCHTOWER_POLL_INTERVAL=300
+    # 
+    # Keep watchtower running unless it crashes/restarts
+    restart: unless-stopped
