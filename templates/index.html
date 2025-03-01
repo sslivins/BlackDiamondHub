@@ -190,13 +190,18 @@
         <div class="btn-container">
             <h2>Welcome to Black Diamond Hub</h2>
             <p>Manage your home with ease. Choose an option below to get started:</p>
-            <a href="{% url 'inventory' %}" class="btn-icon">
-                <img src="{% static 'img/inventory.png' %}" alt="Kitchen Inventory" />
-                <div class="icon-caption">Kitchen Inventory</div>
-            </a>
             <a href="{% url 'webcams' %}" class="btn-icon">
                 <img src="{% static 'img/webcams.png' %}" alt="Mountain Webcams" />
                 <div class="icon-caption">Mountain Webcams</div>
+            </a>
+            <!-- snow report-->
+            <a href="{% url 'snow_report' %}" class="btn-icon">
+                <img src="{% static 'img/snowreport.png' %}" alt="Snow Report" />
+                <div class="icon-caption">Snow Report</div>
+            </a>  
+            <a href="{% url 'inventory' %}" class="btn-icon">
+                <img src="{% static 'img/inventory.png' %}" alt="Kitchen Inventory" />
+                <div class="icon-caption">Kitchen Inventory</div>
             </a>
             <a href="{% url 'sonos_control' %}" class="btn-icon">
                 <img src="{% static 'img/music.png' %}" alt="Sonos" />

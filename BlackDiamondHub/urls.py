@@ -32,6 +32,7 @@ urlpatterns = [
     path('sonos_control/', include('sonos_control.urls')),
     path('auth/', include('social_django.urls', namespace='social')),
     path('wifi/', include('wifi.urls')),
+    path('snow_report/', include('snow_report.urls')),
 ]
 
 if settings.DEBUG:

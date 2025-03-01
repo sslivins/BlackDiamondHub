@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'feedback',
     'sonos_control',
     'wifi',
+    'snow_report',
 ]
 
 CHANNEL_LAYERS = {

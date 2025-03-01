@@ -1,0 +1,264 @@
+<!-- filepath: /j:/blackdiamondlodge/BlackDiamondHub/snow_report/templates/snow_report.html -->
+{% extends 'base.html' %}
+
+{% block title %}Snow Report{% endblock %}
+
+{% block content %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snow Report - Sun Peaks</title>
+    <!-- Include FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            background-color: #222;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .section {
+            background: #333;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #FFD700;
+        }
+
+        .unit-toggle-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .unit-toggle-button {
+            background-color: #FFD700;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .box {
+            background: #444;
+            padding: 5px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .primary-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .temp-location {
+            font-size: 20px;
+            margin-top: 5px;
+        }
+
+        .temp-elevation {
+            font-size: 16px;
+            color: #bbb;
+        }
+
+        .forecast-day {
+            text-align: center;
+            background: #555;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .forecast-icon {
+            font-size: 64px;
+            margin-bottom: 10px;
+        }
+
+        .unit-toggle-container {
+            display: flex;
+            justify-content: flex-end;  /* Right-align */
+            margin-bottom: 10px;
+        }
+        
+        .unit-toggle-button {
+            background-color: #FFD700;
+            color: black;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 5px;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .unit-toggle-button i {
+            font-size: 16px;
+        }
+        
+        .unit-toggle-button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+        
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>❄ Sun Peaks Snow Report</h1>
+
+    <!-- Unit Toggle Button -->
+    <div class="unit-toggle-container">
+        <button class="unit-toggle-button" onclick="window.location.href='?units=metric'" {% if units == "metric" %}disabled{% endif %}>
+            <i class="fas fa-ruler-combined"></i> °C, m
+        </button>
+        <button class="unit-toggle-button" onclick="window.location.href='?units=imperial'" {% if units == "imperial" %}disabled{% endif %}>
+            <i class="fas fa-ruler-combined"></i> °F, ft
+        </button>
+    </div>
+    
+
+    <!-- Current Weather -->
+    <div class="section">
+        <h2>🌤 Current Conditions</h2>
+        <div class="box">
+            <p><span class="forecast-icon {{ today_icon }}" id="today_icon"></span></p>
+            <p id="today_description">{{ today_description }}</p>
+        </div>
+    </div>
+
+    <!-- Temperatures (Grid Layout) -->
+    <div class="section">
+        <h2>🌡 Temperatures</h2>
+        <div class="grid" id="temperatures">
+            {% for temp in temperatures %}
+            <div class="box">
+                <div class="primary-value">{{ temp.value }} {{ temp.unit }}</div>
+                <div class="temp-location">{{ temp.location }}</div>
+                <div class="temp-elevation">Elevation: {{ temp.elevation }} {{ temp.elevation_unit }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Snow Conditions (Grid Layout) -->
+    <div class="section">
+        <h2>❄ Snow Conditions</h2>
+        <div class="grid" id="snow_conditions">
+            {% for snow in snow_conditions %}
+            <div class="box">
+                <div class="primary-value">{{ snow.value }} {{ snow.unit }}</div>
+                <div class="temp-location">{{ snow.period }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Base Snow Conditions (Grid Layout) -->
+    <div class="section">
+        <h2>🏔 Base Snow</h2>
+        <div class="grid" id="base_snow_conditions">
+            {% for base_snow in base_snow_conditions %}
+            <div class="box">
+                <div class="primary-value">{{ base_snow.value }} {{ base_snow.unit }}</div>
+                <div class="temp-location">{{ base_snow.period }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Wind Speeds (Grid Layout) -->
+    <div class="section">
+        <h2>💨 Wind Speeds</h2>
+        <div class="grid" id="wind_speeds">
+            {% for wind in wind_speeds %}
+            <div class="box">
+                <div class="primary-value">{{ wind.speed_average }} {{ wind.speed_unit }}</div>
+                <div class="temp-location">{{ wind.location }}</div>
+                <div class="temp-elevation">Elevation: {{ wind.elevation }} {{ wind.elevation_unit }}</div>
+                <div class="temp-location">{{ wind.speed_direction }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 5-Day Forecast -->
+    <div class="section">
+        <h2>📅 5-Day Forecast</h2>
+        <div class="grid" id="forecast">
+            {% for day in forecast %}
+            <div class="forecast-day">
+                <h3>{{ day.day_name }}</h3>
+                <p><i class="{{ day.icon }} forecast-icon"></i></p>
+                <p>{{ day.description }}</p>
+                <p>🌡 Low: {{ day.low_temp_value }} {{ day.temp_unit }} | High: {{ day.high_temp_value }} {{ day.temp_unit }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+    async function fetchData() {
+        const response = await fetch(window.location.href);
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Update today's weather
+        document.getElementById('today_icon').className = 'forecast-icon ' + doc.querySelector('#today_icon').className;
+        document.getElementById('today_description').textContent = doc.querySelector('#today_description').textContent;
+
+        // Update temperatures
+        document.getElementById('temperatures').innerHTML = doc.querySelector('#temperatures').innerHTML;
+
+        // Update snow conditions
+        document.getElementById('snow_conditions').innerHTML = doc.querySelector('#snow_conditions').innerHTML;
+
+        // Update base snow conditions
+        document.getElementById('base_snow_conditions').innerHTML = doc.querySelector('#base_snow_conditions').innerHTML;
+
+        // Update wind speeds
+        document.getElementById('wind_speeds').innerHTML = doc.querySelector('#wind_speeds').innerHTML;
+
+        // Update 5-day forecast
+        document.getElementById('forecast').innerHTML = doc.querySelector('#forecast').innerHTML;
+
+    }
+
+    // udpate every 1 minutes
+    setInterval(fetchData, 60000);
+</script>
+
+</body>
+</html>
+{% endblock %}
