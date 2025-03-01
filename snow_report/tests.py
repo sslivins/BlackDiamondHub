@@ -19,3 +19,5 @@ class LiveParseWeatherHtmlTests(TestCase):
         self.assertIsNotNone(weather_data_imperial)
         self.assertNotIn('', weather_data_imperial.values(), "Empty string found in imperial weather data")
         self.assertNotIn('', [item for sublist in weather_data_imperial.values() if isinstance(sublist, list) for item in sublist], "Empty string found in imperial weather data list items")
+        
+        
