@@ -204,6 +204,7 @@ def map_weather_icon(sunpeaks_icon):
         "icon-fog": "fas fa-smog",
         "icon-clear_skies_night": "fas fa-moon",
         "icon-partly_cloudy_night": "fas fa-cloud-moon",
+        "icon-cloudy_night": "fas fa-cloud-moon",
     }
     
     icon = icon_mapping.get(sunpeaks_icon, "fas fa-question-circle")
