@@ -8,7 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Light Control</title>
+    <title>Scene Control</title>
     <style>
         body {
             text-align: center;
@@ -16,13 +16,25 @@
             background-color: #222;
             color: #fff;
         }
-
+    
         .container {
-            margin-top: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-
-        .light-button {
-            display: inline-block;
+        
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+    
+        .scene-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             padding: 20px 40px;
             font-size: 24px;
             font-weight: bold;
@@ -32,39 +44,35 @@
             cursor: pointer;
             transition: 0.3s;
             width: 200px;
+            height: 150px;
+            margin: 10px;
+            background-color: #333; /* Darker background color */
         }
-
-        .light-on {
-            background-color: #FFD700;  /* Gold when ON */
-            color: black;
-        }
-
-        .light-off {
-            background-color: #444;  /* Dark gray when OFF */
-        }
-
-        .light-button:hover {
+    
+        .scene-button:hover {
             opacity: 0.8;
+        }
+    
+        .scene-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Light Control</h1>
-    <p>The light is currently: <strong>{{ light_state|upper }}</strong></p>
-
-    <form method="POST">
-        {% csrf_token %}
-        <button type="submit" class="light-button {% if light_state == 'on' %}light-on{% else %}light-off{% endif %}">
-            {% if light_state == "on" %}
-                Turn Off
-            {% else %}
-                Turn On
-            {% endif %}
-        </button>
-    </form>
-</div>
+    <div class="container">
+        <h1>Scene Control</h1>
+        <form method="POST">
+            {% csrf_token %}
+            {% for scene in scenes %}
+                <button type="submit" name="scene_id" value="{{ scene.id }}" class="scene-button">
+                    <span class="scene-icon">{{ scene.icon }}</span>
+                    {{ scene.name }}
+                </button>
+            {% endfor %}
+        </form>
+    </div>
 
 </body>
 </html>
