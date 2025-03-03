@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Scene Control{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Control</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: #fff;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        .light-button {
+            display: inline-block;
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            width: 200px;
+        }
+
+        .light-on {
+            background-color: #FFD700;  /* Gold when ON */
+            color: black;
+        }
+
+        .light-off {
+            background-color: #444;  /* Dark gray when OFF */
+        }
+
+        .light-button:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Light Control</h1>
+    <p>The light is currently: <strong>{{ light_state|upper }}</strong></p>
+
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" class="light-button {% if light_state == 'on' %}light-on{% else %}light-off{% endif %}">
+            {% if light_state == "on" %}
+                Turn Off
+            {% else %}
+                Turn On
+            {% endif %}
+        </button>
+    </form>
+</div>
+
+</body>
+</html>
+{% endblock %}
