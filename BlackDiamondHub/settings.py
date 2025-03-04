@@ -236,7 +236,10 @@ WIFI_PASSWORD_FOR_BDL = os.environ.get('WIFI_PASSWORD_FOR_BDL', 'default_passwor
 WIFI_PASSWORD_FOR_BDL_TO_MI = os.environ.get('WIFI_PASSWORD_FOR_BDL_TO_MI', 'default_password')
 WIFI_PASSWORD_FOR_BDL_GUEST = os.environ.get('WIFI_PASSWORD_FOR_BDL_GUEST', 'default_password')
 
-
+###############################
+### Home Assistant Settings ###
+###############################
+HOMEASSISTANT_URL = os.environ.get('HOMEASSISTANT_URL', 'http://homeassistant.local:8123')
 HOMEASSISTANT_ACCESS_TOKEN = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN')
 
 ##############################
