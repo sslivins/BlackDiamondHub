@@ -18,10 +18,11 @@ def get_scenes():
         entities = response.json()
         for entity in entities:
             if entity['entity_id'].startswith('scene.'):
+                icon = entity['attributes'].get('icon', 'mdi:lightbulb')
                 scenes.append({
                     "id": entity['entity_id'],
                     "name": entity['attributes'].get('friendly_name', entity['entity_id']),
-                    "icon": entity['attributes'].get('icon', '🖼️')  # Default icon if not provided
+                    "icon": homeassistant_icon_mapping(icon),  # Default icon if not found
                 })
     return scenes
 
@@ -41,3 +42,20 @@ def scenes(request):
 
     scenes_list = get_scenes()
     return render(request, "scene_control.html", {"scenes": scenes_list})
+
+def homeassistant_icon_mapping(hass_icon):
+    """Map Home Assistant icons to Font Awesome icons."""
+    icon_mapping = {
+        "mdi:lightbulb": "fas fa-lightbulb",
+        "mdi:movie": "fas fa-film",
+        "mdi:television": "fas fa-tv",
+        "mdi:silverware-fork-knife": "fas fa-utensils",
+        "mdi:chef-hat": "fas fa-hat-chef",
+    }
+    
+    fa_icon =  icon_mapping.get(hass_icon, "fas fa-question-circle")  # Default icon if not found
+    
+    if fa_icon == "fas fa-questionmark":
+        print(f"Unsupported HomeAssistant icon: {hass_icon}")
+        
+    return fa_icon
