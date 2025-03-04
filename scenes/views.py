@@ -16,14 +16,17 @@ def get_scenes():
     scenes = []
     if response.status_code == 200:
         entities = response.json()
+        scene_filter = [name.lower() for name in settings.SCENE_FILTER]  # Convert SCENE_FILTER to lowercase
         for entity in entities:
             if entity['entity_id'].startswith('scene.'):
-                icon = entity['attributes'].get('icon', 'mdi:lightbulb')
-                scenes.append({
-                    "id": entity['entity_id'],
-                    "name": entity['attributes'].get('friendly_name', entity['entity_id']),
-                    "icon": homeassistant_icon_mapping(icon),  # Default icon if not found
-                })
+                friendly_name = entity['attributes'].get('friendly_name', entity['entity_id'])
+                if not scene_filter or friendly_name.lower() in scene_filter:
+                    icon = entity['attributes'].get('icon', 'mdi:lightbulb')
+                    scenes.append({
+                        "id": entity['entity_id'],
+                        "name": friendly_name,
+                        "icon": homeassistant_icon_mapping(icon),  # Default icon if not found
+                    })
     return scenes
 
 def activate_scene(scene_id):
@@ -51,6 +54,7 @@ def homeassistant_icon_mapping(hass_icon):
         "mdi:television": "fas fa-tv",
         "mdi:silverware-fork-knife": "fas fa-utensils",
         "mdi:chef-hat": "fas fa-hat-chef",
+        "mdi:briefcase": "fas fa-briefcase",
     }
     
     fa_icon =  icon_mapping.get(hass_icon, "fas fa-question-circle")  # Default icon if not found

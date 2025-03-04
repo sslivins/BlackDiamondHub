@@ -236,4 +236,10 @@ WIFI_PASSWORD_FOR_BDL = os.environ.get('WIFI_PASSWORD_FOR_BDL', 'default_passwor
 WIFI_PASSWORD_FOR_BDL_TO_MI = os.environ.get('WIFI_PASSWORD_FOR_BDL_TO_MI', 'default_password')
 WIFI_PASSWORD_FOR_BDL_GUEST = os.environ.get('WIFI_PASSWORD_FOR_BDL_GUEST', 'default_password')
 
+
 HOMEASSISTANT_ACCESS_TOKEN = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN')
+
+##############################
+### SCENE CONTROL SETTINGS ###
+##############################
+SCENE_FILTER = os.environ.get('SCENE_FILTER', '').split(',') if os.environ.get('SCENE_FILTER') else []
