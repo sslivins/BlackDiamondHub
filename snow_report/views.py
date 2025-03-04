@@ -198,12 +198,14 @@ def map_weather_icon(sunpeaks_icon):
         "icon-rain_showers": "fas fa-cloud-rain",
         "icon-snow_showers": "fas fa-snowflake",
         "icon-light_snow": "fas fa-snowflake",
-        "icon-snow": "fas fa-snowman",
-        "icon-heavy_snow": "fas fa-snowman",
+        "icon-snow_flurries": "fas fa-snowflake",
+        "icon-snow": "fas fa-snowflake",
+        "icon-heavy_snow": "fas fa-snowflake",
         "icon-thunderstorm": "fas fa-bolt",
         "icon-fog": "fas fa-smog",
         "icon-clear_skies_night": "fas fa-moon",
         "icon-partly_cloudy_night": "fas fa-cloud-moon",
+        "icon-cloudy_night": "fas fa-cloud-moon",
     }
     
     icon = icon_mapping.get(sunpeaks_icon, "fas fa-question-circle")
