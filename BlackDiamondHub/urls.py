@@ -33,6 +33,7 @@ urlpatterns = [
     path('auth/', include('social_django.urls', namespace='social')),
     path('wifi/', include('wifi.urls')),
     path('snow_report/', include('snow_report.urls')),
+    path('bdl_cameras/', include('bdl_cameras.urls')),
 ]
 
 if settings.DEBUG:
