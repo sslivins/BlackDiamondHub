@@ -17,6 +17,7 @@ from io import BytesIO
 import base64
 from selenium.common.exceptions import NoSuchElementException
 from django.contrib.auth.models import User
+from selenium.common.exceptions import StaleElementReferenceException
 
 class ItemModalTests(LiveServerTestCase):
 
@@ -312,10 +313,18 @@ class ItemModalTests(LiveServerTestCase):
         search_button = self.browser.find_element(By.ID, 'search-button')
         search_button.click()
         
-        #wait for search to complete
-        WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.ID, f'item-{self.items[7].id}'))
-        )
+        # Wait for search to complete and handle StaleElementReferenceException
+        retries = 3
+        while retries > 0:
+            try:
+                WebDriverWait(self.browser, 10).until(
+                    EC.element_to_be_clickable((By.ID, f'item-{self.items[7].id}'))
+                )
+                break
+            except StaleElementReferenceException:
+                retries -= 1
+                if retries == 0:
+                    raise
         
         #count the number of items displayed
         items = self.browser.find_elements(By.CSS_SELECTOR, "[id^='item-']")
