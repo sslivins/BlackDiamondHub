@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     'sonos_control',
     'wifi',
     'snow_report',
-    'bdl_cameras',
+    'cameras',
 ]
 
 CHANNEL_LAYERS = {
