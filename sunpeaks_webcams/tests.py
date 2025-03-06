@@ -74,8 +74,14 @@ class CheckForNewWebcamsTests(TestCase):
                 'static_image_url': 'https://www.sunpeaksresort.com/sites/default/files/spr_website_data/webcams/ele_view_of_OSV.jpg',
                 'location': 'Base of the Elevation Chairlift',
                 'elevation': "1,600m (5,249')"
-            }
+            },
+            'Sundance Lift Base': {
+                'static_image_url': 'https://www.sunpeaksresort.com/sites/default/files/spr_website_data/webcams/Sundance Lift Base.jpg',
+                'location': 'Village Square',
+                'elevation': "Village Base, 1,255m (4,116')"
+            },
         }
+        
         
         # Get current UTC time and the current Pacific Time via pytz.
         now_utc = datetime.now(timezone.utc)
@@ -132,11 +138,11 @@ class CheckForNewWebcamsTests(TestCase):
             # Verify expected values for location and elevation.
             self.assertEqual(
                 webcam['location'], exp['location'],
-                f"For camera '{camera_name}', expected location '{exp['location']}', got '{webcam['location']}'"
+                f"For camera '{camera_name}', expected location: '{exp['location']}', but got '{webcam['location']}'"
             )
             self.assertEqual(
                 webcam['elevation'], exp['elevation'],
-                f"For camera '{camera_name}', expected elevation '{exp['elevation']}', got '{webcam['elevation']}'"
+                f"For camera '{camera_name}', expected elevation: '{exp['elevation']}', but got: '{webcam['elevation']}'"
             )
 
 class SunPeaksWebcamsTest(StaticLiveServerTestCase):
