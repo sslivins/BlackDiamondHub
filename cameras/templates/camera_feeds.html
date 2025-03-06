@@ -11,6 +11,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Feeds</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
     <style>
         body {
             background-color: #000000;
@@ -40,12 +42,12 @@
             align-items: center;     
             justify-content: flex-start; 
             overflow: hidden;
-            max-height: 500px; /* Set a fixed height for uniformity */
+            max-height: 325px; /* Set a fixed height for uniformity */
         }
 
-        /* Image styling */
-        .cam img {
-            height: 500px;  /* Fixed height */
+        /* Video styling */
+        .cam video {
+            height: 325px;  /* Fixed height */
             width: auto;    /* Adjust width based on aspect ratio */
             object-fit: cover;
             border-radius: 4px;
@@ -62,13 +64,13 @@
 
         /* Responsive adjustments */
         @media (max-width: 1200px) {
-            .cam img {
+            .cam video {
                 height: 200px; /* Slightly smaller for medium screens */
             }
         }
 
         @media (max-width: 768px) {
-            .cam img {
+            .cam video {
                 height: 180px; /* Smaller for mobile screens */
             }
         }
@@ -80,42 +82,30 @@
         {% for feed in camera_feeds %}
         <div class="cam" data-camera-name="{{ feed.name }}">
             <h2>{{ feed.name }}</h2>
-            <img src="{{ feed.url }}" alt="Camera: {{ feed.name }}" 
-                 onclick="openModal(this)" 
-                 onerror="this.onerror=null;this.src='{% static 'webcam_offline.webp' %}';">
+            <video id="video-{{ forloop.counter }}" controls autoplay muted></video>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    var video = document.getElementById("video-{{ forloop.counter }}");
+                    var videoSrc = "{{ feed.url }}";
+
+                    if (Hls.isSupported()) {
+                        var hls = new Hls();
+                        hls.loadSource(videoSrc);
+                        hls.attachMedia(video);
+                        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                            video.play();
+                        });
+                    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                        video.src = videoSrc;
+                        video.addEventListener("loadedmetadata", function () {
+                            video.play();
+                        });
+                    }
+                });
+            </script>
         </div>
         {% endfor %}
     </div>
-
-    <script>
-        function openModal(img) {
-            const modal = document.createElement("div");
-            modal.style.position = "fixed";
-            modal.style.top = "0";
-            modal.style.left = "0";
-            modal.style.width = "100vw";
-            modal.style.height = "100vh";
-            modal.style.backgroundColor = "rgba(0,0,0,0.8)";
-            modal.style.display = "flex";
-            modal.style.alignItems = "center";
-            modal.style.justifyContent = "center";
-            modal.style.zIndex = "1000";
-
-            const modalImg = document.createElement("img");
-            modalImg.src = img.src;
-            modalImg.style.maxWidth = "80%";
-            modalImg.style.maxHeight = "80%";
-            modalImg.style.borderRadius = "8px";
-
-            modal.appendChild(modalImg);
-
-            modal.onclick = function() {
-                document.body.removeChild(modal);
-            };
-
-            document.body.appendChild(modal);
-        }
-    </script>
 </body>
 </html>
 {% endblock %}
