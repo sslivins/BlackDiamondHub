@@ -20,10 +20,12 @@ def get_camera_feeds():
         entities = response.json()
         for entity in entities:
             if entity['entity_id'].startswith('camera.'):
+                #print(f"Entity ID: {entity['attributes']}")  # Debugging line to check the entity ID
                 entity_picture = entity['attributes'].get('entity_picture')
                 if entity_picture:
 
-                    camera_url = urljoin(base_url, entity_picture)
+                    entity_stream = entity_picture.replace("camera_proxy", "camera_proxy_stream")
+                    camera_url = urljoin(base_url, entity_stream)
                   
                     camera_feeds.append({
                         "name": entity['attributes'].get('friendly_name', entity['entity_id']),
