@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Feeds</title>
+    <style>
+        .camera-feed {
+            margin: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        .camera-feed img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Camera Feeds</h1>
+    <div class="camera-feeds">
+        {% for feed in camera_feeds %}
+            <div class="camera-feed">
+                <h2>{{ feed.name }}</h2>
+                <img src="{{ feed.url }}" alt="{{ feed.name }}">
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

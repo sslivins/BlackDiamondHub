@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class BdlCamerasConfig(AppConfig):
+class ScenesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'cameras'
+    name = 'scenes'

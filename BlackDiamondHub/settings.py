@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'sonos_control',
     'wifi',
     'snow_report',
+    'scenes',
     'cameras',
 ]
 
@@ -235,3 +236,14 @@ WIFI_NETWORKS_PUBLIC = os.environ.get('WIFI_NETWORKS_PUBLIC', 'bdl_guest').split
 WIFI_PASSWORD_FOR_BDL = os.environ.get('WIFI_PASSWORD_FOR_BDL', 'default_password')
 WIFI_PASSWORD_FOR_BDL_TO_MI = os.environ.get('WIFI_PASSWORD_FOR_BDL_TO_MI', 'default_password')
 WIFI_PASSWORD_FOR_BDL_GUEST = os.environ.get('WIFI_PASSWORD_FOR_BDL_GUEST', 'default_password')
+
+###############################
+### Home Assistant Settings ###
+###############################
+HOMEASSISTANT_URL = os.environ.get('HOMEASSISTANT_URL', 'http://homeassistant.local:8123')
+HOMEASSISTANT_ACCESS_TOKEN = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN')
+
+##############################
+### SCENE CONTROL SETTINGS ###
+##############################
+SCENE_FILTER = os.environ.get('SCENE_FILTER', '').split(',') if os.environ.get('SCENE_FILTER') else []
