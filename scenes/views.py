@@ -145,10 +145,7 @@ def homeassistant_icon_mapping(hass_icon):
         "mdi:car-battery": "fa-solid fa-car-battery",  # Car battery
         "mdi:solar-panel": "fa-solid fa-solar-panel",  # Solar panel
         
-        "mdi:lightbulb": "fas fa-lightbulb",
-        "mdi:movie": "fas fa-tv",
         "mdi:theater": "fas fa-tv",
-        "mdi:silverware-fork-knife": "fas fa-utensils",
         "mdi:chef-hat": "fas fa-fire-burner",
         "mdi:briefcase": "fas fa-briefcase",
         "mdi:food": "fas fa-utensils",        
