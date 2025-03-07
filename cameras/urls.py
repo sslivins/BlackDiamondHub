@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import camera_feed_view
+from . import views
 
 urlpatterns = [
-    path('', camera_feed_view, name='camera_feeds'),
+    path('', views.camera_feed_view, name='cameras'),
 ]
