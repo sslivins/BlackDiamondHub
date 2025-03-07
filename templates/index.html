@@ -144,8 +144,8 @@
         }
         
         .btn-icon img {
-            width: 256px;
-            height: 256px;
+            width: 200px;
+            height: 200px;
             border-radius: 20px;  /* Adjust this value for more or less rounding */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -215,6 +215,10 @@
                 <img src="{% static 'img/scene.png' %}" alt="Scene Control" />
                 <div class="icon-caption">Scene Control</div>
             </a>
+            <a href="{% url 'cameras' %}" class="btn-icon">
+                <img src="{% static 'img/cameras.png' %}" alt="Cameras" />
+                <div class="icon-caption">Cameras</div>
+            </a>            
         </div>
     </div>
 

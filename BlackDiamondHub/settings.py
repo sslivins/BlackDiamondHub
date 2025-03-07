@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'wifi',
     'snow_report',
     'scenes',
+    'cameras',
 ]
 
 CHANNEL_LAYERS = {
@@ -241,6 +242,9 @@ WIFI_PASSWORD_FOR_BDL_GUEST = os.environ.get('WIFI_PASSWORD_FOR_BDL_GUEST', 'def
 ###############################
 HOMEASSISTANT_URL = os.environ.get('HOMEASSISTANT_URL', 'http://homeassistant.local:8123')
 HOMEASSISTANT_ACCESS_TOKEN = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN')
+
+HOMEASSISTANT_URL_2 = os.environ.get('HOMEASSISTANT_URL_2', 'http://homeassistant.local:8123')
+HOMEASSISTANT_ACCESS_TOKEN_2 = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN_2')
 
 ##############################
 ### SCENE CONTROL SETTINGS ###

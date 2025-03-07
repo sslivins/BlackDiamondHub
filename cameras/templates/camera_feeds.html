@@ -1,0 +1,213 @@
+<!-- filepath: /j:/blackdiamondlodge/BlackDiamondHub/cameras/templates/camera_feeds.html -->
+{% extends 'base.html' %}
+
+{% block title %}Camera Feeds{% endblock %}
+
+{% block content %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Feeds</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;            
+        }
+
+        /* Webcam container styling */
+        #webcams {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            justify-content: center;
+            align-items: flex-start;
+            width: 100%;
+            max-height: 100vh;
+        }
+
+        /* Camera container */
+        .cam {
+            display: flex;
+            flex-direction: column;
+            align-items: center;     
+            justify-content: flex-start; 
+            overflow: hidden;
+            max-height: 325px; /* Set a fixed height for uniformity */
+        }
+
+        /* Video styling */
+        .cam video {
+            height: 325px;  /* Fixed height */
+            width: auto;    /* Adjust width based on aspect ratio */
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        /* Display camera name on the main page */
+        .cam h2 {
+            margin: 5px 0;
+            color: #ddd;
+            font-size: 14px;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Fullscreen styles */
+        .fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .fullscreen video {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 30px;
+            color: #fff;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .cam video {
+                height: 200px; /* Slightly smaller for medium screens */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .cam video {
+                height: 180px; /* Smaller for mobile screens */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="webcams">
+        {% for feed in camera_feeds %}
+        <div class="cam" data-camera-name="{{ feed.name }}">
+            <h2>{{ feed.name }}</h2>
+            <video id="video-{{ forloop.counter }}" controls autoplay muted onclick="openFullscreen(this)"></video>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    var video = document.getElementById("video-{{ forloop.counter }}");
+                    var videoSrc = "{{ feed.url }}";
+
+                    if (Hls.isSupported()) {
+                        var hls = new Hls();
+                        hls.loadSource(videoSrc);
+                        hls.attachMedia(video);
+                        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                            video.play();
+                        });
+                    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                        video.src = videoSrc;
+                        video.addEventListener("loadedmetadata", function () {
+                            video.play();
+                        });
+                    }
+                });
+            </script>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="fullscreen-container" class="fullscreen" style="display: none;">
+        <span class="close-btn" onclick="closeFullscreen()">&times;</span>
+        <video id="fullscreen-video" controls autoplay muted></video>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var videos = document.querySelectorAll(".cam video");
+        
+            videos.forEach(function(video) {
+                video.addEventListener("click", function(event) {
+                    console.log("Video clicked, requesting fullscreen");
+                    openFullscreen(video);
+                });
+        
+                video.addEventListener("touchstart", function(event) {
+                    console.log("Video touched, requesting fullscreen");
+                    openFullscreen(video);
+                });
+            });
+        
+            // Listen for fullscreen changes and attach click/tap exit functionality
+            document.addEventListener("fullscreenchange", exitOnTap);
+            document.addEventListener("webkitfullscreenchange", exitOnTap);
+            document.addEventListener("mozfullscreenchange", exitOnTap);
+            document.addEventListener("MSFullscreenChange", exitOnTap);
+        });
+        
+        function openFullscreen(videoElement) {
+            console.log("Opening fullscreen for video:", videoElement);
+        
+            if (videoElement.requestFullscreen) {
+                videoElement.requestFullscreen().catch(err => console.warn("Fullscreen request denied:", err));
+            } else if (videoElement.mozRequestFullScreen) {
+                videoElement.mozRequestFullScreen();
+            } else if (videoElement.webkitRequestFullscreen) {
+                videoElement.webkitRequestFullscreen();
+            } else if (videoElement.msRequestFullscreen) {
+                videoElement.msRequestFullscreen();
+            }
+        
+            videoElement.play();
+        
+            // Add event listener for exit fullscreen on tap
+            videoElement.addEventListener("click", closeFullscreen);
+        }
+        
+        function closeFullscreen() {
+            console.log("Exiting fullscreen...");
+        
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else if (document.webkitFullscreenElement) {
+                document.webkitExitFullscreen();
+            } else if (document.mozFullScreenElement) {
+                document.mozCancelFullScreen();
+            } else if (document.msFullscreenElement) {
+                document.msExitFullscreen();
+            }
+        }
+        
+        // Handles tapping anywhere to exit fullscreen
+        function exitOnTap() {
+            if (document.fullscreenElement) {
+                document.fullscreenElement.addEventListener("click", closeFullscreen);
+            }
+        }
+        
+        
+    </script>
+</body>
+</html>
+{% endblock %}
