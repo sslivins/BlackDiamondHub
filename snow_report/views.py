@@ -199,6 +199,7 @@ def map_weather_icon(sunpeaks_icon):
         "icon-snow_showers": "fas fa-snowflake",
         "icon-light_snow": "fas fa-snowflake",
         "icon-snow_flurries": "fas fa-snowflake",
+        "icon-mixed_snow": "fas fa-snowflake",
         "icon-snow": "fas fa-snowflake",
         "icon-heavy_snow": "fas fa-snowflake",
         "icon-thunderstorm": "fas fa-bolt",
