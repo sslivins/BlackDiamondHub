@@ -144,24 +144,69 @@
     </div>
 
     <script>
-        function openFullscreen(videoElement) {
-            var fullscreenContainer = document.getElementById("fullscreen-container");
-            var fullscreenVideo = document.getElementById("fullscreen-video");
-
-            fullscreenVideo.src = videoElement.src;
-            fullscreenContainer.style.display = "flex";
-            fullscreenVideo.addEventListener("loadedmetadata", function () {
-                fullscreenVideo.play();
+        document.addEventListener("DOMContentLoaded", function () {
+            var videos = document.querySelectorAll(".cam video");
+        
+            videos.forEach(function(video) {
+                video.addEventListener("click", function(event) {
+                    console.log("Video clicked, requesting fullscreen");
+                    openFullscreen(video);
+                });
+        
+                video.addEventListener("touchstart", function(event) {
+                    console.log("Video touched, requesting fullscreen");
+                    openFullscreen(video);
+                });
             });
+        
+            // Listen for fullscreen changes and attach click/tap exit functionality
+            document.addEventListener("fullscreenchange", exitOnTap);
+            document.addEventListener("webkitfullscreenchange", exitOnTap);
+            document.addEventListener("mozfullscreenchange", exitOnTap);
+            document.addEventListener("MSFullscreenChange", exitOnTap);
+        });
+        
+        function openFullscreen(videoElement) {
+            console.log("Opening fullscreen for video:", videoElement);
+        
+            if (videoElement.requestFullscreen) {
+                videoElement.requestFullscreen().catch(err => console.warn("Fullscreen request denied:", err));
+            } else if (videoElement.mozRequestFullScreen) {
+                videoElement.mozRequestFullScreen();
+            } else if (videoElement.webkitRequestFullscreen) {
+                videoElement.webkitRequestFullscreen();
+            } else if (videoElement.msRequestFullscreen) {
+                videoElement.msRequestFullscreen();
+            }
+        
+            videoElement.play();
+        
+            // Add event listener for exit fullscreen on tap
+            videoElement.addEventListener("click", closeFullscreen);
         }
-
+        
         function closeFullscreen() {
-            var fullscreenContainer = document.getElementById("fullscreen-container");
-            var fullscreenVideo = document.getElementById("fullscreen-video");
-
-            fullscreenVideo.pause();
-            fullscreenContainer.style.display = "none";
+            console.log("Exiting fullscreen...");
+        
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else if (document.webkitFullscreenElement) {
+                document.webkitExitFullscreen();
+            } else if (document.mozFullScreenElement) {
+                document.mozCancelFullScreen();
+            } else if (document.msFullscreenElement) {
+                document.msExitFullscreen();
+            }
         }
+        
+        // Handles tapping anywhere to exit fullscreen
+        function exitOnTap() {
+            if (document.fullscreenElement) {
+                document.fullscreenElement.addEventListener("click", closeFullscreen);
+            }
+        }
+        
+        
     </script>
 </body>
 </html>
