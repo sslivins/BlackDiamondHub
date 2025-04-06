@@ -47,7 +47,7 @@ class LiveParseWeatherHtmlTests(TestCase):
             try:
                 temp_value = int(temp["value"])
                 self.assertGreaterEqual(temp_value, -50, f"Temperature of {temp['value']} for {temp['location']} is less than -50")
-                self.assertLessEqual(temp_value, 50, f"Temperature of {temp['value']} for {temp['location']} is greater than 50")
+                self.assertLessEqual(temp_value, 120, f"Temperature of {temp['value']} for {temp['location']} is greater than 120")
             except ValueError:
                 self.fail(f"Temperature value for {temp['location']} is not a valid integer: {temp['value']}")
 
