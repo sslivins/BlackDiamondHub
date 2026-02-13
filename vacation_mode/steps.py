@@ -175,6 +175,19 @@ VACATION_STEPS = [
         ],
     },
     {
+        "alias": "Set Backup Differential to 8",
+        "icon": "fas fa-gauge-high",
+        "actions": [
+            {
+                "action": "number/set_value",
+                "data": {
+                    "entity_id": "number.aeco_1988_backup_differential",
+                    "value": "8",
+                },
+            },
+        ],
+    },
+    {
         "alias": "Enable Home Away Mode",
         "icon": "fas fa-plane-departure",
         "actions": [
@@ -345,6 +358,19 @@ HOME_STEPS = [
                 },
                 "device_id": "0abe97d22992d228895650b8c985f68a",
                 "entity_id_override": "6ca02d2dbf190374822573ac052c2d48",
+            },
+        ],
+    },
+    {
+        "alias": "Set Backup Differential to 6",
+        "icon": "fas fa-gauge-high",
+        "actions": [
+            {
+                "action": "number/set_value",
+                "data": {
+                    "entity_id": "number.aeco_1988_backup_differential",
+                    "value": "6",
+                },
             },
         ],
     },
