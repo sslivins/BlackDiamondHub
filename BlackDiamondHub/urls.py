@@ -35,6 +35,7 @@ urlpatterns = [
     path('snow_report/', include('snow_report.urls')),
     path('cameras/', include('cameras.urls')),
     path('scenes/', include('scenes.urls')),
+    path('vacation_mode/', include('vacation_mode.urls')),
 ]
 
 if settings.DEBUG:

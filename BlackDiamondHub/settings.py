@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'snow_report',
     'scenes',
     'cameras',
+    'vacation_mode',
 ]
 
 CHANNEL_LAYERS = {
