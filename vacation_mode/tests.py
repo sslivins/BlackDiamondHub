@@ -1,7 +1,30 @@
 from django.test import TestCase, Client
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from unittest.mock import patch, MagicMock
 import json
+import time
+import unittest
 import requests as requests_lib
+
+try:
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service as ChromeService
+
+    # Try to use webdriver-manager for auto-matching chromedriver
+    try:
+        from webdriver_manager.chrome import ChromeDriverManager
+        _chrome_service = ChromeService(ChromeDriverManager().install())
+    except ImportError:
+        _chrome_service = None
+
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    SELENIUM_AVAILABLE = False
+    _chrome_service = None
 
 from .executor import (
     call_ha_service,
@@ -9,12 +32,19 @@ from .executor import (
     get_away_mode_state,
     start_execution,
     get_run_status,
+    get_active_run,
+    run_steps,
     _runs,
     _execution_lock,
     STATUS_PENDING,
+    STATUS_RUNNING,
+    STATUS_RETRYING,
     STATUS_SUCCESS,
     STATUS_FAILED,
+    MAX_RETRIES,
+    RETRY_DELAY,
 )
+from .steps import VACATION_STEPS, HOME_STEPS
 
 
 class GetAwayModeStateTests(TestCase):
@@ -267,3 +297,565 @@ class DryRunTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         mock_start.assert_called_once_with("vacation", dry_run=True)
+
+
+class StepDefinitionTests(TestCase):
+    """Tests to validate step definitions are well-formed."""
+
+    def test_vacation_steps_not_empty(self):
+        self.assertGreater(len(VACATION_STEPS), 0)
+
+    def test_home_steps_not_empty(self):
+        self.assertGreater(len(HOME_STEPS), 0)
+
+    def test_all_vacation_steps_have_required_fields(self):
+        for i, step in enumerate(VACATION_STEPS):
+            with self.subTest(step=i, alias=step.get("alias")):
+                self.assertIn("alias", step)
+                self.assertIn("icon", step)
+                self.assertIn("actions", step)
+                self.assertIsInstance(step["actions"], list)
+                self.assertGreater(len(step["actions"]), 0)
+
+    def test_all_home_steps_have_required_fields(self):
+        for i, step in enumerate(HOME_STEPS):
+            with self.subTest(step=i, alias=step.get("alias")):
+                self.assertIn("alias", step)
+                self.assertIn("icon", step)
+                self.assertIn("actions", step)
+                self.assertIsInstance(step["actions"], list)
+                self.assertGreater(len(step["actions"]), 0)
+
+    def test_all_actions_have_action_field(self):
+        """Every action must have a 'domain/service' format action field."""
+        all_steps = VACATION_STEPS + HOME_STEPS
+        for step in all_steps:
+            for j, action in enumerate(step["actions"]):
+                with self.subTest(step=step["alias"], action=j):
+                    self.assertIn("action", action)
+                    self.assertIn("/", action["action"], "Action must be 'domain/service' format")
+
+    def test_all_actions_have_data(self):
+        """Every action must have a data dict."""
+        all_steps = VACATION_STEPS + HOME_STEPS
+        for step in all_steps:
+            for j, action in enumerate(step["actions"]):
+                with self.subTest(step=step["alias"], action=j):
+                    self.assertIn("data", action)
+                    self.assertIsInstance(action["data"], dict)
+
+    def test_all_actions_have_targeting(self):
+        """Every action must have at least one targeting method."""
+        all_steps = VACATION_STEPS + HOME_STEPS
+        for step in all_steps:
+            for j, action in enumerate(step["actions"]):
+                with self.subTest(step=step["alias"], action=j):
+                    has_entity = action["data"].get("entity_id") is not None
+                    has_device = action.get("device_id") is not None
+                    has_area = action.get("area_id") is not None
+                    has_override = action.get("entity_id_override") is not None
+                    self.assertTrue(
+                        has_entity or has_device or has_area or has_override,
+                        f"Action has no targeting (entity_id, device_id, area_id, or entity_id_override)"
+                    )
+
+    def test_icons_are_font_awesome(self):
+        """All step icons should be Font Awesome classes."""
+        all_steps = VACATION_STEPS + HOME_STEPS
+        for step in all_steps:
+            with self.subTest(step=step["alias"]):
+                self.assertTrue(
+                    step["icon"].startswith("fas ") or step["icon"].startswith("fab "),
+                    f"Icon '{step['icon']}' doesn't look like a Font Awesome class"
+                )
+
+
+class RunStepsTests(TestCase):
+    """Tests for the full run_steps execution flow."""
+
+    def setUp(self):
+        # Ensure lock is released before each test
+        if _execution_lock.locked():
+            _execution_lock.release()
+
+    def tearDown(self):
+        # Clean up
+        if _execution_lock.locked():
+            _execution_lock.release()
+        _runs.clear()
+
+    @patch("vacation_mode.executor.call_ha_service")
+    def test_all_steps_succeed(self, mock_call):
+        mock_call.return_value = (True, None)
+
+        steps = [
+            {"alias": "Step 1", "icon": "fas fa-test", "actions": [{"action": "switch/turn_on", "data": {"entity_id": "s1"}}]},
+            {"alias": "Step 2", "icon": "fas fa-test", "actions": [{"action": "switch/turn_on", "data": {"entity_id": "s2"}}]},
+        ]
+
+        run_id = "test-run-1"
+        _execution_lock.acquire()
+        _runs[run_id] = {
+            "run_id": run_id, "mode": "vacation", "status": "running",
+            "steps": [{"alias": s["alias"], "icon": s["icon"], "status": STATUS_PENDING, "attempt": 0, "error": None} for s in steps],
+        }
+
+        run_steps(run_id, steps)
+
+        run_data = _runs[run_id]
+        self.assertEqual(run_data["status"], "complete")
+        for step in run_data["steps"]:
+            self.assertEqual(step["status"], STATUS_SUCCESS)
+
+    @patch("vacation_mode.executor.call_ha_service")
+    @patch("vacation_mode.executor.RETRY_DELAY", 0)
+    def test_step_retries_then_succeeds(self, mock_call):
+        """A step that fails once then succeeds on retry."""
+        mock_call.side_effect = [(False, "timeout"), (True, None)]
+
+        steps = [
+            {"alias": "Flaky Step", "icon": "fas fa-test", "actions": [{"action": "switch/turn_on", "data": {"entity_id": "s1"}}]},
+        ]
+
+        run_id = "test-run-2"
+        _execution_lock.acquire()
+        _runs[run_id] = {
+            "run_id": run_id, "mode": "vacation", "status": "running",
+            "steps": [{"alias": "Flaky Step", "icon": "fas fa-test", "status": STATUS_PENDING, "attempt": 0, "error": None}],
+        }
+
+        run_steps(run_id, steps)
+
+        run_data = _runs[run_id]
+        self.assertEqual(run_data["steps"][0]["status"], STATUS_SUCCESS)
+        self.assertEqual(run_data["status"], "complete")
+
+    @patch("vacation_mode.executor.call_ha_service")
+    @patch("vacation_mode.executor.RETRY_DELAY", 0)
+    def test_step_fails_all_retries_then_continues(self, mock_call):
+        """A step that fails all retries — the run should still complete (continue past it)."""
+        # First step always fails, second step succeeds
+        mock_call.side_effect = [
+            (False, "error")] * (1 + MAX_RETRIES) + [(True, None)
+        ]
+
+        steps = [
+            {"alias": "Bad Step", "icon": "fas fa-test", "actions": [{"action": "switch/turn_on", "data": {"entity_id": "s1"}}]},
+            {"alias": "Good Step", "icon": "fas fa-test", "actions": [{"action": "switch/turn_on", "data": {"entity_id": "s2"}}]},
+        ]
+
+        run_id = "test-run-3"
+        _execution_lock.acquire()
+        _runs[run_id] = {
+            "run_id": run_id, "mode": "vacation", "status": "running",
+            "steps": [
+                {"alias": "Bad Step", "icon": "fas fa-test", "status": STATUS_PENDING, "attempt": 0, "error": None},
+                {"alias": "Good Step", "icon": "fas fa-test", "status": STATUS_PENDING, "attempt": 0, "error": None},
+            ],
+        }
+
+        run_steps(run_id, steps)
+
+        run_data = _runs[run_id]
+        self.assertEqual(run_data["status"], "complete")
+        self.assertEqual(run_data["steps"][0]["status"], STATUS_FAILED)
+        self.assertEqual(run_data["steps"][1]["status"], STATUS_SUCCESS)
+
+    @patch("vacation_mode.executor.call_ha_service")
+    def test_run_releases_lock_on_completion(self, mock_call):
+        mock_call.return_value = (True, None)
+        steps = [{"alias": "S", "icon": "fas fa-test", "actions": [{"action": "switch/turn_on", "data": {"entity_id": "s1"}}]}]
+
+        run_id = "test-run-4"
+        _execution_lock.acquire()
+        _runs[run_id] = {
+            "run_id": run_id, "mode": "vacation", "status": "running",
+            "steps": [{"alias": "S", "icon": "fas fa-test", "status": STATUS_PENDING, "attempt": 0, "error": None}],
+        }
+
+        run_steps(run_id, steps)
+        # Lock should be released — we can acquire it again
+        acquired = _execution_lock.acquire(blocking=False)
+        self.assertTrue(acquired)
+        if acquired:
+            _execution_lock.release()
+
+
+class StartExecutionTests(TestCase):
+    """Tests for the start_execution function."""
+
+    def setUp(self):
+        if _execution_lock.locked():
+            _execution_lock.release()
+        _runs.clear()
+
+    def tearDown(self):
+        # Wait for any background threads to finish
+        time.sleep(0.2)
+        if _execution_lock.locked():
+            _execution_lock.release()
+        _runs.clear()
+
+    @patch("vacation_mode.executor.call_ha_service")
+    def test_start_vacation_mode(self, mock_call):
+        mock_call.return_value = (True, None)
+        run_id, error = start_execution("vacation", dry_run=True)
+        self.assertIsNotNone(run_id)
+        self.assertIsNone(error)
+
+    @patch("vacation_mode.executor.call_ha_service")
+    def test_start_home_mode(self, mock_call):
+        mock_call.return_value = (True, None)
+        run_id, error = start_execution("home", dry_run=True)
+        self.assertIsNotNone(run_id)
+        self.assertIsNone(error)
+
+    @patch("vacation_mode.executor.call_ha_service")
+    def test_concurrent_execution_blocked(self, mock_call):
+        """Cannot start a second execution while one is running."""
+        # Simulate a long-running step
+        def slow_call(*args, **kwargs):
+            time.sleep(2)
+            return True, None
+        mock_call.side_effect = slow_call
+
+        run_id1, error1 = start_execution("vacation", dry_run=True)
+        self.assertIsNotNone(run_id1)
+        self.assertIsNone(error1)
+
+        # Try to start another — should fail
+        run_id2, error2 = start_execution("home", dry_run=True)
+        self.assertIsNone(run_id2)
+        self.assertIn("already in progress", error2)
+
+    @patch("vacation_mode.executor.call_ha_service")
+    def test_run_stores_dry_run_flag(self, mock_call):
+        mock_call.return_value = (True, None)
+        run_id, _ = start_execution("vacation", dry_run=True)
+        self.assertTrue(_runs[run_id]["dry_run"])
+
+    @patch("vacation_mode.executor.call_ha_service")
+    def test_run_status_has_all_steps(self, mock_call):
+        mock_call.return_value = (True, None)
+        run_id, _ = start_execution("vacation", dry_run=True)
+        status = get_run_status(run_id)
+        self.assertIsNotNone(status)
+        self.assertEqual(len(status["steps"]), len(VACATION_STEPS))
+
+
+class AdditionalViewTests(TestCase):
+    """Additional view tests for edge cases."""
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_execute_get_not_allowed(self):
+        """Execute endpoint should reject GET requests."""
+        response = self.client.get("/vacation_mode/api/execute/")
+        self.assertEqual(response.status_code, 405)
+
+    def test_execute_empty_body(self):
+        """Execute with empty body should return 400."""
+        response = self.client.post(
+            "/vacation_mode/api/execute/",
+            data="",
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_execute_no_mode(self):
+        """Execute without mode field should return 400."""
+        response = self.client.post(
+            "/vacation_mode/api/execute/",
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_status_post_not_allowed(self):
+        """Status endpoint should reject POST requests."""
+        response = self.client.post("/vacation_mode/api/status/test/")
+        self.assertEqual(response.status_code, 405)
+
+    def test_state_post_not_allowed(self):
+        """State endpoint should reject POST requests."""
+        response = self.client.post("/vacation_mode/api/state/")
+        self.assertEqual(response.status_code, 405)
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_main_page_vacation_mode_context(self, mock_active, mock_away):
+        """When home, mode should be vacation (button to leave)."""
+        mock_away.return_value = False
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertEqual(response.context["mode"], "vacation")
+        self.assertFalse(response.context["is_away"])
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_main_page_home_mode_context(self, mock_active, mock_away):
+        """When away, mode should be home (button to arrive)."""
+        mock_away.return_value = True
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertEqual(response.context["mode"], "home")
+        self.assertTrue(response.context["is_away"])
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_main_page_contains_step_json(self, mock_active, mock_away):
+        """The page should contain JSON step data."""
+        mock_away.return_value = False
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        content = response.content.decode()
+        # Steps JSON should be embedded in the page
+        self.assertIn("pending", content)
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_main_page_shows_vacation_button_when_home(self, mock_active, mock_away):
+        mock_away.return_value = False
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertContains(response, "Set Vacation Mode")
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_main_page_shows_arrival_button_when_away(self, mock_active, mock_away):
+        mock_away.return_value = True
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertContains(response, "Prepare for Arrival")
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_dry_run_checkbox_checked_by_default(self, mock_active, mock_away):
+        """Dry run checkbox should be checked by default."""
+        mock_away.return_value = False
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        content = response.content.decode()
+        self.assertIn('checked', content)
+        self.assertIn('let dryRun = true', content)
+
+    @patch("vacation_mode.views.start_execution")
+    def test_execute_dry_run_false_by_default(self, mock_start):
+        """Without dry_run in body, it should default to False."""
+        mock_start.return_value = ("abc123", None)
+        self.client.post(
+            "/vacation_mode/api/execute/",
+            data=json.dumps({"mode": "vacation"}),
+            content_type="application/json",
+        )
+        mock_start.assert_called_once_with("vacation", dry_run=False)
+
+
+class TemplateRenderTests(TestCase):
+    """Tests for template rendering correctness."""
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_template_has_step_list(self, mock_active, mock_away):
+        mock_away.return_value = False
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertContains(response, 'id="step-list"')
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_template_has_progress_bar(self, mock_active, mock_away):
+        mock_away.return_value = False
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertContains(response, 'id="progress-container"')
+        self.assertContains(response, 'id="progress-bar"')
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_template_has_status_badge(self, mock_active, mock_away):
+        mock_away.return_value = False
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertContains(response, 'id="status-badge"')
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_away_badge_class(self, mock_active, mock_away):
+        mock_away.return_value = True
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertContains(response, "status-badge away")
+
+    @patch("vacation_mode.views.get_away_mode_state")
+    @patch("vacation_mode.views.get_active_run")
+    def test_home_badge_class(self, mock_active, mock_away):
+        mock_away.return_value = False
+        mock_active.return_value = None
+        response = self.client.get("/vacation_mode/")
+        self.assertContains(response, "status-badge home")
+
+    def setUp(self):
+        self.client = Client()
+
+
+class HomepageIconTests(TestCase):
+    """Tests for the vacation mode icon on the homepage."""
+
+    def setUp(self):
+        self.client = Client()
+
+    @patch("BlackDiamondHub.views.requests.get")
+    def test_homepage_has_vacation_link(self, mock_get):
+        mock_response = MagicMock(status_code=200)
+        mock_response.content = b'<div class="weather current-conditions"><ul class="list-temps"></ul></div>'
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        response = self.client.get("/")
+        self.assertContains(response, "/vacation_mode/")
+
+    @patch("BlackDiamondHub.views.requests.get")
+    def test_homepage_has_vacation_icon(self, mock_get):
+        mock_response = MagicMock(status_code=200)
+        mock_response.content = b'<div class="weather current-conditions"><ul class="list-temps"></ul></div>'
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        response = self.client.get("/")
+        self.assertContains(response, "vacation.png")
+
+    @patch("BlackDiamondHub.views.requests.get")
+    def test_homepage_has_vacation_caption(self, mock_get):
+        mock_response = MagicMock(status_code=200)
+        mock_response.content = b'<div class="weather current-conditions"><ul class="list-temps"></ul></div>'
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        response = self.client.get("/")
+        self.assertContains(response, "Vacation Mode")
+
+
+class SeleniumVacationModeTests(StaticLiveServerTestCase):
+    """Selenium tests to validate the vacation mode page renders correctly at 1920x1080."""
+
+    _original_get_away_mode_state = None
+
+    @classmethod
+    def setUpClass(cls):
+        if not SELENIUM_AVAILABLE:
+            raise unittest.SkipTest("Selenium not available")
+        super().setUpClass()
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-gpu")
+        try:
+            if _chrome_service:
+                cls.driver = webdriver.Chrome(service=_chrome_service, options=chrome_options)
+            else:
+                cls.driver = webdriver.Chrome(options=chrome_options)
+        except Exception as e:
+            raise unittest.SkipTest(f"Chrome WebDriver not available: {e}")
+        cls.driver.set_window_size(1920, 1080)
+        cls.driver.implicitly_wait(10)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.driver.quit()
+        super().tearDownClass()
+
+    def setUp(self):
+        # Monkeypatch get_away_mode_state so the live server uses our mock
+        from vacation_mode import views as vm_views
+        self._original_get_away_mode_state = vm_views.get_away_mode_state
+        vm_views.get_away_mode_state = lambda: False
+
+    def tearDown(self):
+        from vacation_mode import views as vm_views
+        vm_views.get_away_mode_state = self._original_get_away_mode_state
+
+    def _set_away_state(self, is_away):
+        from vacation_mode import views as vm_views
+        vm_views.get_away_mode_state = lambda: is_away
+
+    def test_no_vertical_scrollbar_at_1080p(self):
+        """Page should fit within 1920x1080 without vertical scrollbar."""
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "step-list"))
+        )
+        scroll_height = self.driver.execute_script("return document.documentElement.scrollHeight")
+        client_height = self.driver.execute_script("return document.documentElement.clientHeight")
+        self.assertLessEqual(
+            scroll_height, client_height,
+            f"Page has vertical scrollbar: scrollHeight={scroll_height} > clientHeight={client_height}"
+        )
+
+    def test_no_horizontal_scrollbar_at_1080p(self):
+        """Page should fit within 1920x1080 without horizontal scrollbar."""
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "step-list"))
+        )
+        scroll_width = self.driver.execute_script("return document.documentElement.scrollWidth")
+        client_width = self.driver.execute_script("return document.documentElement.clientWidth")
+        self.assertLessEqual(
+            scroll_width, client_width,
+            f"Page has horizontal scrollbar: scrollWidth={scroll_width} > clientWidth={client_width}"
+        )
+
+    def test_step_items_render_on_page(self):
+        """Step items should be rendered on the page."""
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "step-list"))
+        )
+        step_items = self.driver.find_elements(By.CSS_SELECTOR, ".step-item")
+        self.assertEqual(len(step_items), len(VACATION_STEPS))
+
+    def test_home_steps_render_when_away(self):
+        """When away, home steps should be shown."""
+        self._set_away_state(True)
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "step-list"))
+        )
+        step_items = self.driver.find_elements(By.CSS_SELECTOR, ".step-item")
+        self.assertEqual(len(step_items), len(HOME_STEPS))
+
+    def test_step_items_are_single_line(self):
+        """Each step item should be a single-line row (no wrapping)."""
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "step-list"))
+        )
+        step_items = self.driver.find_elements(By.CSS_SELECTOR, ".step-item")
+        for item in step_items:
+            height = item.size["height"]
+            # A single-line row with padding should be under 65px
+            self.assertLessEqual(height, 65, f"Step item too tall ({height}px), may be wrapping")
+
+    def test_action_button_visible(self):
+        """The action button should be visible."""
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        btn = WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "action-btn"))
+        )
+        self.assertTrue(btn.is_displayed())
+        self.assertIn("Set Vacation Mode", btn.text)
+
+    def test_action_button_shows_arrival_when_away(self):
+        """When away, button should show Prepare for Arrival."""
+        self._set_away_state(True)
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        btn = WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "action-btn"))
+        )
+        self.assertIn("Prepare for Arrival", btn.text)
+
+    def test_dry_run_checked_by_default(self):
+        """Dry run checkbox should be checked by default."""
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        checkbox = WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "dry-run-checkbox"))
+        )
+        self.assertTrue(checkbox.is_selected())

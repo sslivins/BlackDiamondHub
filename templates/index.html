@@ -138,9 +138,24 @@
             border: 2px solid #000000;
         }
 
+        .icon-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .icon-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+
         .btn-icon {
-            margin: 10px;
+            margin: 5px;
             display: inline-block;
+            text-decoration: none;
         }
         
         .btn-icon img {
@@ -190,39 +205,64 @@
         <div class="btn-container">
             <h2>Welcome to Black Diamond Hub</h2>
             <p>Manage your home with ease. Choose an option below to get started:</p>
-            <a href="{% url 'webcams' %}" class="btn-icon">
-                <img src="{% static 'img/webcams.png' %}" alt="Mountain Webcams" />
-                <div class="icon-caption">Mountain Webcams</div>
-            </a>
-            <!-- snow report-->
-            <a href="{% url 'snow_report' %}" class="btn-icon">
-                <img src="{% static 'img/snowreport.png' %}" alt="Snow Report" />
-                <div class="icon-caption">Snow Report</div>
-            </a>  
-            <a href="{% url 'inventory' %}" class="btn-icon">
-                <img src="{% static 'img/inventory.png' %}" alt="Kitchen Inventory" />
-                <div class="icon-caption">Kitchen Inventory</div>
-            </a>
-            <a href="{% url 'sonos_control' %}" class="btn-icon">
-                <img src="{% static 'img/music.png' %}" alt="Sonos" />
-                <div class="icon-caption">Music</div>
-            </a>
-            <a href="{% url 'wifi_qr' %}" class="btn-icon">
-                <img src="{% static 'img/wifi.png' %}" alt="Wifi Setup" />
-                <div class="icon-caption">WiFi Setup</div>
-            </a>
-            <a href="{% url 'scenes' %}" class="btn-icon">
-                <img src="{% static 'img/scene.png' %}" alt="Scene Control" />
-                <div class="icon-caption">Scene Control</div>
-            </a>
-            <a href="{% url 'cameras' %}" class="btn-icon">
-                <img src="{% static 'img/cameras.png' %}" alt="Cameras" />
-                <div class="icon-caption">Cameras</div>
-            </a>            
+            <div class="icon-grid" id="icon-grid">
+                <a href="{% url 'webcams' %}" class="btn-icon">
+                    <img src="{% static 'img/webcams.png' %}" alt="Mountain Webcams" />
+                    <div class="icon-caption">Mountain Webcams</div>
+                </a>
+                <a href="{% url 'snow_report' %}" class="btn-icon">
+                    <img src="{% static 'img/snowreport.png' %}" alt="Snow Report" />
+                    <div class="icon-caption">Snow Report</div>
+                </a>
+                <a href="{% url 'inventory' %}" class="btn-icon">
+                    <img src="{% static 'img/inventory.png' %}" alt="Kitchen Inventory" />
+                    <div class="icon-caption">Kitchen Inventory</div>
+                </a>
+                <a href="{% url 'sonos_control' %}" class="btn-icon">
+                    <img src="{% static 'img/music.png' %}" alt="Sonos" />
+                    <div class="icon-caption">Music</div>
+                </a>
+                <a href="{% url 'wifi_qr' %}" class="btn-icon">
+                    <img src="{% static 'img/wifi.png' %}" alt="Wifi Setup" />
+                    <div class="icon-caption">WiFi Setup</div>
+                </a>
+                <a href="{% url 'scenes' %}" class="btn-icon">
+                    <img src="{% static 'img/scene.png' %}" alt="Scene Control" />
+                    <div class="icon-caption">Scene Control</div>
+                </a>
+                <a href="{% url 'cameras' %}" class="btn-icon">
+                    <img src="{% static 'img/cameras.png' %}" alt="Cameras" />
+                    <div class="icon-caption">Cameras</div>
+                </a>
+                <a href="{% url 'vacation_mode' %}" class="btn-icon">
+                    <img src="{% static 'img/vacation.png' %}" alt="Vacation Mode" />
+                    <div class="icon-caption">Vacation Mode</div>
+                </a>
+            </div>            
         </div>
     </div>
 
     <script>
+        // Split icons into 2 centered rows (extra item on first row if odd)
+        document.addEventListener('DOMContentLoaded', function() {
+            const grid = document.getElementById('icon-grid');
+            const icons = Array.from(grid.querySelectorAll('.btn-icon'));
+            const total = icons.length;
+            const firstRowCount = Math.ceil(total / 2);
+
+            grid.innerHTML = '';
+
+            const row1 = document.createElement('div');
+            row1.className = 'icon-row';
+            icons.slice(0, firstRowCount).forEach(icon => row1.appendChild(icon));
+            grid.appendChild(row1);
+
+            const row2 = document.createElement('div');
+            row2.className = 'icon-row';
+            icons.slice(firstRowCount).forEach(icon => row2.appendChild(icon));
+            grid.appendChild(row2);
+        });
+
         function toggleUnits() {
             var toggleButton = document.querySelector('.toggle-button');
             var elevations = document.querySelectorAll('.elevation');
