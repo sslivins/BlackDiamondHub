@@ -215,8 +215,10 @@ class FeedbackModalTest(LiveServerTestCase):
             EC.visibility_of_element_located((By.ID, "feedback-modal"))
         )
 
-        # Fill out the feedback form
-        name_input = self.browser.find_element(By.ID, "name")
+        # Wait for the form elements to be interactive
+        name_input = WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.ID, "name"))
+        )
         email_input = self.browser.find_element(By.ID, "email")
         message_input = self.browser.find_element(By.ID, "message")
 
@@ -225,8 +227,10 @@ class FeedbackModalTest(LiveServerTestCase):
         message_input.send_keys("This is a test feedback message.")
 
         # Submit the feedback form
-        submit_button = self.browser.find_element(By.CSS_SELECTOR, "#feedback-form button[type='submit']")
-        submit_button.click()
+        submit_button = WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "#feedback-form button[type='submit']"))
+        )
+        self.browser.execute_script("arguments[0].click();", submit_button)
 
         # Wait for the success message to be visible
         WebDriverWait(self.browser, 20).until(
