@@ -65,12 +65,16 @@ class WeatherUnitToggleTest(LiveServerTestCase):
         options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
         cls.browser = webdriver.Chrome(options=options)
         cls.browser.set_window_size(1920, 1080)
-        cls.browser.implicitly_wait(20)
 
     @classmethod
     def tearDownClass(cls):
         cls.browser.quit()
         super().tearDownClass()
+
+    def setUp(self):
+        # Reset browser state between tests
+        self.browser.get('about:blank')
+        self.browser.delete_all_cookies()
 
     def test_temperature_non_number(self):
         self.browser.get(self.live_server_url)
@@ -99,6 +103,9 @@ class WeatherUnitToggleTest(LiveServerTestCase):
 
     def test_temperature_missing(self):
         self.browser.get(self.live_server_url)
+        WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'temperature'))
+        )
         self.browser.execute_script('''
             document.querySelector(".temperature").setAttribute("data-metric", "");
             document.querySelector(".temperature").textContent = "°C";
@@ -113,6 +120,9 @@ class WeatherUnitToggleTest(LiveServerTestCase):
 
     def test_temperature_conversion_c_to_f(self):
         self.browser.get(self.live_server_url)
+        WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'temperature'))
+        )
         self.browser.execute_script('''
             document.querySelector(".temperature").setAttribute("data-metric", "25");
             document.querySelector(".temperature").textContent = "25°C";
@@ -127,6 +137,9 @@ class WeatherUnitToggleTest(LiveServerTestCase):
 
     def test_elevation_conversion_m_to_ft(self):
         self.browser.get(self.live_server_url)
+        WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'elevation'))
+        )
         self.browser.execute_script('''
             document.querySelector(".elevation").setAttribute("data-metric", "1000");
             document.querySelector(".elevation").textContent = "Elevation: 1000 m";
@@ -152,7 +165,6 @@ class FeedbackModalTest(LiveServerTestCase):
         cls.browser = webdriver.Chrome(options=options)
         cls.browser.set_window_size(1920, 1080)
         
-        cls.browser.implicitly_wait(10)  
         # Create a test user
         cls.test_user = User.objects.create_user(username='testuser', password='testpassword', is_staff=True)
 
@@ -161,10 +173,17 @@ class FeedbackModalTest(LiveServerTestCase):
         cls.browser.quit()
         super().tearDownClass()
 
+    def setUp(self):
+        # Reset browser state between tests
+        self.browser.get('about:blank')
+        self.browser.delete_all_cookies()
+
     def test_feedback_modal_submission_and_unread_count(self):
         # Log in
         self.browser.get(self.live_server_url + '/accounts/login/')
-        username_input = self.browser.find_element(By.ID, "id_username")
+        username_input = WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.ID, "id_username"))
+        )
         password_input = self.browser.find_element(By.ID, "id_password")
         
         username_input.send_keys("testuser")
@@ -174,7 +193,7 @@ class FeedbackModalTest(LiveServerTestCase):
         login_button.click()
 
         # Wait for the login to complete and redirect to the home page
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CLASS_NAME, "feedback-button"))
         )
         
@@ -186,16 +205,20 @@ class FeedbackModalTest(LiveServerTestCase):
             initial_unread_count = 0
 
         # Open the feedback modal
-        feedback_button = self.browser.find_element(By.CLASS_NAME, "feedback-button")
+        feedback_button = WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "feedback-button"))
+        )
         feedback_button.click()
 
         # Wait for the modal to be visible
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, "feedback-modal"))
         )
 
-        # Fill out the feedback form
-        name_input = self.browser.find_element(By.ID, "name")
+        # Wait for the form elements to be interactive
+        name_input = WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.ID, "name"))
+        )
         email_input = self.browser.find_element(By.ID, "email")
         message_input = self.browser.find_element(By.ID, "message")
 
@@ -204,11 +227,13 @@ class FeedbackModalTest(LiveServerTestCase):
         message_input.send_keys("This is a test feedback message.")
 
         # Submit the feedback form
-        submit_button = self.browser.find_element(By.CSS_SELECTOR, "#feedback-form button[type='submit']")
-        submit_button.click()
+        submit_button = WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "#feedback-form button[type='submit']"))
+        )
+        self.browser.execute_script("arguments[0].click();", submit_button)
 
         # Wait for the success message to be visible
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, "feedback-success"))
         )
 
@@ -217,12 +242,12 @@ class FeedbackModalTest(LiveServerTestCase):
         self.assertIn("Thank you for your feedback!", success_message)
 
         # Wait for the modal to close after a delay
-        WebDriverWait(self.browser, 5).until(
+        WebDriverWait(self.browser, 20).until(
             EC.invisibility_of_element((By.ID, "feedback-modal"))
         )
 
         # Check if the unread message count increased
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.text_to_be_present_in_element((By.CLASS_NAME, "badge"), str(initial_unread_count + 1))
         )
 

@@ -52,7 +52,7 @@ class CheckForNewWebcamsTests(TestCase):
             },
             'Mt. Tod, View from Mt. Morrisey': {
                 'static_image_url': 'https://www.sunpeaksresort.com/sites/default/files/spr_website_data/webcams/view of mt todd.jpg',
-                'location': 'Top of the Morrisey Express',
+                'location': 'Top of Morrisey Express',
                 'elevation': "1,672m (5,495')"
             },
             'Elevation': {
@@ -77,6 +77,11 @@ class CheckForNewWebcamsTests(TestCase):
             },
             'Sundance Lift Base': {
                 'static_image_url': 'https://www.sunpeaksresort.com/sites/default/files/spr_website_data/webcams/Sundance Lift Base.jpg',
+                'location': 'Village Square',
+                'elevation': "Village Base, 1,255m (4,116')"
+            },
+            'Village Clock Tower': {
+                'static_image_url': 'https://www.sunpeaksresort.com/sites/default/files/spr_website_data/webcams/Village Clock Tower.jpg',
                 'location': 'Village Square',
                 'elevation': "Village Base, 1,255m (4,116')"
             },
