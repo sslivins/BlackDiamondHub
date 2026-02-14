@@ -340,7 +340,10 @@ class ItemModalTests(LiveServerTestCase):
         )
         login_button.click()
         
-        username_input = self.browser.find_element(By.ID, "id_username")
+        # Wait for login page to load
+        username_input = WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.ID, "id_username"))
+        )
         password_input = self.browser.find_element(By.ID, "id_password")
         
         username_input.send_keys("testuser")
@@ -457,7 +460,10 @@ class ItemModalEditTests(LiveServerTestCase):
         )
         login_button.click()
         
-        username_input = self.browser.find_element(By.ID, "id_username")
+        # Wait for login page to load
+        username_input = WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.ID, "id_username"))
+        )
         password_input = self.browser.find_element(By.ID, "id_password")
         
         username_input.send_keys("testuser")

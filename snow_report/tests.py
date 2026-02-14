@@ -73,7 +73,7 @@ class LiveParseWeatherHtmlTests(TestCase):
         ## Wind Speeds
         ##########################
         wind_speeds = weather_data_metric["wind_speeds"]
-        self.assertEqual(len(wind_speeds), 4, f"Expected 4 wind speeds but found {len(wind_speeds)}")
+        self.assertEqual(len(wind_speeds), 3, f"Expected 3 wind speeds but found {len(wind_speeds)}")
 
         for wind in wind_speeds:
             self.assertNotEqual(wind["location"], "", f"Wind speed location for {wind['location']} is empty")

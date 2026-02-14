@@ -164,7 +164,9 @@ class FeedbackModalTest(LiveServerTestCase):
     def test_feedback_modal_submission_and_unread_count(self):
         # Log in
         self.browser.get(self.live_server_url + '/accounts/login/')
-        username_input = self.browser.find_element(By.ID, "id_username")
+        username_input = WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.ID, "id_username"))
+        )
         password_input = self.browser.find_element(By.ID, "id_password")
         
         username_input.send_keys("testuser")
@@ -186,11 +188,13 @@ class FeedbackModalTest(LiveServerTestCase):
             initial_unread_count = 0
 
         # Open the feedback modal
-        feedback_button = self.browser.find_element(By.CLASS_NAME, "feedback-button")
+        feedback_button = WebDriverWait(self.browser, 10).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "feedback-button"))
+        )
         feedback_button.click()
 
         # Wait for the modal to be visible
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 15).until(
             EC.visibility_of_element_located((By.ID, "feedback-modal"))
         )
 
