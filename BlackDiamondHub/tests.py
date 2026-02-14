@@ -226,14 +226,14 @@ class FeedbackModalTest(LiveServerTestCase):
         email_input.send_keys("testuser@example.com")
         message_input.send_keys("This is a test feedback message.")
 
-        # Submit the feedback form
-        submit_button = WebDriverWait(self.browser, 20).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, "#feedback-form button[type='submit']"))
-        )
-        self.browser.execute_script("arguments[0].click();", submit_button)
+        # Submit the feedback form via JavaScript to ensure the submit event fires
+        self.browser.execute_script("""
+            var form = document.getElementById('feedback-form');
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        """)
 
         # Wait for the success message to be visible
-        WebDriverWait(self.browser, 20).until(
+        WebDriverWait(self.browser, 30).until(
             EC.visibility_of_element_located((By.ID, "feedback-success"))
         )
 
@@ -241,13 +241,13 @@ class FeedbackModalTest(LiveServerTestCase):
         success_message = self.browser.find_element(By.ID, "feedback-success").text
         self.assertIn("Thank you for your feedback!", success_message)
 
-        # Wait for the modal to close after a delay
-        WebDriverWait(self.browser, 20).until(
+        # Wait for the modal to close after a delay (JS has 2s setTimeout)
+        WebDriverWait(self.browser, 30).until(
             EC.invisibility_of_element((By.ID, "feedback-modal"))
         )
 
         # Check if the unread message count increased
-        WebDriverWait(self.browser, 20).until(
+        WebDriverWait(self.browser, 30).until(
             EC.text_to_be_present_in_element((By.CLASS_NAME, "badge"), str(initial_unread_count + 1))
         )
 

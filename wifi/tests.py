@@ -324,9 +324,12 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
         login_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
         login_button.click()
         
-        # Wait for redirect back to wifi page
+        # Wait for redirect back to wifi page and QR codes to load
         WebDriverWait(self.driver, 20).until(
             EC.url_contains("/wifi/")
+        )
+        WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "img.qr-code"))
         )
     
         qr_images = self.driver.find_elements(By.CSS_SELECTOR, "img.qr-code")
