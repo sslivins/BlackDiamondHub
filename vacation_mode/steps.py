@@ -44,7 +44,7 @@ VACATION_STEPS = [
         ],
     },
     {
-        "alias": "Set Buffer Tank to 28°C",
+        "alias": "Set Buffer Tank & Backup Differential",
         "icon": "fas fa-temperature-arrow-down",
         "actions": [
             {
@@ -52,6 +52,13 @@ VACATION_STEPS = [
                 "data": {
                     "entity_id": "number.aeco_1988_hot_tank_target_temperature",
                     "value": "28",
+                },
+            },
+            {
+                "action": "number/set_value",
+                "data": {
+                    "entity_id": "number.aeco_1988_backup_differential",
+                    "value": "8",
                 },
             },
         ],
@@ -63,51 +70,46 @@ VACATION_STEPS = [
             {
                 "action": "climate/set_temperature",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.master_bedroom",
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
-                "device_id": "c5569f4e6018519213237a1959466f73",
                 "delay_after": 1,
             },
             {
                 "action": "climate/set_temperature",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.basement_bunk_rooms",
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
-                "device_id": "c1a18960f155608d8e51d3602b440c0c",
                 "delay_after": 1,
             },
             {
                 "action": "climate/set_temperature",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.main_floor",
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
-                "device_id": "3c8299f7d84395386348e53cd9a1546d",
                 "delay_after": 1,
             },
             {
                 "action": "climate/set_temperature",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.basement_master",
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
-                "device_id": "710aecb39bd6d0c6b4553a371eb99895",
                 "delay_after": 1,
             },
             {
                 "action": "climate/set_temperature",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.ski_room",
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
-                "device_id": "652c56dece31b19b0e56d46e87290d43",
             },
         ],
     },
@@ -175,19 +177,6 @@ VACATION_STEPS = [
         ],
     },
     {
-        "alias": "Set Backup Differential to 8",
-        "icon": "fas fa-gauge-high",
-        "actions": [
-            {
-                "action": "number/set_value",
-                "data": {
-                    "entity_id": "number.aeco_1988_backup_differential",
-                    "value": "8",
-                },
-            },
-        ],
-    },
-    {
         "alias": "Enable Home Away Mode",
         "icon": "fas fa-plane-departure",
         "actions": [
@@ -242,8 +231,28 @@ HOME_STEPS = [
         ],
     },
     {
-        "alias": "Reset Thermostat Presets & Buffer Tank",
+        "alias": "Set Buffer Tank & Backup Differential",
         "icon": "fas fa-temperature-arrow-up",
+        "actions": [
+            {
+                "action": "number/set_value",
+                "data": {
+                    "entity_id": "number.aeco_1988_hot_tank_target_temperature",
+                    "value": "36",
+                },
+            },
+            {
+                "action": "number/set_value",
+                "data": {
+                    "entity_id": "number.aeco_1988_backup_differential",
+                    "value": "6",
+                },
+            },
+        ],
+    },
+    {
+        "alias": "Set Thermostats to Home Temperatures",
+        "icon": "fas fa-house-chimney",
         "actions": [
             {
                 "action": "climate/set_preset_mode",
@@ -258,68 +267,51 @@ HOME_STEPS = [
                     "c5569f4e6018519213237a1959466f73",
                     "c1a18960f155608d8e51d3602b440c0c",
                 ],
-            },
-            {
-                "action": "number/set_value",
-                "data": {
-                    "entity_id": "number.aeco_1988_hot_tank_target_temperature",
-                    "value": "36",
-                },
-            },
-        ],
-    },
-    {
-        "alias": "Set Thermostats to Home Temperatures",
-        "icon": "fas fa-house-chimney",
-        "actions": [
-            {
-                "action": "climate/set_temperature",
-                "data": {
-                    "entity_id": None,
-                    "temperature": 19,
-                    "hvac_mode": "heat",
-                },
-                "device_id": "c5569f4e6018519213237a1959466f73",
-                "delay_after": 1,
+                "delay_after": 2,
             },
             {
                 "action": "climate/set_temperature",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.master_bedroom",
                     "temperature": 20,
                     "hvac_mode": "heat",
                 },
-                "device_id": "3c8299f7d84395386348e53cd9a1546d",
                 "delay_after": 1,
             },
             {
                 "action": "climate/set_temperature",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.basement_bunk_rooms",
+                    "temperature": 20,
+                    "hvac_mode": "heat",
+                },
+                "delay_after": 1,
+            },
+            {
+                "action": "climate/set_temperature",
+                "data": {
+                    "entity_id": "climate.main_floor",
+                    "temperature": 20,
+                    "hvac_mode": "heat",
+                },
+                "delay_after": 1,
+            },
+            {
+                "action": "climate/set_temperature",
+                "data": {
+                    "entity_id": "climate.basement_master",
+                    "temperature": 20,
+                    "hvac_mode": "heat",
+                },
+                "delay_after": 1,
+            },
+            {
+                "action": "climate/set_temperature",
+                "data": {
+                    "entity_id": "climate.ski_room",
                     "temperature": 19,
                     "hvac_mode": "heat",
                 },
-                "device_id": "c1a18960f155608d8e51d3602b440c0c",
-                "delay_after": 1,
-            },
-            {
-                "action": "climate/set_temperature",
-                "data": {
-                    "entity_id": None,
-                    "temperature": 18,
-                    "hvac_mode": "heat",
-                },
-                "device_id": "710aecb39bd6d0c6b4553a371eb99895",
-                "delay_after": 1,
-            },
-            {
-                "action": "climate/set_temperature",
-                "data": {
-                    "entity_id": None,
-                    "temperature": 18,
-                    "hvac_mode": "heat",
-                },
-                "device_id": "652c56dece31b19b0e56d46e87290d43",
                 "delay_after": 1,
             },
             {
@@ -358,19 +350,6 @@ HOME_STEPS = [
                 },
                 "device_id": "0abe97d22992d228895650b8c985f68a",
                 "entity_id_override": "6ca02d2dbf190374822573ac052c2d48",
-            },
-        ],
-    },
-    {
-        "alias": "Set Backup Differential to 6",
-        "icon": "fas fa-gauge-high",
-        "actions": [
-            {
-                "action": "number/set_value",
-                "data": {
-                    "entity_id": "number.aeco_1988_backup_differential",
-                    "value": "6",
-                },
             },
         ],
     },
