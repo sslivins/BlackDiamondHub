@@ -79,7 +79,6 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
         # Initialize the Chrome webdriver.
         cls.driver = webdriver.Chrome(options=chrome_options)
         cls.driver.set_window_size(1920, 1080)
-        cls.driver.implicitly_wait(10)
         
     @classmethod
     def tearDownClass(cls):
@@ -87,24 +86,27 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
         super().tearDownClass()
         
     def setUp(self):
+        # Reset browser state between tests
+        self.driver.get('about:blank')
+        self.driver.delete_all_cookies()
+
         self.test_user = User.objects.create_user(username='testuser', password='testpassword')
-        
-    def tearDown(self):
-        # Clear cookies to log out and ensure test isolation between tests.
-        pass
-        #self.driver.delete_all_cookies()        
         
     def test_wifi_page_background_color(self):
         """Verify that the wifi page background color is black (rgba(0, 0, 0, 1))."""
         self.driver.get(f'{self.live_server_url}/wifi/')
-        body = self.driver.find_element(By.TAG_NAME, "body")
+        body = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
         background_color = body.value_of_css_property("background-color")
         self.assertEqual(background_color, 'rgba(0, 0, 0, 1)')
         
     def test_wifi_page_title_and_header(self):
         """Verify that the wifi page title and header are correct."""
         self.driver.get(f'{self.live_server_url}/wifi/')
-        header = self.driver.find_element(By.TAG_NAME, "h1")
+        header = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.TAG_NAME, "h1"))
+        )
         self.assertEqual(header.text.strip(), "WiFi Networks")
         
     # def test_qr_codes_container_is_centered(self):
@@ -148,6 +150,10 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
     def test_wifi_page_no_auth_qr_codes(self):
         """Verify that no QR codes for authenticated networks are displayed for unauthenticated users."""
         self.driver.get(f'{self.live_server_url}/wifi/')
+        # Wait for QR code images to load
+        WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "img.qr-code"))
+        )
         # Find all QR code images.
         qr_images = self.driver.find_elements(By.CSS_SELECTOR, "img.qr-code")
         self.assertGreater(len(qr_images), 0, "No QR code images found on the page")
@@ -181,8 +187,11 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
     def test_wifi_page_public_qr_code(self):
         """Verify that the public QR code is displayed correctly."""
         self.driver.get(f'{self.live_server_url}/wifi/')
-        #self.driver.save_screenshot("screenshot.png")
         
+        # Wait for QR code images to load
+        WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "img.qr-code"))
+        )
         # Verify that at least one QR code image is present.
         qr_images = self.driver.find_elements(By.CSS_SELECTOR, "img.qr-code")
         self.assertGreater(len(qr_images), 0, "No QR code images found on the page")
@@ -227,24 +236,28 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
         self.driver.get(f"{self.live_server_url}/wifi/")
         
         #press the login button
-        login_button = WebDriverWait(self.driver, 10).until(
+        login_button = WebDriverWait(self.driver, 20).until(
             EC.element_to_be_clickable((By.ID, 'login-button'))
         )
         #assert if login button is present
         self.assertTrue(login_button.is_displayed(), "Login button is not displayed")
         login_button.click()
         
-        time.sleep(2)       
-        self.driver.save_screenshot("screenshot_login.png")        
-        
-        username_input = self.driver.find_element(By.ID, "id_username")
-        password_input = self.driver.find_element(By.ID, "id_username")
+        # Wait for login page to load
+        username_input = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.ID, "id_username"))
+        )
+        password_input = self.driver.find_element(By.ID, "id_password")
         username_input.send_keys("testuser")
         password_input.send_keys("testpassword")
         
         login_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
         login_button.click()
         
+        # Wait for redirect back to wifi page
+        WebDriverWait(self.driver, 20).until(
+            EC.url_contains("/wifi/")
+        )
         
         # Check that the current URL is the wifi page.
         self.assertIn("/wifi/", self.driver.current_url)
@@ -257,18 +270,18 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
         self.driver.get(f"{self.live_server_url}/wifi/")
         
         #press the login button
-        login_button = WebDriverWait(self.driver, 10).until(
+        login_button = WebDriverWait(self.driver, 20).until(
             EC.element_to_be_clickable((By.ID, 'login-button'))
         )
         #assert if login button is present
         self.assertTrue(login_button.is_displayed(), "Login button is not displayed")
         login_button.click()
         
-        #take snapshot
-        self.driver.save_screenshot("screenshot.png")
-        
-        username_input = self.driver.find_element(By.NAME, "username")
-        password_input = self.driver.find_element(By.NAME, "password")
+        # Wait for login page to load
+        username_input = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.ID, "id_username"))
+        )
+        password_input = self.driver.find_element(By.ID, "id_password")
         username_input.send_keys("testuser")
         password_input.send_keys("testpassword")
         
@@ -276,7 +289,7 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
         login_button.click()
         
         # Wait for the redirect to complete.
-        logout_button = WebDriverWait(self.driver, 10).until(
+        logout_button = WebDriverWait(self.driver, 20).until(
             EC.element_to_be_clickable((By.ID, 'logout-button'))
         )
         #assert if logout button is present
@@ -293,22 +306,28 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
        
         self.driver.get(f"{self.live_server_url}/wifi/")
         
-        login_button = WebDriverWait(self.driver, 10).until(
+        login_button = WebDriverWait(self.driver, 20).until(
             EC.element_to_be_clickable((By.ID, 'login-button'))
         )
         #assert if login button is present
         self.assertTrue(login_button.is_displayed(), "Login button is not displayed")
         login_button.click()
         
-        username_input = self.driver.find_element(By.NAME, "username")
-        password_input = self.driver.find_element(By.NAME, "password")
+        # Wait for login page to load
+        username_input = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.ID, "id_username"))
+        )
+        password_input = self.driver.find_element(By.ID, "id_password")
         username_input.send_keys("testuser")
         password_input.send_keys("testpassword")
         
         login_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        login_button.click()        
+        login_button.click()
         
-        # After logging in, go to the wifi page.
+        # Wait for redirect back to wifi page
+        WebDriverWait(self.driver, 20).until(
+            EC.url_contains("/wifi/")
+        )
     
         qr_images = self.driver.find_elements(By.CSS_SELECTOR, "img.qr-code")
         self.assertGreater(len(qr_images), 0, "No QR code images found on the page")
@@ -345,20 +364,28 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
         
         self.driver.get(f"{self.live_server_url}/wifi/")
         
-        login_button = WebDriverWait(self.driver, 10).until(
+        login_button = WebDriverWait(self.driver, 20).until(
             EC.element_to_be_clickable((By.ID, 'login-button'))
         )
         #assert if login button is present
         self.assertTrue(login_button.is_displayed(), "Login button is not displayed")
         login_button.click()
         
-        username_input = self.driver.find_element(By.NAME, "username")
-        password_input = self.driver.find_element(By.NAME, "password")
+        # Wait for login page to load
+        username_input = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.ID, "id_username"))
+        )
+        password_input = self.driver.find_element(By.ID, "id_password")
         username_input.send_keys("testuser")
         password_input.send_keys("testpassword")
         
         login_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        login_button.click()   
+        login_button.click()
+        
+        # Wait for redirect back to wifi page
+        WebDriverWait(self.driver, 20).until(
+            EC.url_contains("/wifi/")
+        )   
         
         
         qr_images = self.driver.find_elements(By.CSS_SELECTOR, "img.qr-code")
