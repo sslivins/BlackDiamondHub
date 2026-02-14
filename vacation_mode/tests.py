@@ -631,14 +631,14 @@ class AdditionalViewTests(TestCase):
 
     @patch("vacation_mode.views.get_away_mode_state")
     @patch("vacation_mode.views.get_active_run")
-    def test_dry_run_checkbox_checked_by_default(self, mock_active, mock_away):
-        """Dry run checkbox should be checked by default."""
+    def test_dry_run_checkbox_unchecked_by_default(self, mock_active, mock_away):
+        """Dry run checkbox should be unchecked by default."""
         mock_away.return_value = False
         mock_active.return_value = None
         response = self.client.get("/vacation_mode/")
         content = response.content.decode()
-        self.assertIn('checked', content)
-        self.assertIn('let dryRun = true', content)
+        self.assertNotIn('checked', content.split('dry-run-checkbox')[1].split('>')[0])
+        self.assertIn('let dryRun = false', content)
 
     @patch("vacation_mode.views.start_execution")
     def test_execute_dry_run_false_by_default(self, mock_start):
@@ -852,10 +852,10 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
         )
         self.assertIn("Prepare for Arrival", btn.text)
 
-    def test_dry_run_checked_by_default(self):
-        """Dry run checkbox should be checked by default."""
+    def test_dry_run_unchecked_by_default(self):
+        """Dry run checkbox should be unchecked by default."""
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
         checkbox = WebDriverWait(self.driver, 5).until(
             EC.presence_of_element_located((By.ID, "dry-run-checkbox"))
         )
-        self.assertTrue(checkbox.is_selected())
+        self.assertFalse(checkbox.is_selected())

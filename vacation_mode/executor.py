@@ -214,7 +214,8 @@ def run_steps(run_id, steps, dry_run=False):
     run_data["completed_at"] = time.time()
 
     # Release lock
-    _execution_lock.release()
+    if _execution_lock.locked():
+        _execution_lock.release()
 
 
 def start_execution(mode, dry_run=False):
