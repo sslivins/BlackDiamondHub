@@ -20,12 +20,11 @@ VACATION_STEPS = [
         "icon": "fas fa-fire",
         "actions": [
             {
-                "action": "water_heater/set_operation_mode",
+                "action": "climate/set_preset_mode",
                 "data": {
-                    "entity_id": None,  # Uses device_id targeting
-                    "operation_mode": "off",
+                    "entity_id": "climate.econet_hpwh",
+                    "preset_mode": "Off",
                 },
-                "device_id": "ddc7ec36bd2d3df1a200ca80e92ce757",
             },
         ],
     },
@@ -36,10 +35,9 @@ VACATION_STEPS = [
             {
                 "action": "climate/set_preset_mode",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.hot_tub_heater",
                     "preset_mode": "Away From Home",
                 },
-                "device_id": "a24f0f48e3a062d31841e7602de80f7b",
             },
         ],
     },
@@ -120,39 +118,41 @@ VACATION_STEPS = [
             {
                 "action": "climate/set_temperature",
                 "data": {
+                    "entity_id": "climate.garage_thermostat_thermostat",
                     "temperature": 5,
                 },
-                "area_id": ["garage", "garage_storage_room"],
+                "delay_after": 1,
+            },
+            {
+                "action": "climate/set_temperature",
+                "data": {
+                    "entity_id": "climate.storage_room_thermostat_thermostat",
+                    "temperature": 5,
+                },
             },
         ],
     },
     {
-        "alias": "Set Freezer to Vacation Mode",
+        "alias": "Set Fridge & Freezer to Vacation Mode",
         "icon": "fas fa-icicles",
         "actions": [
             {
                 "action": "switch/turn_on",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "switch.freezer_eco_mode",
                 },
-                "device_id": "84b64f7a7a57a0653c0e97fbd4930737",
-                "entity_id_override": "e043466b0b08145b26f28eff99d1ffd4",
             },
             {
                 "action": "switch/turn_off",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "switch.freezer_dispenser",
                 },
-                "device_id": "84b64f7a7a57a0653c0e97fbd4930737",
-                "entity_id_override": "6da74fdfb7d977912538b3363173099f",
             },
             {
                 "action": "switch/turn_on",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "switch.refrigerator_eco_mode",
                 },
-                "device_id": "0abe97d22992d228895650b8c985f68a",
-                "entity_id_override": "6ca02d2dbf190374822573ac052c2d48",
             },
         ],
     },
@@ -161,18 +161,38 @@ VACATION_STEPS = [
         "icon": "fas fa-tv",
         "actions": [
             {
-                "action": "remote/turn_off",
+                "action": "switch/turn_off",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "switch.living_room_tv_socket_1",
                 },
-                "device_id": "53ddc5429f77069b67290347729b2e72",
+                "delay_after": 1,
             },
             {
-                "action": "remote/turn_off",
+                "action": "switch/turn_off",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "switch.basement_master_tv_socket_1",
                 },
-                "device_id": "db27e57cdcb1d7e835afb4721210a568",
+                "delay_after": 1,
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.media_room_tv_socket_1",
+                },
+                "delay_after": 1,
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.office_tv_socket_1",
+                },
+                "delay_after": 1,
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.master_bedroom_tv_socket_1",
+                },
             },
         ],
     },
@@ -199,12 +219,11 @@ HOME_STEPS = [
         "icon": "fas fa-fire",
         "actions": [
             {
-                "action": "water_heater/set_operation_mode",
+                "action": "climate/set_preset_mode",
                 "data": {
-                    "entity_id": None,
-                    "operation_mode": "eco",
+                    "entity_id": "climate.econet_hpwh",
+                    "preset_mode": "Eco Mode",
                 },
-                "device_id": "ddc7ec36bd2d3df1a200ca80e92ce757",
             },
         ],
     },
@@ -213,20 +232,11 @@ HOME_STEPS = [
         "icon": "fas fa-hot-tub-person",
         "actions": [
             {
-                "action": "switch/turn_off",
-                "data": {
-                    "entity_id": None,
-                },
-                "device_id": "a24f0f48e3a062d31841e7602de80f7b",
-                "entity_id_override": "ea06b7842bd1dbc3247f99a31b5abff5",
-            },
-            {
                 "action": "climate/set_preset_mode",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "climate.hot_tub_heater",
                     "preset_mode": "Standard",
                 },
-                "device_id": "a24f0f48e3a062d31841e7602de80f7b",
             },
         ],
     },
@@ -257,16 +267,15 @@ HOME_STEPS = [
             {
                 "action": "climate/set_preset_mode",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": [
+                        "climate.master_bedroom",
+                        "climate.basement_bunk_rooms",
+                        "climate.main_floor",
+                        "climate.basement_master",
+                        "climate.ski_room",
+                    ],
                     "preset_mode": "none",
                 },
-                "device_id": [
-                    "710aecb39bd6d0c6b4553a371eb99895",
-                    "652c56dece31b19b0e56d46e87290d43",
-                    "3c8299f7d84395386348e53cd9a1546d",
-                    "c5569f4e6018519213237a1959466f73",
-                    "c1a18960f155608d8e51d3602b440c0c",
-                ],
                 "delay_after": 2,
             },
             {
@@ -317,9 +326,17 @@ HOME_STEPS = [
             {
                 "action": "climate/set_temperature",
                 "data": {
+                    "entity_id": "climate.garage_thermostat_thermostat",
                     "temperature": 10,
                 },
-                "area_id": ["garage", "garage_storage_room"],
+                "delay_after": 1,
+            },
+            {
+                "action": "climate/set_temperature",
+                "data": {
+                    "entity_id": "climate.storage_room_thermostat_thermostat",
+                    "temperature": 10,
+                },
             },
         ],
     },
@@ -328,28 +345,62 @@ HOME_STEPS = [
         "icon": "fas fa-icicles",
         "actions": [
             {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.freezer_eco_mode",
+                },
+            },
+            {
                 "action": "switch/turn_on",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "switch.freezer_dispenser",
                 },
-                "device_id": "84b64f7a7a57a0653c0e97fbd4930737",
-                "entity_id_override": "6da74fdfb7d977912538b3363173099f",
             },
             {
                 "action": "switch/turn_off",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "switch.refrigerator_eco_mode",
                 },
-                "device_id": "84b64f7a7a57a0653c0e97fbd4930737",
-                "entity_id_override": "e043466b0b08145b26f28eff99d1ffd4",
+            },
+        ],
+    },
+    {
+        "alias": "Turn On Televisions",
+        "icon": "fas fa-tv",
+        "actions": [
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.living_room_tv_socket_1",
+                },
+                "delay_after": 1,
             },
             {
-                "action": "switch/turn_off",
+                "action": "switch/turn_on",
                 "data": {
-                    "entity_id": None,
+                    "entity_id": "switch.basement_master_tv_socket_1",
                 },
-                "device_id": "0abe97d22992d228895650b8c985f68a",
-                "entity_id_override": "6ca02d2dbf190374822573ac052c2d48",
+                "delay_after": 1,
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.media_room_tv_socket_1",
+                },
+                "delay_after": 1,
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.office_tv_socket_1",
+                },
+                "delay_after": 1,
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.master_bedroom_tv_socket_1",
+                },
             },
         ],
     },
