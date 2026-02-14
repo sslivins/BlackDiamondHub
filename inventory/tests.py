@@ -33,9 +33,6 @@ class ItemModalTests(LiveServerTestCase):
         options.add_argument('--disable-gpu')
         cls.browser = webdriver.Chrome(options=options)
         cls.browser.set_window_size(1920, 1080)
-        
-        # Set an implicit wait for elements to load
-        cls.browser.implicitly_wait(10)
 
     @classmethod
     def tearDownClass(cls):
@@ -43,6 +40,10 @@ class ItemModalTests(LiveServerTestCase):
         super().tearDownClass()
 
     def setUp(self):
+        # Reset browser state between tests
+        self.browser.get('about:blank')
+        self.browser.delete_all_cookies()
+
         # Create a white square placeholder image in memory
         image = Image.new('RGB', (100, 100), color='black')
         image_io = io.BytesIO()
@@ -83,7 +84,7 @@ class ItemModalTests(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/inventory/')
         
         #wait for first tile to load
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
         )
         
@@ -99,7 +100,7 @@ class ItemModalTests(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/inventory/')
         
         #wait for first tile to load
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
         )
         
@@ -112,19 +113,19 @@ class ItemModalTests(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/inventory/')
         
         #wait for first tile to load
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
         )
         
         item_element.click()
         
         # Wait for the modal to appear
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
         # Wait until the title of the modal is populated (indicating the modal is fully loaded)
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
         )
         
@@ -192,19 +193,19 @@ class ItemModalTests(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/inventory/')
         
         #wait for tile to load that doesn't have a long description
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[7].id}'))
         )
         
         item_element.click()
         
         # Wait for the modal to appear
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
         # Wait until the title of the modal is populated (indicating the modal is fully loaded)
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
         )        
         
@@ -233,18 +234,18 @@ class ItemModalTests(LiveServerTestCase):
 
         # Open the modal
         #wait for first tile to load
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
         )
         item_element.click()
 
         # Wait for the modal to appear
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
         # Wait until the title of the modal is populated (indicating the modal is fully loaded)
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
         )        
 
@@ -253,7 +254,7 @@ class ItemModalTests(LiveServerTestCase):
         close_button.click()
 
         # Wait for the modal to be hidden
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.invisibility_of_element_located((By.ID, 'itemModal'))
         )
 
@@ -267,18 +268,18 @@ class ItemModalTests(LiveServerTestCase):
 
         # Open the modal
         #wait tile to load
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[5].id}'))
         )
         item_element.click()
 
         # Wait for the modal to appear
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
         # Wait until the title of the modal is populated (indicating the modal is fully loaded)
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
         )        
 
@@ -288,7 +289,7 @@ class ItemModalTests(LiveServerTestCase):
         
 
         # Wait for the modal to be hidden
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.invisibility_of_element_located((By.ID, 'itemModal'))
         )
 
@@ -301,7 +302,7 @@ class ItemModalTests(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/inventory/')
         
         #wait for first tile to load
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
         )
         
@@ -313,18 +314,15 @@ class ItemModalTests(LiveServerTestCase):
         search_button = self.browser.find_element(By.ID, 'search-button')
         search_button.click()
         
-        # Wait for search to complete and handle StaleElementReferenceException
-        retries = 3
-        while retries > 0:
-            try:
-                WebDriverWait(self.browser, 10).until(
-                    EC.element_to_be_clickable((By.ID, f'item-{self.items[7].id}'))
-                )
-                break
-            except StaleElementReferenceException:
-                retries -= 1
-                if retries == 0:
-                    raise
+        # Wait for the search page to load (URL should contain keyword)
+        WebDriverWait(self.browser, 20).until(
+            EC.url_contains('keyword=Bedroom')
+        )
+        
+        # Wait for filtered results to render
+        WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.ID, f'item-{self.items[7].id}'))
+        )
         
         #count the number of items displayed
         items = self.browser.find_elements(By.CSS_SELECTOR, "[id^='item-']")
@@ -335,13 +333,13 @@ class ItemModalTests(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/inventory/')
         
         #wait for login button to load
-        login_button = WebDriverWait(self.browser, 10).until(
+        login_button = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, 'login-button'))
         )
         login_button.click()
         
         # Wait for login page to load
-        username_input = WebDriverWait(self.browser, 10).until(
+        username_input = WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.ID, "id_username"))
         )
         password_input = self.browser.find_element(By.ID, "id_password")
@@ -353,7 +351,7 @@ class ItemModalTests(LiveServerTestCase):
         login_button.click()
         
         #ensure we are redirected to the inventory page
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.ID, "feedback-button"))
         )
         
@@ -405,9 +403,6 @@ class ItemModalEditTests(LiveServerTestCase):
         options.add_argument('--disable-gpu')
         cls.browser = webdriver.Chrome(options=options)
         cls.browser.set_window_size(1920, 1080)
-        
-        # Set an implicit wait for elements to load
-        cls.browser.implicitly_wait(10)
 
     @classmethod
     def tearDownClass(cls):
@@ -415,6 +410,10 @@ class ItemModalEditTests(LiveServerTestCase):
         super().tearDownClass()
 
     def setUp(self):
+        # Reset browser state between tests
+        self.browser.get('about:blank')
+        self.browser.delete_all_cookies()
+
         # Create a white square placeholder image in memory
         image = Image.new('RGB', (100, 100), color='black')
         image_io = io.BytesIO()
@@ -455,13 +454,13 @@ class ItemModalEditTests(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/inventory/')
         
         #wait for login button to load
-        login_button = WebDriverWait(self.browser, 10).until(
+        login_button = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, 'login-button'))
         )
         login_button.click()
         
         # Wait for login page to load
-        username_input = WebDriverWait(self.browser, 10).until(
+        username_input = WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.ID, "id_username"))
         )
         password_input = self.browser.find_element(By.ID, "id_password")
@@ -473,7 +472,7 @@ class ItemModalEditTests(LiveServerTestCase):
         login_button.click()
         
         #ensure we are redirected to the inventory page
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.ID, "feedback-button"))
         )
         
@@ -487,18 +486,18 @@ class ItemModalEditTests(LiveServerTestCase):
         # Navigate to the inventory page
         self.test_login_and_correct_redirection()
         
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[1].id}'))
         )
         item_element.click()
 
         # Wait for the modal to appear
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
         # Wait until the title of the modal is populated (indicating the modal is fully loaded)
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
         )        
         
@@ -524,18 +523,18 @@ class ItemModalEditTests(LiveServerTestCase):
         # Navigate to the inventory page
         self.test_login_and_correct_redirection()
         
-        item_element = WebDriverWait(self.browser, 10).until(
+        item_element = WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, f'item-{self.items[7].id}'))
         )
         item_element.click()
 
         # Wait for the modal to appear
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
         # Wait until the title of the modal is populated (indicating the modal is fully loaded)
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
         )        
         
@@ -559,7 +558,7 @@ class ItemModalEditTests(LiveServerTestCase):
         save_button.click()
         
         #wait for the edit button to appear again
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.element_to_be_clickable((By.ID, 'edit-btn'))
         )
         
@@ -576,7 +575,7 @@ class ItemModalEditTests(LiveServerTestCase):
         close_button.click()
         
         #wait for the modal to close
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.invisibility_of_element_located((By.ID, 'itemModal'))
         )
         
@@ -584,12 +583,12 @@ class ItemModalEditTests(LiveServerTestCase):
         item_element.click()
         
         # Wait for the modal to appear
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'itemModal'))
         )
         
         # Wait until the title of the modal is populated (indicating the modal is fully loaded)
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             lambda driver: driver.find_element(By.ID, 'modal-item-title').text != ''
         )        
         

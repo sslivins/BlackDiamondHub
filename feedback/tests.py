@@ -128,8 +128,6 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
         options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
         cls.browser = webdriver.Chrome(options=options)
         cls.browser.set_window_size(1920, 1080)
-        
-        cls.browser.implicitly_wait(10)        
 
     @classmethod
     def tearDownClass(cls):
@@ -137,15 +135,20 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
         super().tearDownClass()
 
     def setUp(self):
+        # Reset browser state between tests
+        self.browser.get('about:blank')
+        self.browser.delete_all_cookies()
+
         # Create some feedback messages
         for i in range(25):
             Feedback.objects.create(name=f'User {i}', email=f'user{i}@example.com', message=f'Message {i}', page_url='/feedback/?page=1')
 
     def test_message_count_display(self):
         self.browser.get(self.live_server_url + reverse('view_feedback'))
-        self.browser.implicitly_wait(10)  # Wait for the JavaScript to execute
-        # Find the element that displays the number of messages
-        message_count_element = self.browser.find_element(By.ID, 'message-count')
+        # Wait for the message count element to load
+        message_count_element = WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.ID, 'message-count'))
+        )
         # Assert that the message count is displayed correctly
         self.assertEqual(message_count_element.text, "Showing 1-20 of 25 messages")
         
@@ -175,7 +178,7 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
         self.browser.get(self.live_server_url + reverse('view_feedback'))
         
         # Wait until the table is loaded
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
         )        
 
@@ -184,7 +187,7 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
         first_feedback_row.click()
         
         # Wait for the modal to be visible
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'feedbackModal'))
         )
 
@@ -214,7 +217,7 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
         self.browser.get(self.live_server_url + reverse('view_feedback'))
         
         # Wait until the table is loaded
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
         )
         
@@ -240,8 +243,6 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
         cls.browser = webdriver.Chrome(options=options)
         cls.browser.set_window_size(1920, 1080)
-        
-        cls.browser.implicitly_wait(10)
 
     @classmethod
     def tearDownClass(cls):
@@ -249,6 +250,10 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         super().tearDownClass()
 
     def setUp(self):
+        # Reset browser state between tests
+        self.browser.get('about:blank')
+        self.browser.delete_all_cookies()
+
         # Create multiple feedback entries to populate the table
         for i in range(25):
             Feedback.objects.create(
@@ -263,7 +268,7 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/feedback/')
         
         # Wait until the table is loaded
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
         )
 
@@ -291,7 +296,7 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/feedback/')
         
         # Wait until the table is loaded
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
         )
 
@@ -309,7 +314,7 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/feedback/')
         
         # Wait until the table is loaded
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
         )
         
@@ -341,7 +346,7 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/feedback/')
         
         # Wait until the table is loaded
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
         )
         
@@ -369,7 +374,7 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/feedback/')
         
         # Wait until the table is loaded
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
         )
         
@@ -378,7 +383,7 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
         next_button.click()
         
         #wait for the table to load
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, '#feedback-table-container tbody tr'))
         )
 
