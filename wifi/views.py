@@ -41,6 +41,6 @@ def wifi_qr(request):
         img.save(buf, format="PNG")
         image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
         
-        qr_codes.append({'ssid': ssid, 'qr_image': image_base64})
+        qr_codes.append({'ssid': ssid, 'qr_image': image_base64, 'password': password})
 
     return render(request, 'wifi_qr.html', {'qr_codes': qr_codes})
