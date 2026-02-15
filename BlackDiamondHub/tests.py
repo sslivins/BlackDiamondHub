@@ -2,8 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from django.test import LiveServerTestCase
-from selenium.webdriver.chrome.options import Options
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.contrib.auth.models import User
 from django.test import TestCase, Client, tag
 from django.urls import reverse
@@ -55,17 +54,11 @@ class LandingPageLiveTests(TestCase):
                     self.fail(f"Temperature value is not a valid number: {temp}")
 
 @tag('selenium')
-class WeatherUnitToggleTest(LiveServerTestCase):
+class WeatherUnitToggleTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        
-        options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode
-        options.add_argument('--no-sandbox')  # Bypass OS security model, necessary in some environments
-        options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-        options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
-        cls.browser = webdriver.Chrome(options=options)
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
         cls.browser.set_window_size(1920, 1080)
 
     @classmethod
@@ -155,17 +148,11 @@ class WeatherUnitToggleTest(LiveServerTestCase):
         self.assertEqual(elevation_text, "Elevation: 1000 m")
 
 @tag('selenium')
-class FeedbackModalTest(LiveServerTestCase):
+class FeedbackModalTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        
-        options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode
-        options.add_argument('--no-sandbox')  # Bypass OS security model, necessary in some environments
-        options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-        options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
-        cls.browser = webdriver.Chrome(options=options)
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
         cls.browser.set_window_size(1920, 1080)
         
         # Create a test user
@@ -194,7 +181,7 @@ class FeedbackModalTest(LiveServerTestCase):
         try:
             unread_count_element = self.browser.find_element(By.CLASS_NAME, "badge")
             initial_unread_count = int(unread_count_element.text)
-        except:
+        except Exception:
             initial_unread_count = 0
 
         # Open the feedback modal

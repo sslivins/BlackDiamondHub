@@ -1,23 +1,17 @@
-from django.test import TestCase
-
-import time
 import base64
 import io
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from django.test import tag
+from django.test import TestCase, tag, override_settings, Client
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
 from django.contrib.auth.models import User
-
-from django.test import TestCase, override_settings, Client
 from django.urls import reverse
 
 from PIL import Image
 from pyzbar.pyzbar import decode
-from tests.selenium_helpers import login_from_page
+from tests.selenium_helpers import get_chrome_options, login_from_page
 
 class WifiQRGenerationTests(TestCase):
     def setUp(self):
@@ -75,12 +69,7 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-gpu")
-        # Initialize the Chrome webdriver.
-        cls.driver = webdriver.Chrome(options=chrome_options)
+        cls.driver = webdriver.Chrome(options=get_chrome_options())
         cls.driver.set_window_size(1920, 1080)
         
     @classmethod

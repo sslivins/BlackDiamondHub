@@ -1,21 +1,18 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from django.test import LiveServerTestCase, tag
+from django.test import tag
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-import unittest
 
 import time
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlparse, parse_qs, urlsplit
 import re
 
 from django.test import TestCase
 from dateutil import parser as dt_parser
 import pytz
+from tests.selenium_helpers import get_chrome_options
 
 from sunpeaks_webcams.views import check_for_new_webcams
 
@@ -155,13 +152,7 @@ class SunPeaksWebcamsTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        
-        options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode
-        options.add_argument('--no-sandbox')  # Bypass OS security model, necessary in some environments
-        options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-        options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
-        cls.browser = webdriver.Chrome(options=options)
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
         cls.browser.set_window_size(1920, 1080)
 
     @classmethod
@@ -226,17 +217,11 @@ class SunPeaksWebcamsTest(StaticLiveServerTestCase):
         self.assertFalse(modal.is_displayed(), "Modal did not close when the close button was clicked")
 
 @tag('selenium')
-class FeedbackModalTest(LiveServerTestCase):
+class FeedbackModalTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        
-        options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode
-        options.add_argument('--no-sandbox')  # Bypass OS security model, necessary in some environments
-        options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-        options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
-        cls.browser = webdriver.Chrome(options=options)
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
         cls.browser.set_window_size(1920, 1080)
 
     @classmethod
