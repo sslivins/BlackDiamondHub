@@ -3,7 +3,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium.webdriver.common.action_chains import ActionChains
-from django.test import LiveServerTestCase
+from django.test import LiveServerTestCase, tag
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -18,7 +18,9 @@ import base64
 from selenium.common.exceptions import NoSuchElementException
 from django.contrib.auth.models import User
 from selenium.common.exceptions import StaleElementReferenceException
+from tests.selenium_helpers import login_from_page
 
+@tag('selenium')
 class ItemModalTests(LiveServerTestCase):
 
     @classmethod
@@ -332,23 +334,8 @@ class ItemModalTests(LiveServerTestCase):
         # Navigate to the inventory page
         self.browser.get(f'{self.live_server_url}/inventory/')
         
-        #wait for login button to load
-        login_button = WebDriverWait(self.browser, 20).until(
-            EC.element_to_be_clickable((By.ID, 'login-button'))
-        )
-        login_button.click()
-        
-        # Wait for login page to load
-        username_input = WebDriverWait(self.browser, 20).until(
-            EC.presence_of_element_located((By.ID, "id_username"))
-        )
-        password_input = self.browser.find_element(By.ID, "id_password")
-        
-        username_input.send_keys("testuser")
-        password_input.send_keys("testpassword")
-        
-        login_button = self.browser.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        login_button.click()
+        # Log in using shared helper
+        login_from_page(self.browser, self.live_server_url)
         
         #ensure we are redirected to the inventory page
         WebDriverWait(self.browser, 20).until(
@@ -389,6 +376,7 @@ class ItemModalTests(LiveServerTestCase):
       self.test_login_and_correct_redirection()
       self.test_search_filter()
       
+@tag('selenium')
 class ItemModalEditTests(LiveServerTestCase):
 
     @classmethod
@@ -453,23 +441,8 @@ class ItemModalEditTests(LiveServerTestCase):
         # Navigate to the inventory page
         self.browser.get(f'{self.live_server_url}/inventory/')
         
-        #wait for login button to load
-        login_button = WebDriverWait(self.browser, 20).until(
-            EC.element_to_be_clickable((By.ID, 'login-button'))
-        )
-        login_button.click()
-        
-        # Wait for login page to load
-        username_input = WebDriverWait(self.browser, 20).until(
-            EC.presence_of_element_located((By.ID, "id_username"))
-        )
-        password_input = self.browser.find_element(By.ID, "id_password")
-        
-        username_input.send_keys("testuser")
-        password_input.send_keys("testpassword")
-        
-        login_button = self.browser.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        login_button.click()
+        # Log in using shared helper
+        login_from_page(self.browser, self.live_server_url)
         
         #ensure we are redirected to the inventory page
         WebDriverWait(self.browser, 20).until(

@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, tag
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from unittest.mock import patch, MagicMock
 import json
@@ -734,6 +734,7 @@ class HomepageIconTests(TestCase):
         self.assertContains(response, "Vacation Mode")
 
 
+@tag('selenium')
 class SeleniumVacationModeTests(StaticLiveServerTestCase):
     """Selenium tests to validate the vacation mode page renders correctly at 1920x1080."""
 
@@ -748,6 +749,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-dev-shm-usage")
         try:
             if _chrome_service:
                 cls.driver = webdriver.Chrome(service=_chrome_service, options=chrome_options)
@@ -756,7 +758,6 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
         except Exception as e:
             raise unittest.SkipTest(f"Chrome WebDriver not available: {e}")
         cls.driver.set_window_size(1920, 1080)
-        cls.driver.implicitly_wait(10)
 
     @classmethod
     def tearDownClass(cls):
@@ -764,6 +765,9 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
         super().tearDownClass()
 
     def setUp(self):
+        # Reset browser state between tests
+        self.driver.get('about:blank')
+        self.driver.delete_all_cookies()
         # Monkeypatch get_away_mode_state so the live server uses our mock
         from vacation_mode import views as vm_views
         self._original_get_away_mode_state = vm_views.get_away_mode_state
@@ -780,7 +784,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
     def test_no_vertical_scrollbar_at_1080p(self):
         """Page should fit within 1920x1080 without vertical scrollbar."""
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.ID, "step-list"))
         )
         scroll_height = self.driver.execute_script("return document.documentElement.scrollHeight")
@@ -793,7 +797,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
     def test_no_horizontal_scrollbar_at_1080p(self):
         """Page should fit within 1920x1080 without horizontal scrollbar."""
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.ID, "step-list"))
         )
         scroll_width = self.driver.execute_script("return document.documentElement.scrollWidth")
@@ -806,7 +810,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
     def test_step_items_render_on_page(self):
         """Step items should be rendered on the page."""
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.ID, "step-list"))
         )
         step_items = self.driver.find_elements(By.CSS_SELECTOR, ".step-item")
@@ -816,7 +820,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
         """When away, home steps should be shown."""
         self._set_away_state(True)
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.ID, "step-list"))
         )
         step_items = self.driver.find_elements(By.CSS_SELECTOR, ".step-item")
@@ -825,7 +829,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
     def test_step_items_are_single_line(self):
         """Each step item should be a single-line row (no wrapping)."""
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        WebDriverWait(self.driver, 5).until(
+        WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.ID, "step-list"))
         )
         step_items = self.driver.find_elements(By.CSS_SELECTOR, ".step-item")
@@ -837,7 +841,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
     def test_action_button_visible(self):
         """The action button should be visible."""
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        btn = WebDriverWait(self.driver, 5).until(
+        btn = WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.ID, "action-btn"))
         )
         self.assertTrue(btn.is_displayed())
@@ -847,7 +851,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
         """When away, button should show Prepare for Arrival."""
         self._set_away_state(True)
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        btn = WebDriverWait(self.driver, 5).until(
+        btn = WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.ID, "action-btn"))
         )
         self.assertIn("Prepare for Arrival", btn.text)
@@ -855,7 +859,7 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
     def test_dry_run_unchecked_by_default(self):
         """Dry run checkbox should be unchecked by default."""
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        checkbox = WebDriverWait(self.driver, 5).until(
+        checkbox = WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.ID, "dry-run-checkbox"))
         )
         self.assertFalse(checkbox.is_selected())

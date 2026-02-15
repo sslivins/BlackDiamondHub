@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from django.test import LiveServerTestCase
+from django.test import LiveServerTestCase, tag
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
@@ -150,6 +150,7 @@ class CheckForNewWebcamsTests(TestCase):
                 f"For camera '{camera_name}', expected elevation: '{exp['elevation']}', but got: '{webcam['elevation']}'"
             )
 
+@tag('selenium')
 class SunPeaksWebcamsTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
@@ -162,30 +163,41 @@ class SunPeaksWebcamsTest(StaticLiveServerTestCase):
         options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
         cls.browser = webdriver.Chrome(options=options)
         cls.browser.set_window_size(1920, 1080)
-        
-        cls.browser.implicitly_wait(10)
 
     @classmethod
     def tearDownClass(cls):
         cls.browser.quit()
+        super().tearDownClass()
+
+    def setUp(self):
+        # Reset browser state between tests
+        self.browser.get('about:blank')
+        self.browser.delete_all_cookies()
 
     def test_background_color(self):
         self.browser.get(f'{self.live_server_url}/sunpeaks_webcams/')
-        body = self.browser.find_element(By.TAG_NAME, 'body')
+        body = WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.TAG_NAME, 'body'))
+        )
         background_color = body.value_of_css_property('background-color')
         self.assertEqual(background_color, 'rgba(0, 0, 0, 1)')
 
     def test_images_are_displayed(self):
         self.browser.get(f'{self.live_server_url}/sunpeaks_webcams/')
+        WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '#webcams img'))
+        )
         images = self.browser.find_elements(By.CSS_SELECTOR, '#webcams img')
         self.assertTrue(len(images) > 0, "No images found on the page")
 
     def test_image_modal_opens(self):
         self.browser.get(f'{self.live_server_url}/sunpeaks_webcams/')
-        first_image = self.browser.find_element(By.CSS_SELECTOR, '#webcams img')
+        first_image = WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '#webcams img'))
+        )
         first_image.click()
 
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'webcam-image-modal-image'))
         )
 
@@ -194,23 +206,26 @@ class SunPeaksWebcamsTest(StaticLiveServerTestCase):
 
     def test_modal_closes(self):
         self.browser.get(f'{self.live_server_url}/sunpeaks_webcams/')
-        first_image = self.browser.find_element(By.CSS_SELECTOR, '#webcams img')
+        first_image = WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '#webcams img'))
+        )
         first_image.click()
 
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, 'webcam-image-modal-image'))
         )
 
         close_button = self.browser.find_element(By.CSS_SELECTOR, '#webcam-image-modal .close')
         close_button.click()
 
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.invisibility_of_element((By.ID, 'webcam-image-modal-image'))
         )
 
         modal = self.browser.find_element(By.ID, 'webcam-image-modal-image')
         self.assertFalse(modal.is_displayed(), "Modal did not close when the close button was clicked")
 
+@tag('selenium')
 class FeedbackModalTest(LiveServerTestCase):
     @classmethod
     def setUpClass(cls):
@@ -223,13 +238,16 @@ class FeedbackModalTest(LiveServerTestCase):
         options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
         cls.browser = webdriver.Chrome(options=options)
         cls.browser.set_window_size(1920, 1080)
-        
-        cls.browser.implicitly_wait(10)  
 
     @classmethod
     def tearDownClass(cls):
         cls.browser.quit()
         super().tearDownClass()
+
+    def setUp(self):
+        # Reset browser state between tests
+        self.browser.get('about:blank')
+        self.browser.delete_all_cookies()
 
     def test_feedback_modal_submission(self):
         
@@ -237,7 +255,7 @@ class FeedbackModalTest(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/sunpeaks_webcams/')
 
         #wait for page to load
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.CLASS_NAME, "feedback-button"))
         )
         
@@ -246,12 +264,14 @@ class FeedbackModalTest(LiveServerTestCase):
         feedback_button.click()
         
         # Wait for the modal to be visible
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, "feedback-modal"))
         )
 
         # Fill out the feedback form
-        name_input = self.browser.find_element(By.ID, "name")
+        name_input = WebDriverWait(self.browser, 20).until(
+            EC.element_to_be_clickable((By.ID, "name"))
+        )
         email_input = self.browser.find_element(By.ID, "email")
         message_input = self.browser.find_element(By.ID, "message")
 
@@ -269,7 +289,7 @@ class FeedbackModalTest(LiveServerTestCase):
         submit_button.click()
 
         # Wait for the success message to be visible
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, "feedback-success"))
         )
 
@@ -281,7 +301,7 @@ class FeedbackModalTest(LiveServerTestCase):
         
 
         # Wait for the modal to close after a delay
-        WebDriverWait(self.browser, 5).until(
+        WebDriverWait(self.browser, 20).until(
             EC.invisibility_of_element((By.ID, "feedback-modal"))
         )
 
@@ -294,7 +314,7 @@ class FeedbackModalTest(LiveServerTestCase):
         self.browser.get(f'{self.live_server_url}/sunpeaks_webcams/')
 
         #wait for page to load
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.CLASS_NAME, "feedback-button"))
         )
         
@@ -303,7 +323,7 @@ class FeedbackModalTest(LiveServerTestCase):
         feedback_button.click()
         
         # Wait for the modal to be visible
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, 20).until(
             EC.visibility_of_element_located((By.ID, "feedback-modal"))
         )
         
@@ -312,7 +332,7 @@ class FeedbackModalTest(LiveServerTestCase):
         close_button.click()
         
         #wait for modal to close
-        WebDriverWait(self.browser, 5).until(
+        WebDriverWait(self.browser, 20).until(
             EC.invisibility_of_element((By.ID, "feedback-modal"))
         )
         

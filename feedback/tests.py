@@ -1,7 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from django.test import TestCase
+from django.test import TestCase, tag
 from django.urls import reverse
 from .models import Feedback
 from selenium.webdriver.support.ui import WebDriverWait
@@ -115,6 +115,7 @@ class FeedbackViewTests(TestCase):
         self.assertEqual(feedback_row.message, 'Test message 1')
 
 
+@tag('selenium')
 class FeedbackSeleniumTest(StaticLiveServerTestCase):
 
     @classmethod
@@ -230,6 +231,7 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
         # Assert that the background color is dark grey (rgba(26, 26, 26, 1))
         self.assertEqual(background_color, 'rgba(26, 26, 26, 1)')
 
+@tag('selenium')
 class FeedbackPaginationTest(StaticLiveServerTestCase):
 
     @classmethod
