@@ -3,37 +3,26 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium.webdriver.common.action_chains import ActionChains
-from django.test import LiveServerTestCase, tag
-from selenium.webdriver.chrome.options import Options
+from django.test import tag
 from selenium import webdriver
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 import io
 from .models import Item
-import time
-import requests
 from pyzbar.pyzbar import decode
 from io import BytesIO
 import base64
 from selenium.common.exceptions import NoSuchElementException
 from django.contrib.auth.models import User
-from selenium.common.exceptions import StaleElementReferenceException
-from tests.selenium_helpers import login_from_page
+from tests.selenium_helpers import get_chrome_options, login_from_page
 
 @tag('selenium')
-class ItemModalTests(LiveServerTestCase):
+class ItemModalTests(StaticLiveServerTestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-
-        # Set up Selenium Chrome WebDriver options (headless mode)
-        options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--disable-gpu')
-        cls.browser = webdriver.Chrome(options=options)
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
         cls.browser.set_window_size(1920, 1080)
 
     @classmethod
@@ -377,19 +366,12 @@ class ItemModalTests(LiveServerTestCase):
       self.test_search_filter()
       
 @tag('selenium')
-class ItemModalEditTests(LiveServerTestCase):
+class ItemModalEditTests(StaticLiveServerTestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-
-        # Set up Selenium Chrome WebDriver options (headless mode)
-        options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--disable-gpu')
-        cls.browser = webdriver.Chrome(options=options)
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
         cls.browser.set_window_size(1920, 1080)
 
     @classmethod

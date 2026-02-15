@@ -6,11 +6,9 @@ from django.urls import reverse
 from .models import Feedback
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.chrome.options import Options
-import time
 from datetime import timedelta
 from django.utils import timezone
+from tests.selenium_helpers import get_chrome_options
 
 
 class FeedbackViewTests(TestCase):
@@ -121,13 +119,7 @@ class FeedbackSeleniumTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-
-        options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode
-        options.add_argument('--no-sandbox')  # Bypass OS security model, necessary in some environments
-        options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-        options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
-        cls.browser = webdriver.Chrome(options=options)
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
         cls.browser.set_window_size(1920, 1080)
 
     @classmethod
@@ -237,13 +229,7 @@ class FeedbackPaginationTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        
-        options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode
-        options.add_argument('--no-sandbox')  # Bypass OS security model, necessary in some environments
-        options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-        options.add_argument('--disable-gpu')  # Disable GPU hardware acceleration
-        cls.browser = webdriver.Chrome(options=options)
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
         cls.browser.set_window_size(1920, 1080)
 
     @classmethod
