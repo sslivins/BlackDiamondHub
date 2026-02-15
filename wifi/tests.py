@@ -329,8 +329,12 @@ class WifiQRPageSeleniumTests(StaticLiveServerTestCase):
         # Wait for redirect back to wifi page
         WebDriverWait(self.driver, 20).until(
             EC.url_contains("/wifi/")
-        )   
+        )
         
+        # Wait for QR code images to load
+        WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "img.qr-code"))
+        )
         
         qr_images = self.driver.find_elements(By.CSS_SELECTOR, "img.qr-code")
         self.assertGreater(len(qr_images), 0, "No QR code images found on the page")
