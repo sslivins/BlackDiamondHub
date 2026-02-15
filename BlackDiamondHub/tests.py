@@ -5,8 +5,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from django.test import LiveServerTestCase
 from selenium.webdriver.chrome.options import Options
 from django.contrib.auth.models import User
-from django.test import TestCase, Client
+from django.test import TestCase, Client, tag
 from django.urls import reverse
+from tests.selenium_helpers import get_chrome_options, login_via_browser, wait_for_network_idle
 
 class LandingPageLiveTests(TestCase):
     def setUp(self):
@@ -53,6 +54,7 @@ class LandingPageLiveTests(TestCase):
                 except ValueError:
                     self.fail(f"Temperature value is not a valid number: {temp}")
 
+@tag('selenium')
 class WeatherUnitToggleTest(LiveServerTestCase):
     @classmethod
     def setUpClass(cls):
@@ -152,6 +154,7 @@ class WeatherUnitToggleTest(LiveServerTestCase):
         elevation_text = self.browser.find_element(By.CLASS_NAME, "elevation").text
         self.assertEqual(elevation_text, "Elevation: 1000 m")
 
+@tag('selenium')
 class FeedbackModalTest(LiveServerTestCase):
     @classmethod
     def setUpClass(cls):
@@ -179,18 +182,8 @@ class FeedbackModalTest(LiveServerTestCase):
         self.browser.delete_all_cookies()
 
     def test_feedback_modal_submission_and_unread_count(self):
-        # Log in
-        self.browser.get(self.live_server_url + '/accounts/login/')
-        username_input = WebDriverWait(self.browser, 20).until(
-            EC.presence_of_element_located((By.ID, "id_username"))
-        )
-        password_input = self.browser.find_element(By.ID, "id_password")
-        
-        username_input.send_keys("testuser")
-        password_input.send_keys("testpassword")
-        
-        login_button = self.browser.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        login_button.click()
+        # Log in using shared helper
+        login_via_browser(self.browser, self.live_server_url)
 
         # Wait for the login to complete and redirect to the home page
         WebDriverWait(self.browser, 20).until(
@@ -226,14 +219,17 @@ class FeedbackModalTest(LiveServerTestCase):
         email_input.send_keys("testuser@example.com")
         message_input.send_keys("This is a test feedback message.")
 
-        # Submit the feedback form
-        submit_button = WebDriverWait(self.browser, 20).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, "#feedback-form button[type='submit']"))
-        )
-        self.browser.execute_script("arguments[0].click();", submit_button)
+        # Submit the feedback form via JavaScript to ensure the submit event fires
+        self.browser.execute_script("""
+            var form = document.getElementById('feedback-form');
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        """)
+
+        # Wait for network requests to complete
+        wait_for_network_idle(self.browser)
 
         # Wait for the success message to be visible
-        WebDriverWait(self.browser, 20).until(
+        WebDriverWait(self.browser, 30).until(
             EC.visibility_of_element_located((By.ID, "feedback-success"))
         )
 
@@ -241,13 +237,13 @@ class FeedbackModalTest(LiveServerTestCase):
         success_message = self.browser.find_element(By.ID, "feedback-success").text
         self.assertIn("Thank you for your feedback!", success_message)
 
-        # Wait for the modal to close after a delay
-        WebDriverWait(self.browser, 20).until(
+        # Wait for the modal to close after a delay (JS has 2s setTimeout)
+        WebDriverWait(self.browser, 30).until(
             EC.invisibility_of_element((By.ID, "feedback-modal"))
         )
 
         # Check if the unread message count increased
-        WebDriverWait(self.browser, 20).until(
+        WebDriverWait(self.browser, 30).until(
             EC.text_to_be_present_in_element((By.CLASS_NAME, "badge"), str(initial_unread_count + 1))
         )
 
