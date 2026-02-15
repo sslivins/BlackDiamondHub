@@ -34,6 +34,9 @@ from .executor import (
     get_run_status,
     get_active_run,
     run_steps,
+    verify_entity_state,
+    _get_expected_state,
+    _get_entity_ids_for_action,
     _runs,
     _execution_lock,
     STATUS_PENDING,
@@ -148,8 +151,9 @@ class CallHaServiceTests(TestCase):
 class ExecuteStepTests(TestCase):
     """Tests for executing individual steps."""
 
+    @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
     @patch("vacation_mode.executor.call_ha_service")
-    def test_step_success(self, mock_call):
+    def test_step_success(self, mock_call, mock_verify):
         mock_call.return_value = (True, None)
         step = {
             "alias": "Test Step",
@@ -160,9 +164,11 @@ class ExecuteStepTests(TestCase):
         step_status = {"status": "running", "error": None}
         result = execute_step(step, step_status)
         self.assertTrue(result)
+        mock_verify.assert_called_once()
 
+    @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
     @patch("vacation_mode.executor.call_ha_service")
-    def test_step_failure(self, mock_call):
+    def test_step_failure(self, mock_call, mock_verify):
         mock_call.return_value = (False, "Service unavailable")
         step = {
             "alias": "Test Step",
@@ -174,9 +180,12 @@ class ExecuteStepTests(TestCase):
         result = execute_step(step, step_status)
         self.assertFalse(result)
         self.assertIn("Service unavailable", step_status["error"])
+        # verify_entity_state should NOT be called when service call fails
+        mock_verify.assert_not_called()
 
+    @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
     @patch("vacation_mode.executor.call_ha_service")
-    def test_partial_action_failure(self, mock_call):
+    def test_partial_action_failure(self, mock_call, mock_verify):
         """If one action in a step fails but others succeed, the step still fails."""
         mock_call.side_effect = [(True, None), (False, "Error"), (True, None)]
         step = {
@@ -192,6 +201,253 @@ class ExecuteStepTests(TestCase):
         self.assertFalse(result)
         # But all 3 actions were attempted (continue on sub-action failure)
         self.assertEqual(mock_call.call_count, 3)
+        # verify_entity_state called for action 1 and 3 (succeeded), not 2 (failed)
+        self.assertEqual(mock_verify.call_count, 2)
+
+    @patch("vacation_mode.executor.verify_entity_state")
+    @patch("vacation_mode.executor.call_ha_service")
+    def test_step_fails_when_verification_fails(self, mock_call, mock_verify):
+        """Step should fail if service call succeeds but state verification fails."""
+        mock_call.return_value = (True, None)
+        mock_verify.return_value = (False, "State verification failed: switch.test is unavailable")
+        step = {
+            "alias": "Test Step",
+            "actions": [
+                {"action": "switch/turn_on", "data": {"entity_id": "switch.test"}},
+            ],
+        }
+        step_status = {"status": "running", "error": None}
+        result = execute_step(step, step_status)
+        self.assertFalse(result)
+        self.assertIn("unavailable", step_status["error"])
+
+
+class GetExpectedStateTests(TestCase):
+    """Tests for _get_expected_state helper."""
+
+    def test_switch_turn_on(self):
+        check, expected = _get_expected_state("switch/turn_on", {})
+        self.assertEqual(check, "state")
+        self.assertEqual(expected, "on")
+
+    def test_switch_turn_off(self):
+        check, expected = _get_expected_state("switch/turn_off", {})
+        self.assertEqual(check, "state")
+        self.assertEqual(expected, "off")
+
+    def test_input_boolean_turn_on(self):
+        check, expected = _get_expected_state("input_boolean/turn_on", {})
+        self.assertEqual(check, "state")
+        self.assertEqual(expected, "on")
+
+    def test_input_boolean_turn_off(self):
+        check, expected = _get_expected_state("input_boolean/turn_off", {})
+        self.assertEqual(check, "state")
+        self.assertEqual(expected, "off")
+
+    def test_climate_set_temperature(self):
+        check, expected = _get_expected_state("climate/set_temperature", {"temperature": 13.5})
+        self.assertEqual(check, "attr:temperature")
+        self.assertEqual(expected, 13.5)
+
+    def test_climate_set_preset_mode(self):
+        check, expected = _get_expected_state("climate/set_preset_mode", {"preset_mode": "Off"})
+        self.assertEqual(check, "attr:preset_mode")
+        self.assertEqual(expected, "Off")
+
+    def test_number_set_value(self):
+        check, expected = _get_expected_state("number/set_value", {"value": "28"})
+        self.assertEqual(check, "state")
+        self.assertEqual(expected, "28")
+
+    def test_unknown_action(self):
+        check, expected = _get_expected_state("light/turn_on", {})
+        self.assertEqual(check, "state")
+        self.assertEqual(expected, "on")
+
+    def test_climate_set_temperature_no_value(self):
+        check, expected = _get_expected_state("climate/set_temperature", {})
+        self.assertIsNone(check)
+        self.assertIsNone(expected)
+
+
+class GetEntityIdsForActionTests(TestCase):
+    """Tests for _get_entity_ids_for_action helper."""
+
+    def test_single_entity_id(self):
+        action = {"action": "switch/turn_on", "data": {"entity_id": "switch.test"}}
+        self.assertEqual(_get_entity_ids_for_action(action), ["switch.test"])
+
+    def test_list_entity_ids(self):
+        action = {"action": "climate/set_preset_mode", "data": {"entity_id": ["c1", "c2"]}}
+        self.assertEqual(_get_entity_ids_for_action(action), ["c1", "c2"])
+
+    def test_entity_id_override(self):
+        action = {"action": "switch/turn_on", "data": {}, "entity_id_override": "switch.override"}
+        self.assertEqual(_get_entity_ids_for_action(action), ["switch.override"])
+
+    def test_device_id_only(self):
+        action = {"action": "switch/turn_on", "data": {}, "device_id": "abc123"}
+        self.assertEqual(_get_entity_ids_for_action(action), [])
+
+    def test_no_targeting(self):
+        action = {"action": "switch/turn_on", "data": {}}
+        self.assertEqual(_get_entity_ids_for_action(action), [])
+
+
+class VerifyEntityStateTests(TestCase):
+    """Tests for verify_entity_state."""
+
+    def test_dry_run_skips_verification(self):
+        action = {"action": "switch/turn_on", "data": {"entity_id": "switch.test"}}
+        success, error = verify_entity_state(action, dry_run=True)
+        self.assertTrue(success)
+        self.assertIsNone(error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_switch_on_verified(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "on", "attributes": {}},
+        )
+        action = {"action": "switch/turn_on", "data": {"entity_id": "switch.test"}}
+        success, error = verify_entity_state(action)
+        self.assertTrue(success)
+        self.assertIsNone(error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_switch_still_off_after_turn_on(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "off", "attributes": {}},
+        )
+        action = {"action": "switch/turn_on", "data": {"entity_id": "switch.test"}}
+        success, error = verify_entity_state(action)
+        self.assertFalse(success)
+        self.assertIn("expected state 'on', got 'off'", error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_entity_unavailable(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "unavailable", "attributes": {}},
+        )
+        action = {"action": "switch/turn_off", "data": {"entity_id": "switch.test"}}
+        success, error = verify_entity_state(action)
+        self.assertFalse(success)
+        self.assertIn("is unavailable", error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_entity_unknown(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "unknown", "attributes": {}},
+        )
+        action = {"action": "switch/turn_on", "data": {"entity_id": "switch.test"}}
+        success, error = verify_entity_state(action)
+        self.assertFalse(success)
+        self.assertIn("is unknown", error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_climate_temperature_verified(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "heat", "attributes": {"temperature": 13.5}},
+        )
+        action = {"action": "climate/set_temperature", "data": {"entity_id": "climate.main_floor", "temperature": 13.5}}
+        success, error = verify_entity_state(action)
+        self.assertTrue(success)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_climate_temperature_wrong(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "heat", "attributes": {"temperature": 20.0}},
+        )
+        action = {"action": "climate/set_temperature", "data": {"entity_id": "climate.main_floor", "temperature": 13.5}}
+        success, error = verify_entity_state(action)
+        self.assertFalse(success)
+        self.assertIn("expected temperature=13.5, got 20.0", error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_climate_preset_mode_verified(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "heat", "attributes": {"preset_mode": "Off"}},
+        )
+        action = {"action": "climate/set_preset_mode", "data": {"entity_id": "climate.econet_hpwh", "preset_mode": "Off"}}
+        success, error = verify_entity_state(action)
+        self.assertTrue(success)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_climate_preset_mode_wrong(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "heat", "attributes": {"preset_mode": "Eco Mode"}},
+        )
+        action = {"action": "climate/set_preset_mode", "data": {"entity_id": "climate.econet_hpwh", "preset_mode": "Off"}}
+        success, error = verify_entity_state(action)
+        self.assertFalse(success)
+        self.assertIn("expected preset_mode='Off', got 'Eco Mode'", error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_number_set_value_verified(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "28", "attributes": {}},
+        )
+        action = {"action": "number/set_value", "data": {"entity_id": "number.buffer_tank", "value": "28"}}
+        success, error = verify_entity_state(action)
+        self.assertTrue(success)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_multiple_entities_one_fails(self, mock_get):
+        """When multiple entity_ids given, failure of one should fail the verification."""
+        def mock_responses(*args, **kwargs):
+            url = args[0]
+            if "climate.ok" in url:
+                return MagicMock(status_code=200, json=lambda: {"state": "heat", "attributes": {"preset_mode": "none"}})
+            else:
+                return MagicMock(status_code=200, json=lambda: {"state": "unavailable", "attributes": {}})
+        mock_get.side_effect = mock_responses
+        action = {"action": "climate/set_preset_mode", "data": {"entity_id": ["climate.ok", "climate.dead"], "preset_mode": "none"}}
+        success, error = verify_entity_state(action)
+        self.assertFalse(success)
+        self.assertIn("climate.dead is unavailable", error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_http_error_on_state_query(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=500)
+        action = {"action": "switch/turn_on", "data": {"entity_id": "switch.test"}}
+        success, error = verify_entity_state(action)
+        self.assertFalse(success)
+        self.assertIn("HTTP 500", error)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_network_error_on_state_query(self, mock_get):
+        mock_get.side_effect = requests_lib.ConnectionError("timeout")
+        action = {"action": "switch/turn_on", "data": {"entity_id": "switch.test"}}
+        success, error = verify_entity_state(action)
+        self.assertFalse(success)
+        self.assertIn("state query failed", error)
+
+    def test_no_entity_id_skips_verification(self):
+        """Actions with device_id only can't be verified."""
+        action = {"action": "switch/turn_on", "data": {}, "device_id": "abc123"}
+        success, error = verify_entity_state(action)
+        self.assertTrue(success)
 
 
 class ViewTests(TestCase):
@@ -384,8 +640,9 @@ class RunStepsTests(TestCase):
             _execution_lock.release()
         _runs.clear()
 
+    @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
     @patch("vacation_mode.executor.call_ha_service")
-    def test_all_steps_succeed(self, mock_call):
+    def test_all_steps_succeed(self, mock_call, mock_verify):
         mock_call.return_value = (True, None)
 
         steps = [
@@ -407,9 +664,10 @@ class RunStepsTests(TestCase):
         for step in run_data["steps"]:
             self.assertEqual(step["status"], STATUS_SUCCESS)
 
+    @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
     @patch("vacation_mode.executor.call_ha_service")
     @patch("vacation_mode.executor.RETRY_DELAY", 0)
-    def test_step_retries_then_succeeds(self, mock_call):
+    def test_step_retries_then_succeeds(self, mock_call, mock_verify):
         """A step that fails once then succeeds on retry."""
         mock_call.side_effect = [(False, "timeout"), (True, None)]
 
@@ -430,9 +688,10 @@ class RunStepsTests(TestCase):
         self.assertEqual(run_data["steps"][0]["status"], STATUS_SUCCESS)
         self.assertEqual(run_data["status"], "complete")
 
+    @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
     @patch("vacation_mode.executor.call_ha_service")
     @patch("vacation_mode.executor.RETRY_DELAY", 0)
-    def test_step_fails_all_retries_then_continues(self, mock_call):
+    def test_step_fails_all_retries_then_continues(self, mock_call, mock_verify):
         """A step that fails all retries — the run should still complete (continue past it)."""
         # First step always fails, second step succeeds
         mock_call.side_effect = [
@@ -461,8 +720,9 @@ class RunStepsTests(TestCase):
         self.assertEqual(run_data["steps"][0]["status"], STATUS_FAILED)
         self.assertEqual(run_data["steps"][1]["status"], STATUS_SUCCESS)
 
+    @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
     @patch("vacation_mode.executor.call_ha_service")
-    def test_run_releases_lock_on_completion(self, mock_call):
+    def test_run_releases_lock_on_completion(self, mock_call, mock_verify):
         mock_call.return_value = (True, None)
         steps = [{"alias": "S", "icon": "fas fa-test", "actions": [{"action": "switch/turn_on", "data": {"entity_id": "s1"}}]}]
 

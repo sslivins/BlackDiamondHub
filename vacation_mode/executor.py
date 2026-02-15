@@ -24,6 +24,7 @@ _execution_lock = threading.Lock()
 
 MAX_RETRIES = 2
 RETRY_DELAY = 3  # seconds
+STATE_VERIFY_DELAY = 2  # seconds to wait before checking entity state
 
 STATUS_PENDING = "pending"
 STATUS_RUNNING = "running"
@@ -139,6 +140,150 @@ def call_ha_service(action, data, device_id=None, area_id=None, entity_id_overri
         return False, error_msg
 
 
+def _get_expected_state(action, data):
+    """
+    Derive the expected entity state after a service call.
+
+    Returns:
+        (check_type, expected_value) where check_type is one of:
+        - "state": compare against entity state directly
+        - "attr:<name>": compare against an entity attribute
+        - None: no verification possible
+    """
+    domain, service = action.split("/")
+
+    # switch/turn_on, switch/turn_off, input_boolean/turn_on, input_boolean/turn_off
+    if service == "turn_on":
+        return "state", "on"
+    if service == "turn_off":
+        return "state", "off"
+
+    # climate/set_temperature → check attributes.temperature
+    if domain == "climate" and service == "set_temperature":
+        temp = data.get("temperature")
+        if temp is not None:
+            return "attr:temperature", float(temp)
+
+    # climate/set_preset_mode → check attributes.preset_mode
+    if domain == "climate" and service == "set_preset_mode":
+        preset = data.get("preset_mode")
+        if preset is not None:
+            return "attr:preset_mode", preset
+
+    # number/set_value → state equals the value
+    if domain == "number" and service == "set_value":
+        value = data.get("value")
+        if value is not None:
+            return "state", str(value)
+
+    return None, None
+
+
+def _get_entity_ids_for_action(action_def):
+    """
+    Extract the entity_id(s) to verify from an action definition.
+    Returns a list of entity_id strings, or empty list if not verifiable.
+    """
+    # entity_id_override takes priority
+    entity_id = action_def.get("entity_id_override")
+    if not entity_id:
+        entity_id = action_def.get("data", {}).get("entity_id")
+
+    if not entity_id:
+        return []
+
+    if isinstance(entity_id, list):
+        return entity_id
+    return [entity_id]
+
+
+def verify_entity_state(action_def, dry_run=False):
+    """
+    After a service call, verify that the target entity reached the expected state.
+
+    Waits STATE_VERIFY_DELAY seconds then queries the HA states API.
+
+    Args:
+        action_def: The action dict from step definitions
+        dry_run: If True, skip verification
+
+    Returns:
+        (success: bool, error_message: str or None)
+    """
+    if dry_run:
+        return True, None
+
+    action = action_def["action"]
+    data = action_def.get("data", {})
+
+    check_type, expected = _get_expected_state(action, data)
+    if check_type is None:
+        # No verification possible for this action type
+        return True, None
+
+    entity_ids = _get_entity_ids_for_action(action_def)
+    if not entity_ids:
+        # device_id or area_id targeting — can't verify individual entities
+        return True, None
+
+    time.sleep(STATE_VERIFY_DELAY)
+
+    errors = []
+    for entity_id in entity_ids:
+        url = urljoin(get_ha_base_url(), f"/api/states/{entity_id}")
+        try:
+            response = requests.get(url, headers=get_ha_headers(), timeout=10)
+            if response.status_code != 200:
+                errors.append(f"{entity_id}: failed to query state (HTTP {response.status_code})")
+                continue
+
+            state_data = response.json()
+            actual_state = state_data.get("state")
+
+            # Any entity in unavailable/unknown state is a failure
+            if actual_state in ("unavailable", "unknown"):
+                errors.append(f"{entity_id} is {actual_state}")
+                continue
+
+            if check_type == "state":
+                if str(actual_state) != str(expected):
+                    errors.append(
+                        f"{entity_id}: expected state '{expected}', got '{actual_state}'"
+                    )
+            elif check_type.startswith("attr:"):
+                attr_name = check_type.split(":", 1)[1]
+                attrs = state_data.get("attributes", {})
+                actual_value = attrs.get(attr_name)
+                if actual_value is None:
+                    errors.append(
+                        f"{entity_id}: attribute '{attr_name}' not found"
+                    )
+                elif type(expected) is float:
+                    try:
+                        if float(actual_value) != expected:
+                            errors.append(
+                                f"{entity_id}: expected {attr_name}={expected}, got {actual_value}"
+                            )
+                    except (ValueError, TypeError):
+                        errors.append(
+                            f"{entity_id}: {attr_name}='{actual_value}' is not numeric"
+                        )
+                elif str(actual_value) != str(expected):
+                    errors.append(
+                        f"{entity_id}: expected {attr_name}='{expected}', got '{actual_value}'"
+                    )
+
+        except requests.RequestException as e:
+            errors.append(f"{entity_id}: state query failed: {e}")
+
+    if errors:
+        error_msg = "State verification failed: " + "; ".join(errors)
+        logger.warning(error_msg)
+        return False, error_msg
+
+    return True, None
+
+
 def execute_step(step, step_status, dry_run=False):
     """
     Execute a single step (which may contain multiple actions).
@@ -162,6 +307,12 @@ def execute_step(step, step_status, dry_run=False):
         if not success:
             sub_errors.append(f"Action {i + 1} ({action['action']}): {error}")
             # Don't stop on sub-action failure within a step — try remaining actions
+            continue
+
+        # Verify the entity actually reached the expected state
+        verify_success, verify_error = verify_entity_state(action, dry_run=dry_run)
+        if not verify_success:
+            sub_errors.append(f"Action {i + 1} ({action['action']}): {verify_error}")
             continue
 
         # Apply delay if specified
