@@ -1,0 +1,24 @@
+# go2rtc configuration for BlackDiamondHub cameras
+# Documentation: https://github.com/AlexxIT/go2rtc
+#
+# Add your camera RTSP URLs below. Each key becomes the stream name
+# used by the cameras app to display the feed.
+#
+# UniFi camera RTSP URL format (enable RTSP in UniFi Protect settings):
+#   rtsps://nvr-ip:7441/CAMERA_ID?enableSrtp
+# or direct camera RTSP (if enabled):
+#   rtsp://camera-ip:554/s0  (high quality)
+#   rtsp://camera-ip:554/s1  (low quality)
+
+streams:
+  # Example cameras - replace with your actual RTSP URLs:
+  # front_door: rtsp://admin:password@192.168.10.50:554/s0
+  # driveway: rtsp://admin:password@192.168.10.51:554/s0
+  # backyard: rtsp://admin:password@192.168.10.52:554/s0
+
+api:
+  listen: ":1984"
+  origin: "*"       # Allow CORS from Django app
+
+webrtc:
+  listen: ":8555"

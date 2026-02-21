@@ -247,6 +247,11 @@ HOMEASSISTANT_ACCESS_TOKEN = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN')
 HOMEASSISTANT_URL_2 = os.environ.get('HOMEASSISTANT_URL_2', 'http://homeassistant.local:8123')
 HOMEASSISTANT_ACCESS_TOKEN_2 = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN_2')
 
+###########################
+### go2rtc Camera Settings ###
+###########################
+GO2RTC_URL = os.environ.get('GO2RTC_URL', 'http://localhost:1984')
+
 ##############################
 ### SCENE CONTROL SETTINGS ###
 ##############################
