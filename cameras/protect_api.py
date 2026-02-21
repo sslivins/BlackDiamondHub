@@ -1,4 +1,9 @@
-"""UniFi Protect API client for dynamic camera discovery."""
+"""UniFi Protect API client for dynamic camera discovery.
+
+Uses the UniFi Protect Integration (Public) API with API key auth.
+Endpoint: GET /proxy/protect/integration/v1/cameras
+Auth: X-API-KEY header
+"""
 
 import logging
 import time
@@ -56,48 +61,29 @@ def clear_cache():
 
 
 def _fetch_cameras_from_protect():
-    """Authenticate with UniFi Protect and fetch all RTSP-enabled cameras.
+    """Fetch all RTSP-enabled cameras from UniFi Protect Integration API.
+
+    Uses API key authentication (X-API-KEY header) against the public
+    Integration API at /proxy/protect/integration/v1/cameras.
 
     Returns a list of camera dicts, or None on failure.
     """
     host = getattr(settings, 'UNIFI_PROTECT_HOST', None)
-    username = getattr(settings, 'UNIFI_PROTECT_USERNAME', None)
-    password = getattr(settings, 'UNIFI_PROTECT_PASSWORD', None)
+    api_key = getattr(settings, 'UNIFI_PROTECT_API_KEY', None)
 
-    if not all([host, username, password]):
-        logger.warning("UniFi Protect credentials not configured")
+    if not all([host, api_key]):
+        logger.warning("UniFi Protect not configured (need host and API key)")
         return None
 
     try:
-        session = requests.Session()
-        session.verify = False
-
-        # Authenticate — returns TOKEN cookie and x-csrf-token header
-        resp = session.post(
-            f'https://{host}/api/auth/login',
-            json={
-                'username': username,
-                'password': password,
-                'rememberMe': False,
-            },
-            timeout=10,
-        )
-        resp.raise_for_status()
-
-        csrf_token = resp.headers.get('x-csrf-token')
-        if csrf_token:
-            session.headers['x-csrf-token'] = csrf_token
-
-        # Fetch bootstrap (contains NVR info + all cameras)
-        resp = session.get(
-            f'https://{host}/proxy/protect/api/bootstrap',
+        resp = requests.get(
+            f'https://{host}/proxy/protect/integration/v1/cameras',
+            headers={'X-API-KEY': api_key},
+            verify=False,
             timeout=15,
         )
         resp.raise_for_status()
-        bootstrap = resp.json()
-
-        rtsps_port = bootstrap.get('nvr', {}).get('ports', {}).get('rtsps', 7441)
-        cameras_data = bootstrap.get('cameras', [])
+        cameras_data = resp.json()
 
         # Handle both list and dict formats
         if isinstance(cameras_data, dict):
@@ -119,7 +105,7 @@ def _fetch_cameras_from_protect():
                 cameras.append({
                     'name': name,
                     'stream_name': _camera_name_to_stream_name(name),
-                    'rtsp_url': f'rtsps://{cam_host}:{rtsps_port}/{rtsp_alias}',
+                    'rtsp_url': f'rtsps://{cam_host}:7441/{rtsp_alias}',
                 })
 
         cameras.sort(key=lambda c: c['name'])

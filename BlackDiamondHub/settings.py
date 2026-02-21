@@ -256,8 +256,7 @@ GO2RTC_URL = os.environ.get('GO2RTC_URL', 'http://localhost:1984')
 ### UniFi Protect Settings ###
 #################################
 UNIFI_PROTECT_HOST = os.environ.get('UNIFI_PROTECT_HOST', '')
-UNIFI_PROTECT_USERNAME = os.environ.get('UNIFI_PROTECT_USERNAME', '')
-UNIFI_PROTECT_PASSWORD = os.environ.get('UNIFI_PROTECT_PASSWORD', '')
+UNIFI_PROTECT_API_KEY = os.environ.get('UNIFI_PROTECT_API_KEY', '')
 
 ##############################
 ### SCENE CONTROL SETTINGS ###

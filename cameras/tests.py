@@ -1,6 +1,6 @@
 import json
 from django.test import TestCase, Client, override_settings
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 from .views import get_go2rtc_streams, _register_streams_with_go2rtc
 from .protect_api import (
     get_protect_cameras, clear_cache, _camera_name_to_stream_name,
@@ -31,55 +31,49 @@ class CameraNameToStreamNameTests(TestCase):
 
 # --- Protect API fetch tests ---
 
-MOCK_BOOTSTRAP = {
-    'nvr': {
-        'ports': {'rtsp': 7447, 'rtsps': 7441},
+MOCK_CAMERAS_RESPONSE = [
+    {
+        'name': 'Front Door',
+        'connectionHost': '192.168.10.1',
+        'channels': [
+            {
+                'id': 0,
+                'name': 'High',
+                'isRtspEnabled': True,
+                'rtspAlias': 'abc123high',
+                'width': 2688,
+                'height': 1512,
+            },
+            {
+                'id': 1,
+                'name': 'Medium',
+                'isRtspEnabled': True,
+                'rtspAlias': 'abc123med',
+                'width': 1024,
+                'height': 576,
+            },
+        ],
     },
-    'cameras': [
-        {
-            'name': 'Front Door',
-            'connectionHost': '192.168.10.1',
-            'channels': [
-                {
-                    'id': 0,
-                    'name': 'High',
-                    'isRtspEnabled': True,
-                    'rtspAlias': 'abc123high',
-                    'width': 2688,
-                    'height': 1512,
-                },
-                {
-                    'id': 1,
-                    'name': 'Medium',
-                    'isRtspEnabled': True,
-                    'rtspAlias': 'abc123med',
-                    'width': 1024,
-                    'height': 576,
-                },
-            ],
-        },
-        {
-            'name': 'Backyard',
-            'connectionHost': '192.168.10.1',
-            'channels': [
-                {
-                    'id': 0,
-                    'name': 'High',
-                    'isRtspEnabled': True,
-                    'rtspAlias': 'xyz789high',
-                    'width': 2688,
-                    'height': 1512,
-                },
-            ],
-        },
-    ],
-}
+    {
+        'name': 'Backyard',
+        'connectionHost': '192.168.10.1',
+        'channels': [
+            {
+                'id': 0,
+                'name': 'High',
+                'isRtspEnabled': True,
+                'rtspAlias': 'xyz789high',
+                'width': 2688,
+                'height': 1512,
+            },
+        ],
+    },
+]
 
 
 @override_settings(
     UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_USERNAME='testuser',
-    UNIFI_PROTECT_PASSWORD='testpass',
+    UNIFI_PROTECT_API_KEY='test_api_key',
 )
 class FetchCamerasFromProtectTests(TestCase):
     """Tests for _fetch_cameras_from_protect."""
@@ -87,16 +81,13 @@ class FetchCamerasFromProtectTests(TestCase):
     def setUp(self):
         clear_cache()
 
-    @patch('cameras.protect_api.requests.Session')
-    def test_returns_cameras_sorted_by_name(self, MockSession):
+    @patch('cameras.protect_api.requests.get')
+    def test_returns_cameras_sorted_by_name(self, mock_get):
         """Cameras are returned sorted alphabetically."""
-        session = MockSession.return_value
-        login_resp = MagicMock()
-        login_resp.headers = {'x-csrf-token': 'tok123'}
-        bootstrap_resp = MagicMock()
-        bootstrap_resp.json.return_value = MOCK_BOOTSTRAP
-        session.post.return_value = login_resp
-        session.get.return_value = bootstrap_resp
+        resp = MagicMock()
+        resp.json.return_value = MOCK_CAMERAS_RESPONSE
+        resp.raise_for_status = MagicMock()
+        mock_get.return_value = resp
 
         cameras = _fetch_cameras_from_protect()
 
@@ -104,16 +95,13 @@ class FetchCamerasFromProtectTests(TestCase):
         self.assertEqual(cameras[0]['name'], 'Backyard')
         self.assertEqual(cameras[1]['name'], 'Front Door')
 
-    @patch('cameras.protect_api.requests.Session')
-    def test_constructs_rtsps_url(self, MockSession):
-        """RTSP URLs are built correctly from bootstrap data."""
-        session = MockSession.return_value
-        login_resp = MagicMock()
-        login_resp.headers = {'x-csrf-token': 'tok'}
-        bootstrap_resp = MagicMock()
-        bootstrap_resp.json.return_value = MOCK_BOOTSTRAP
-        session.post.return_value = login_resp
-        session.get.return_value = bootstrap_resp
+    @patch('cameras.protect_api.requests.get')
+    def test_constructs_rtsps_url(self, mock_get):
+        """RTSP URLs are built correctly from camera data."""
+        resp = MagicMock()
+        resp.json.return_value = MOCK_CAMERAS_RESPONSE
+        resp.raise_for_status = MagicMock()
+        mock_get.return_value = resp
 
         cameras = _fetch_cameras_from_protect()
 
@@ -122,16 +110,13 @@ class FetchCamerasFromProtectTests(TestCase):
             'rtsps://192.168.10.1:7441/abc123high',
         )
 
-    @patch('cameras.protect_api.requests.Session')
-    def test_uses_first_rtsp_enabled_channel(self, MockSession):
+    @patch('cameras.protect_api.requests.get')
+    def test_uses_first_rtsp_enabled_channel(self, mock_get):
         """Picks the first RTSP-enabled channel (highest quality)."""
-        session = MockSession.return_value
-        login_resp = MagicMock()
-        login_resp.headers = {}
-        bootstrap_resp = MagicMock()
-        bootstrap_resp.json.return_value = MOCK_BOOTSTRAP
-        session.post.return_value = login_resp
-        session.get.return_value = bootstrap_resp
+        resp = MagicMock()
+        resp.json.return_value = MOCK_CAMERAS_RESPONSE
+        resp.raise_for_status = MagicMock()
+        mock_get.return_value = resp
 
         cameras = _fetch_cameras_from_protect()
 
@@ -139,102 +124,98 @@ class FetchCamerasFromProtectTests(TestCase):
         front_door = next(c for c in cameras if c['name'] == 'Front Door')
         self.assertIn('abc123high', front_door['rtsp_url'])
 
-    @patch('cameras.protect_api.requests.Session')
-    def test_skips_cameras_without_rtsp(self, MockSession):
+    @patch('cameras.protect_api.requests.get')
+    def test_skips_cameras_without_rtsp(self, mock_get):
         """Cameras with no RTSP-enabled channels are excluded."""
-        bootstrap = {
-            'nvr': {'ports': {'rtsps': 7441}},
-            'cameras': [
-                {
-                    'name': 'NoRTSP Cam',
-                    'connectionHost': '192.168.10.1',
-                    'channels': [
-                        {'id': 0, 'isRtspEnabled': False, 'rtspAlias': None},
-                    ],
-                },
-            ],
-        }
-        session = MockSession.return_value
-        login_resp = MagicMock()
-        login_resp.headers = {}
-        bootstrap_resp = MagicMock()
-        bootstrap_resp.json.return_value = bootstrap
-        session.post.return_value = login_resp
-        session.get.return_value = bootstrap_resp
+        resp = MagicMock()
+        resp.json.return_value = [
+            {
+                'name': 'NoRTSP Cam',
+                'connectionHost': '192.168.10.1',
+                'channels': [
+                    {'id': 0, 'isRtspEnabled': False, 'rtspAlias': None},
+                ],
+            },
+        ]
+        resp.raise_for_status = MagicMock()
+        mock_get.return_value = resp
 
         cameras = _fetch_cameras_from_protect()
 
         self.assertEqual(cameras, [])
 
-    @patch('cameras.protect_api.requests.Session')
-    def test_returns_none_on_auth_failure(self, MockSession):
-        """Returns None when authentication fails."""
-        session = MockSession.return_value
+    @patch('cameras.protect_api.requests.get')
+    def test_returns_none_on_request_failure(self, mock_get):
+        """Returns None when the API request fails."""
         import requests
-        session.post.side_effect = requests.RequestException("401 Unauthorized")
+        mock_get.side_effect = requests.RequestException("Connection refused")
 
         result = _fetch_cameras_from_protect()
 
         self.assertIsNone(result)
 
-    @override_settings(UNIFI_PROTECT_HOST='', UNIFI_PROTECT_USERNAME='', UNIFI_PROTECT_PASSWORD='')
+    @override_settings(UNIFI_PROTECT_HOST='', UNIFI_PROTECT_API_KEY='')
     def test_returns_none_when_not_configured(self):
         """Returns None when Protect credentials are not set."""
         result = _fetch_cameras_from_protect()
 
         self.assertIsNone(result)
 
-    @patch('cameras.protect_api.requests.Session')
-    def test_generates_stream_name(self, MockSession):
+    @patch('cameras.protect_api.requests.get')
+    def test_generates_stream_name(self, mock_get):
         """Stream names are generated from camera names."""
-        session = MockSession.return_value
-        login_resp = MagicMock()
-        login_resp.headers = {}
-        bootstrap_resp = MagicMock()
-        bootstrap_resp.json.return_value = MOCK_BOOTSTRAP
-        session.post.return_value = login_resp
-        session.get.return_value = bootstrap_resp
+        resp = MagicMock()
+        resp.json.return_value = MOCK_CAMERAS_RESPONSE
+        resp.raise_for_status = MagicMock()
+        mock_get.return_value = resp
 
         cameras = _fetch_cameras_from_protect()
 
         front_door = next(c for c in cameras if c['name'] == 'Front Door')
         self.assertEqual(front_door['stream_name'], 'front_door')
 
-    @patch('cameras.protect_api.requests.Session')
-    def test_handles_dict_format_cameras(self, MockSession):
-        """Handles bootstrap where cameras is a dict keyed by ID."""
-        bootstrap = {
-            'nvr': {'ports': {'rtsps': 7441}},
-            'cameras': {
-                'cam1': {
-                    'name': 'Garage',
-                    'connectionHost': '192.168.10.1',
-                    'channels': [
-                        {'id': 0, 'isRtspEnabled': True, 'rtspAlias': 'garageAlias'},
-                    ],
-                },
+    @patch('cameras.protect_api.requests.get')
+    def test_handles_dict_format_cameras(self, mock_get):
+        """Handles response where cameras is a dict keyed by ID."""
+        resp = MagicMock()
+        resp.json.return_value = {
+            'cam1': {
+                'name': 'Garage',
+                'connectionHost': '192.168.10.1',
+                'channels': [
+                    {'id': 0, 'isRtspEnabled': True, 'rtspAlias': 'garageAlias'},
+                ],
             },
         }
-        session = MockSession.return_value
-        login_resp = MagicMock()
-        login_resp.headers = {}
-        bootstrap_resp = MagicMock()
-        bootstrap_resp.json.return_value = bootstrap
-        session.post.return_value = login_resp
-        session.get.return_value = bootstrap_resp
+        resp.raise_for_status = MagicMock()
+        mock_get.return_value = resp
 
         cameras = _fetch_cameras_from_protect()
 
         self.assertEqual(len(cameras), 1)
         self.assertEqual(cameras[0]['name'], 'Garage')
 
+    @patch('cameras.protect_api.requests.get')
+    def test_sends_api_key_header(self, mock_get):
+        """Verifies the API key is sent in the X-API-KEY header."""
+        resp = MagicMock()
+        resp.json.return_value = []
+        resp.raise_for_status = MagicMock()
+        mock_get.return_value = resp
+
+        _fetch_cameras_from_protect()
+
+        mock_get.assert_called_once()
+        call_kwargs = mock_get.call_args
+        self.assertEqual(call_kwargs.kwargs['headers']['X-API-KEY'], 'test_api_key')
+        self.assertIn('/proxy/protect/integration/v1/cameras', call_kwargs.args[0])
+
 
 # --- Cache tests ---
 
 @override_settings(
     UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_USERNAME='user',
-    UNIFI_PROTECT_PASSWORD='pass',
+    UNIFI_PROTECT_API_KEY='test_api_key',
 )
 class ProtectCachingTests(TestCase):
     """Tests for the camera list caching."""
@@ -329,8 +310,7 @@ class GetGo2rtcStreamsTests(TestCase):
 @override_settings(
     GO2RTC_URL='http://localhost:1984',
     UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_USERNAME='user',
-    UNIFI_PROTECT_PASSWORD='pass',
+    UNIFI_PROTECT_API_KEY='test_api_key',
 )
 class CameraFeedViewWithProtectTests(TestCase):
     """Tests for camera_feed_view when Protect is configured."""

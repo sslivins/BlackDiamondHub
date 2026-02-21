@@ -38,10 +38,9 @@ services:
       # go2rtc URL (browser-accessible, for camera page)
       GO2RTC_URL: ${GO2RTC_URL}
 
-      # UniFi Protect API credentials (for camera discovery)
+      # UniFi Protect API (for camera discovery)
       UNIFI_PROTECT_HOST: ${UNIFI_PROTECT_HOST}
-      UNIFI_PROTECT_USERNAME: ${UNIFI_PROTECT_USERNAME}
-      UNIFI_PROTECT_PASSWORD: ${UNIFI_PROTECT_PASSWORD}
+      UNIFI_PROTECT_API_KEY: ${UNIFI_PROTECT_API_KEY}
 
     ports:
       - "8000:8000"
