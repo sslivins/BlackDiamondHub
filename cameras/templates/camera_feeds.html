@@ -5,88 +5,175 @@
 {% block content %}
 <style>
     body {
-        background-color: #000000;
+        background-color: #0a0a0a !important;
         color: #ffffff;
+    }
+
+    .cameras-header {
+        text-align: center;
+        padding: 20px 10px 10px;
+    }
+
+    .cameras-header h1 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #e0e0e0;
+        letter-spacing: 1px;
+        text-transform: uppercase;
         margin: 0;
-        padding: 0;
     }
 
     .camera-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 10px;
-        justify-content: center;
-        align-items: flex-start;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        gap: 12px;
+        padding: 10px 16px 24px;
+        max-width: 1920px;
+        margin: 0 auto;
     }
 
-    .cam {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+    .cam-card {
+        position: relative;
+        background: #111;
+        border-radius: 10px;
         overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+        cursor: pointer;
     }
 
-    .cam h2 {
-        margin: 5px 0;
-        color: #ddd;
-        font-size: 14px;
-        text-align: center;
+    .cam-card:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+        transform: scale(1.01);
+    }
+
+    .cam-card video-rtc,
+    .cam-card video {
+        display: block;
         width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: contain;
+        background: #000;
     }
 
-    .cam iframe {
-        border: none;
-        border-radius: 4px;
-        background-color: #111;
-        height: 325px;
-        width: 578px;
+    .cam-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 6px 12px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #fff;
+        letter-spacing: 0.5px;
+        pointer-events: none;
+    }
+
+    .cam-status {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4caf50;
+        box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+        pointer-events: none;
     }
 
     .no-cameras {
         text-align: center;
-        padding: 60px 20px;
-        color: #888;
+        padding: 80px 20px;
+        color: #555;
+        grid-column: 1 / -1;
     }
 
     .no-cameras i {
-        font-size: 48px;
-        margin-bottom: 16px;
+        font-size: 56px;
+        margin-bottom: 20px;
         display: block;
+        color: #333;
     }
 
-    /* Responsive adjustments */
-    @media (max-width: 1200px) {
-        .cam iframe {
-            height: 225px;
-            width: 400px;
+    .no-cameras h2 {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .no-cameras p {
+        color: #444;
+        font-size: 0.9rem;
+    }
+
+    /* Fullscreen mode */
+    .cam-card:fullscreen {
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cam-card:fullscreen video-rtc,
+    .cam-card:fullscreen video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .cam-card:fullscreen .cam-label {
+        font-size: 1rem;
+        padding: 10px 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+        .camera-grid {
+            grid-template-columns: 1fr;
+            padding: 8px;
+            gap: 8px;
         }
     }
 
-    @media (max-width: 768px) {
-        .cam iframe {
-            height: 180px;
-            width: 320px;
+    @media (min-width: 1600px) {
+        .camera-grid {
+            grid-template-columns: repeat(3, 1fr);
         }
     }
 </style>
 
+<div class="cameras-header">
+    <h1><i class="fas fa-shield-alt"></i> &nbsp;Security Cameras</h1>
+</div>
+
 <div class="camera-grid">
     {% for stream in streams %}
-    <div class="cam">
-        <h2>{{ stream.display_name }}</h2>
-        <iframe
-            src="{{ go2rtc_url }}/stream.html?src={{ stream.name }}&mode=webrtc,mse"
-            allow="fullscreen"
-            allowfullscreen>
-        </iframe>
+    <div class="cam-card" onclick="toggleFullscreen(this)" title="Click for fullscreen">
+        <video-rtc
+            src="{{ go2rtc_url }}/api/ws?src={{ stream.name }}"
+            mode="webrtc,mse,mp4"
+            background>
+        </video-rtc>
+        <div class="cam-status"></div>
+        <div class="cam-label">{{ stream.display_name }}</div>
     </div>
     {% empty %}
     <div class="no-cameras">
         <i class="fas fa-video-slash"></i>
         <h2>No Cameras Available</h2>
-        <p>No camera streams are configured in go2rtc, or go2rtc is not reachable.</p>
+        <p>No camera streams are configured, or go2rtc is not reachable.</p>
     </div>
     {% endfor %}
 </div>
+
+<script src="{{ go2rtc_url }}/video-rtc.js"></script>
+<script>
+    function toggleFullscreen(card) {
+        if (!document.fullscreenElement) {
+            card.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen();
+        }
+    }
+</script>
 {% endblock %}

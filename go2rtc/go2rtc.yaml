@@ -15,3 +15,22 @@ api:
 
 webrtc:
   listen: ":8555"
+streams:
+  backyard:
+    - rtsps://192.168.10.1:7441/Fx4CI9O2N6UuXCjz
+  doorbell_camera:
+    - rtsps://192.168.10.1:7441/Ymr7QkkgjaHT6Ny4
+  front_door___entry:
+    - rtsps://192.168.10.1:7441/nCrA9HBXSmFKGGxw
+  garage___side_entry:
+    - rtsps://192.168.10.1:7441/1hUJcE0td8fhXEUK
+  hot_tub:
+    - rtsps://192.168.10.1:7441/CAcdkf6TSWJDsknk
+  side_yard:
+    - rtsps://192.168.10.1:7441/jtOjvPv9U5I43SdM
+  side_of_house___generator:
+    - rtsps://192.168.10.1:7441/lCi76j9TveRaIyEC
+  side_of_house___hvac:
+    - rtsps://192.168.10.1:7441/rHRCKhSyCtkSk7fc
+  ski_room___entry:
+    - rtsps://192.168.10.1:7441/pbImN58W5DpmabTh

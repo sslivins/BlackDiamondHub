@@ -405,8 +405,8 @@ class CameraFeedViewWithProtectTests(TestCase):
 
     @patch("cameras.views._register_streams_with_go2rtc")
     @patch("cameras.views.get_protect_cameras")
-    def test_view_renders_camera_iframes(self, mock_cameras, mock_register):
-        """Renders iframe elements for each discovered camera."""
+    def test_view_renders_camera_streams(self, mock_cameras, mock_register):
+        """Renders video-rtc elements for each discovered camera."""
         mock_cameras.return_value = [
             {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://x'},
             {'name': 'Backyard', 'stream_name': 'backyard', 'rtsp_url': 'rtsps://y'},
@@ -416,7 +416,7 @@ class CameraFeedViewWithProtectTests(TestCase):
 
         self.assertContains(response, "Front Door")
         self.assertContains(response, "Backyard")
-        self.assertContains(response, "stream.html?src=front_door")
+        self.assertContains(response, "/api/ws?src=front_door")
 
 
 @override_settings(
