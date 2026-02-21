@@ -11,10 +11,10 @@
 #   rtsp://camera-ip:554/s1  (low quality)
 
 streams:
-  # Example cameras - replace with your actual RTSP URLs:
-  # front_door: rtsp://admin:password@192.168.10.50:554/s0
-  # driveway: rtsp://admin:password@192.168.10.51:554/s0
-  # backyard: rtsp://admin:password@192.168.10.52:554/s0
+  front_door: ${GO2RTC_STREAM_FRONT_DOOR}
+  # Add more cameras:
+  # driveway: ${GO2RTC_STREAM_DRIVEWAY}
+  # backyard: ${GO2RTC_STREAM_BACKYARD}
 
 api:
   listen: ":1984"

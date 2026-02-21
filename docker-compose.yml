@@ -46,6 +46,7 @@ services:
   go2rtc:
     image: alexxit/go2rtc
     container_name: go2rtc
+    env_file: .env
     volumes:
       - ./go2rtc/go2rtc.yaml:/config/go2rtc.yaml
     ports:
