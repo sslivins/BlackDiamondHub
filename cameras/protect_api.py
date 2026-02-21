@@ -1,7 +1,9 @@
 """UniFi Protect API client for dynamic camera discovery.
 
 Uses the UniFi Protect Integration (Public) API with API key auth.
-Endpoint: GET /proxy/protect/integration/v1/cameras
+- GET  /proxy/protect/integration/v1/cameras           — list cameras
+- POST /proxy/protect/integration/v1/cameras/{id}/rtsps-stream — create RTSPS URL
+- GET  /proxy/protect/integration/v1/cameras/{id}/rtsps-stream — get existing URL
 Auth: X-API-KEY header
 """
 
@@ -25,6 +27,8 @@ _cache = {
 }
 CACHE_TTL = 300  # 5 minutes
 
+API_BASE = '/proxy/protect/integration/v1'
+
 
 def _camera_name_to_stream_name(name):
     """Convert a camera display name to a safe go2rtc stream name.
@@ -39,7 +43,7 @@ def get_protect_cameras():
 
     Returns a list of dicts:
         [{'name': 'Front Door', 'stream_name': 'front_door',
-          'rtsp_url': 'rtsps://host:7441/alias'}, ...]
+          'rtsp_url': 'rtsps://host:7441/...'}, ...]
 
     Returns an empty list on failure or if Protect is not configured.
     """
@@ -60,11 +64,60 @@ def clear_cache():
     _cache['timestamp'] = 0
 
 
-def _fetch_cameras_from_protect():
-    """Fetch all RTSP-enabled cameras from UniFi Protect Integration API.
+def _get_rtsps_url(host, api_key, camera_id):
+    """Get or create an RTSPS stream URL for a camera.
 
-    Uses API key authentication (X-API-KEY header) against the public
-    Integration API at /proxy/protect/integration/v1/cameras.
+    First tries GET to retrieve an existing stream. If none exists,
+    creates one via POST with 'high' quality.
+
+    Returns the RTSPS URL string, or None on failure.
+    """
+    base = f'https://{host}{API_BASE}/cameras/{camera_id}/rtsps-stream'
+    headers = {'X-API-KEY': api_key}
+
+    # Try to get existing RTSPS stream
+    try:
+        resp = requests.get(base, headers=headers, verify=False, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        # Return the highest quality available URL
+        for quality in ('high', 'medium', 'low'):
+            if data.get(quality):
+                return _clean_rtsps_url(data[quality])
+    except requests.RequestException:
+        pass  # Fall through to create
+
+    # No existing stream — create one
+    try:
+        resp = requests.post(
+            base,
+            headers={**headers, 'Content-Type': 'application/json'},
+            json={'qualities': ['high']},
+            verify=False,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        for quality in ('high', 'medium', 'low'):
+            if data.get(quality):
+                return _clean_rtsps_url(data[quality])
+    except requests.RequestException as e:
+        logger.warning("Failed to create RTSPS stream for camera %s: %s",
+                       camera_id, e)
+
+    return None
+
+
+def _clean_rtsps_url(url):
+    """Strip ?enableSrtp from RTSPS URLs — go2rtc handles TLS natively."""
+    return url.split('?')[0] if url else url
+
+
+def _fetch_cameras_from_protect():
+    """Fetch all cameras with RTSPS streams from UniFi Protect Integration API.
+
+    Uses API key authentication (X-API-KEY header). Discovers cameras via
+    GET /v1/cameras, then fetches/creates RTSPS stream URLs for each.
 
     Returns a list of camera dicts, or None on failure.
     """
@@ -77,7 +130,7 @@ def _fetch_cameras_from_protect():
 
     try:
         resp = requests.get(
-            f'https://{host}/proxy/protect/integration/v1/cameras',
+            f'https://{host}{API_BASE}/cameras',
             headers={'X-API-KEY': api_key},
             verify=False,
             timeout=15,
@@ -92,20 +145,16 @@ def _fetch_cameras_from_protect():
         cameras = []
         for camera in cameras_data:
             name = camera.get('name', 'Unknown')
-            cam_host = camera.get('connectionHost') or host
+            camera_id = camera.get('id')
+            if not camera_id:
+                continue
 
-            # Find the first RTSP-enabled channel (highest quality first)
-            rtsp_alias = None
-            for channel in camera.get('channels', []):
-                if channel.get('isRtspEnabled') and channel.get('rtspAlias'):
-                    rtsp_alias = channel['rtspAlias']
-                    break
-
-            if rtsp_alias:
+            rtsp_url = _get_rtsps_url(host, api_key, camera_id)
+            if rtsp_url:
                 cameras.append({
                     'name': name,
                     'stream_name': _camera_name_to_stream_name(name),
-                    'rtsp_url': f'rtsps://{cam_host}:7441/{rtsp_alias}',
+                    'rtsp_url': rtsp_url,
                 })
 
         cameras.sort(key=lambda c: c['name'])

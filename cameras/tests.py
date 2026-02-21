@@ -1,6 +1,6 @@
 import json
 from django.test import TestCase, Client, override_settings
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 from .views import get_go2rtc_streams, _register_streams_with_go2rtc
 from .protect_api import (
     get_protect_cameras, clear_cache, _camera_name_to_stream_name,
@@ -31,44 +31,44 @@ class CameraNameToStreamNameTests(TestCase):
 
 # --- Protect API fetch tests ---
 
+# Mock camera list from GET /v1/cameras
 MOCK_CAMERAS_RESPONSE = [
-    {
-        'name': 'Front Door',
-        'connectionHost': '192.168.10.1',
-        'channels': [
-            {
-                'id': 0,
-                'name': 'High',
-                'isRtspEnabled': True,
-                'rtspAlias': 'abc123high',
-                'width': 2688,
-                'height': 1512,
-            },
-            {
-                'id': 1,
-                'name': 'Medium',
-                'isRtspEnabled': True,
-                'rtspAlias': 'abc123med',
-                'width': 1024,
-                'height': 576,
-            },
-        ],
-    },
-    {
-        'name': 'Backyard',
-        'connectionHost': '192.168.10.1',
-        'channels': [
-            {
-                'id': 0,
-                'name': 'High',
-                'isRtspEnabled': True,
-                'rtspAlias': 'xyz789high',
-                'width': 2688,
-                'height': 1512,
-            },
-        ],
-    },
+    {'id': 'cam_front', 'name': 'Front Door', 'state': 'CONNECTED'},
+    {'id': 'cam_back', 'name': 'Backyard', 'state': 'CONNECTED'},
 ]
+
+# Mock RTSPS stream responses from GET/POST /v1/cameras/{id}/rtsps-stream
+MOCK_RTSPS_FRONT = {
+    'high': 'rtsps://192.168.10.1:7441/abc123high',
+    'medium': None,
+    'low': None,
+}
+MOCK_RTSPS_BACK = {
+    'high': 'rtsps://192.168.10.1:7441/xyz789high',
+    'medium': None,
+    'low': None,
+}
+MOCK_RTSPS_EMPTY = {'high': None, 'medium': None, 'low': None}
+
+
+def _make_mock_response(json_data, status_code=200):
+    """Create a mock response object."""
+    resp = MagicMock()
+    resp.json.return_value = json_data
+    resp.status_code = status_code
+    resp.raise_for_status = MagicMock()
+    return resp
+
+
+def _mock_get_side_effect(url, **kwargs):
+    """Route mocked GET requests to correct responses."""
+    if url.endswith('/cameras'):
+        return _make_mock_response(MOCK_CAMERAS_RESPONSE)
+    elif 'cam_front/rtsps-stream' in url:
+        return _make_mock_response(MOCK_RTSPS_FRONT)
+    elif 'cam_back/rtsps-stream' in url:
+        return _make_mock_response(MOCK_RTSPS_BACK)
+    return _make_mock_response(MOCK_RTSPS_EMPTY)
 
 
 @override_settings(
@@ -81,13 +81,11 @@ class FetchCamerasFromProtectTests(TestCase):
     def setUp(self):
         clear_cache()
 
+    @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
-    def test_returns_cameras_sorted_by_name(self, mock_get):
+    def test_returns_cameras_sorted_by_name(self, mock_get, mock_post):
         """Cameras are returned sorted alphabetically."""
-        resp = MagicMock()
-        resp.json.return_value = MOCK_CAMERAS_RESPONSE
-        resp.raise_for_status = MagicMock()
-        mock_get.return_value = resp
+        mock_get.side_effect = _mock_get_side_effect
 
         cameras = _fetch_cameras_from_protect()
 
@@ -95,50 +93,56 @@ class FetchCamerasFromProtectTests(TestCase):
         self.assertEqual(cameras[0]['name'], 'Backyard')
         self.assertEqual(cameras[1]['name'], 'Front Door')
 
+    @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
-    def test_constructs_rtsps_url(self, mock_get):
-        """RTSP URLs are built correctly from camera data."""
-        resp = MagicMock()
-        resp.json.return_value = MOCK_CAMERAS_RESPONSE
-        resp.raise_for_status = MagicMock()
-        mock_get.return_value = resp
+    def test_returns_rtsps_urls(self, mock_get, mock_post):
+        """RTSPS URLs are returned from the API."""
+        mock_get.side_effect = _mock_get_side_effect
 
         cameras = _fetch_cameras_from_protect()
 
-        self.assertEqual(
-            cameras[1]['rtsp_url'],
-            'rtsps://192.168.10.1:7441/abc123high',
-        )
-
-    @patch('cameras.protect_api.requests.get')
-    def test_uses_first_rtsp_enabled_channel(self, mock_get):
-        """Picks the first RTSP-enabled channel (highest quality)."""
-        resp = MagicMock()
-        resp.json.return_value = MOCK_CAMERAS_RESPONSE
-        resp.raise_for_status = MagicMock()
-        mock_get.return_value = resp
-
-        cameras = _fetch_cameras_from_protect()
-
-        # Front Door has two enabled channels — should use first (High)
         front_door = next(c for c in cameras if c['name'] == 'Front Door')
-        self.assertIn('abc123high', front_door['rtsp_url'])
+        self.assertEqual(front_door['rtsp_url'], 'rtsps://192.168.10.1:7441/abc123high')
 
+    @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
-    def test_skips_cameras_without_rtsp(self, mock_get):
-        """Cameras with no RTSP-enabled channels are excluded."""
-        resp = MagicMock()
-        resp.json.return_value = [
-            {
-                'name': 'NoRTSP Cam',
-                'connectionHost': '192.168.10.1',
-                'channels': [
-                    {'id': 0, 'isRtspEnabled': False, 'rtspAlias': None},
-                ],
-            },
-        ]
-        resp.raise_for_status = MagicMock()
-        mock_get.return_value = resp
+    def test_creates_stream_when_none_exists(self, mock_get, mock_post):
+        """Creates RTSPS stream via POST when GET returns null URLs."""
+        def get_side_effect(url, **kwargs):
+            if url.endswith('/cameras'):
+                return _make_mock_response([
+                    {'id': 'cam1', 'name': 'New Cam', 'state': 'CONNECTED'},
+                ])
+            # GET rtsps-stream returns all nulls
+            return _make_mock_response(MOCK_RTSPS_EMPTY)
+
+        mock_get.side_effect = get_side_effect
+        mock_post.return_value = _make_mock_response({
+            'high': 'rtsps://192.168.10.1:7441/newstream',
+            'medium': None, 'low': None,
+        })
+
+        cameras = _fetch_cameras_from_protect()
+
+        self.assertEqual(len(cameras), 1)
+        self.assertEqual(cameras[0]['rtsp_url'], 'rtsps://192.168.10.1:7441/newstream')
+        mock_post.assert_called_once()
+
+    @patch('cameras.protect_api.requests.post')
+    @patch('cameras.protect_api.requests.get')
+    def test_skips_cameras_without_rtsps_url(self, mock_get, mock_post):
+        """Cameras where RTSPS stream creation fails are excluded."""
+        import requests as req_lib
+
+        def get_side_effect(url, **kwargs):
+            if url.endswith('/cameras'):
+                return _make_mock_response([
+                    {'id': 'cam1', 'name': 'Broken Cam', 'state': 'CONNECTED'},
+                ])
+            return _make_mock_response(MOCK_RTSPS_EMPTY)
+
+        mock_get.side_effect = get_side_effect
+        mock_post.side_effect = req_lib.RequestException("Failed")
 
         cameras = _fetch_cameras_from_protect()
 
@@ -146,7 +150,7 @@ class FetchCamerasFromProtectTests(TestCase):
 
     @patch('cameras.protect_api.requests.get')
     def test_returns_none_on_request_failure(self, mock_get):
-        """Returns None when the API request fails."""
+        """Returns None when the camera list request fails."""
         import requests
         mock_get.side_effect = requests.RequestException("Connection refused")
 
@@ -161,54 +165,88 @@ class FetchCamerasFromProtectTests(TestCase):
 
         self.assertIsNone(result)
 
+    @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
-    def test_generates_stream_name(self, mock_get):
+    def test_generates_stream_name(self, mock_get, mock_post):
         """Stream names are generated from camera names."""
-        resp = MagicMock()
-        resp.json.return_value = MOCK_CAMERAS_RESPONSE
-        resp.raise_for_status = MagicMock()
-        mock_get.return_value = resp
+        mock_get.side_effect = _mock_get_side_effect
 
         cameras = _fetch_cameras_from_protect()
 
         front_door = next(c for c in cameras if c['name'] == 'Front Door')
         self.assertEqual(front_door['stream_name'], 'front_door')
 
+    @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
-    def test_handles_dict_format_cameras(self, mock_get):
+    def test_handles_dict_format_cameras(self, mock_get, mock_post):
         """Handles response where cameras is a dict keyed by ID."""
-        resp = MagicMock()
-        resp.json.return_value = {
-            'cam1': {
-                'name': 'Garage',
-                'connectionHost': '192.168.10.1',
-                'channels': [
-                    {'id': 0, 'isRtspEnabled': True, 'rtspAlias': 'garageAlias'},
-                ],
-            },
-        }
-        resp.raise_for_status = MagicMock()
-        mock_get.return_value = resp
+        def get_side_effect(url, **kwargs):
+            if url.endswith('/cameras'):
+                return _make_mock_response({
+                    'cam1': {'id': 'cam1', 'name': 'Garage', 'state': 'CONNECTED'},
+                })
+            return _make_mock_response({
+                'high': 'rtsps://192.168.10.1:7441/garageAlias',
+                'medium': None, 'low': None,
+            })
+
+        mock_get.side_effect = get_side_effect
 
         cameras = _fetch_cameras_from_protect()
 
         self.assertEqual(len(cameras), 1)
         self.assertEqual(cameras[0]['name'], 'Garage')
 
+    @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
-    def test_sends_api_key_header(self, mock_get):
+    def test_sends_api_key_header(self, mock_get, mock_post):
         """Verifies the API key is sent in the X-API-KEY header."""
-        resp = MagicMock()
-        resp.json.return_value = []
-        resp.raise_for_status = MagicMock()
-        mock_get.return_value = resp
+        mock_get.side_effect = lambda url, **kwargs: _make_mock_response([])
+        mock_get.return_value = _make_mock_response([])
 
         _fetch_cameras_from_protect()
 
-        mock_get.assert_called_once()
-        call_kwargs = mock_get.call_args
-        self.assertEqual(call_kwargs.kwargs['headers']['X-API-KEY'], 'test_api_key')
-        self.assertIn('/proxy/protect/integration/v1/cameras', call_kwargs.args[0])
+        # First call should be the camera list
+        first_call = mock_get.call_args_list[0]
+        self.assertEqual(first_call.kwargs['headers']['X-API-KEY'], 'test_api_key')
+        self.assertIn('/cameras', first_call.args[0])
+
+    @patch('cameras.protect_api.requests.post')
+    @patch('cameras.protect_api.requests.get')
+    def test_strips_enable_srtp_from_url(self, mock_get, mock_post):
+        """Strips ?enableSrtp from RTSPS URLs — go2rtc handles TLS natively."""
+        def get_side_effect(url, **kwargs):
+            if url.endswith('/cameras'):
+                return _make_mock_response([
+                    {'id': 'cam1', 'name': 'Cam', 'state': 'CONNECTED'},
+                ])
+            return _make_mock_response({
+                'high': 'rtsps://192.168.10.1:7441/stream1?enableSrtp',
+                'medium': None, 'low': None,
+            })
+
+        mock_get.side_effect = get_side_effect
+
+        cameras = _fetch_cameras_from_protect()
+
+        self.assertEqual(cameras[0]['rtsp_url'], 'rtsps://192.168.10.1:7441/stream1')
+
+    @patch('cameras.protect_api.requests.post')
+    @patch('cameras.protect_api.requests.get')
+    def test_skips_cameras_without_id(self, mock_get, mock_post):
+        """Cameras missing an ID field are skipped."""
+        def get_side_effect(url, **kwargs):
+            if url.endswith('/cameras'):
+                return _make_mock_response([
+                    {'name': 'No ID Cam', 'state': 'CONNECTED'},
+                ])
+            return _make_mock_response(MOCK_RTSPS_EMPTY)
+
+        mock_get.side_effect = get_side_effect
+
+        cameras = _fetch_cameras_from_protect()
+
+        self.assertEqual(cameras, [])
 
 
 # --- Cache tests ---
