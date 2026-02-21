@@ -24,7 +24,9 @@ _execution_lock = threading.Lock()
 
 MAX_RETRIES = 2
 RETRY_DELAY = 3  # seconds
-STATE_VERIFY_DELAY = 2  # seconds to wait before checking entity state
+STATE_VERIFY_DELAY = 2  # max seconds to poll for expected state
+STATE_VERIFY_POLL_INTERVAL = 1  # seconds between poll attempts
+STATE_NUMERIC_TOLERANCE = 0.5  # tolerance for C/F rounding (e.g. 38°C → F → C = 37.8°C)
 
 STATUS_PENDING = "pending"
 STATUS_RUNNING = "running"
@@ -170,11 +172,11 @@ def _get_expected_state(action, data):
         if preset is not None:
             return "attr:preset_mode", preset
 
-    # number/set_value → state equals the value
+    # number/set_value → state equals the value (with numeric tolerance)
     if domain == "number" and service == "set_value":
         value = data.get("value")
         if value is not None:
-            return "state", str(value)
+            return "state_numeric", float(value)
 
     return None, None
 
@@ -201,7 +203,8 @@ def verify_entity_state(action_def, dry_run=False):
     """
     After a service call, verify that the target entity reached the expected state.
 
-    Waits STATE_VERIFY_DELAY seconds then queries the HA states API.
+    Polls the HA states API at regular intervals until the expected state is
+    reached or the timeout expires.
 
     Args:
         action_def: The action dict from step definitions
@@ -226,8 +229,39 @@ def verify_entity_state(action_def, dry_run=False):
         # device_id or area_id targeting — can't verify individual entities
         return True, None
 
-    time.sleep(STATE_VERIFY_DELAY)
+    max_wait = action_def.get("verify_delay", STATE_VERIFY_DELAY)
+    start_time = time.time()
+    errors = []
 
+    while True:
+        time.sleep(STATE_VERIFY_POLL_INTERVAL)
+        errors = _check_entities(entity_ids, check_type, expected)
+
+        if not errors:
+            elapsed = time.time() - start_time
+            entity_desc = ", ".join(entity_ids)
+            logger.warning(
+                f"State verified OK for {entity_desc} "
+                f"({action}) in {elapsed:.1f}s (max_wait={max_wait}s)"
+            )
+            return True, None
+
+        if time.time() - start_time >= max_wait:
+            break
+
+    elapsed = time.time() - start_time
+    error_msg = "State verification failed: " + "; ".join(errors)
+    logger.warning(f"{error_msg} (after {elapsed:.1f}s, max_wait={max_wait}s)")
+    return False, error_msg
+
+
+def _check_entities(entity_ids, check_type, expected):
+    """
+    Check whether all entities have reached the expected state.
+
+    Returns:
+        List of error strings (empty if all entities match).
+    """
     errors = []
     for entity_id in entity_ids:
         url = urljoin(get_ha_base_url(), f"/api/states/{entity_id}")
@@ -250,6 +284,16 @@ def verify_entity_state(action_def, dry_run=False):
                     errors.append(
                         f"{entity_id}: expected state '{expected}', got '{actual_state}'"
                     )
+            elif check_type == "state_numeric":
+                try:
+                    if abs(float(actual_state) - expected) > STATE_NUMERIC_TOLERANCE:
+                        errors.append(
+                            f"{entity_id}: expected state ~{expected}, got {actual_state}"
+                        )
+                except (ValueError, TypeError):
+                    errors.append(
+                        f"{entity_id}: state '{actual_state}' is not numeric"
+                    )
             elif check_type.startswith("attr:"):
                 attr_name = check_type.split(":", 1)[1]
                 attrs = state_data.get("attributes", {})
@@ -260,9 +304,9 @@ def verify_entity_state(action_def, dry_run=False):
                     )
                 elif type(expected) is float:
                     try:
-                        if float(actual_value) != expected:
+                        if abs(float(actual_value) - expected) > STATE_NUMERIC_TOLERANCE:
                             errors.append(
-                                f"{entity_id}: expected {attr_name}={expected}, got {actual_value}"
+                                f"{entity_id}: expected {attr_name}~={expected}, got {actual_value}"
                             )
                     except (ValueError, TypeError):
                         errors.append(
@@ -276,12 +320,7 @@ def verify_entity_state(action_def, dry_run=False):
         except requests.RequestException as e:
             errors.append(f"{entity_id}: state query failed: {e}")
 
-    if errors:
-        error_msg = "State verification failed: " + "; ".join(errors)
-        logger.warning(error_msg)
-        return False, error_msg
-
-    return True, None
+    return errors
 
 
 def execute_step(step, step_status, dry_run=False):
@@ -295,6 +334,11 @@ def execute_step(step, step_status, dry_run=False):
     sub_errors = []
 
     for i, action in enumerate(actions):
+        # Update progress message if the action has a description
+        description = action.get("description")
+        if description:
+            step_status["progress"] = description
+
         success, error = call_ha_service(
             action=action["action"],
             data=action.get("data", {}),
@@ -322,8 +366,10 @@ def execute_step(step, step_status, dry_run=False):
 
     if sub_errors:
         step_status["error"] = "; ".join(sub_errors)
+        step_status["progress"] = None
         return False
 
+    step_status["progress"] = None
     return True
 
 
@@ -402,6 +448,7 @@ def start_execution(mode, dry_run=False):
                 "status": STATUS_PENDING,
                 "attempt": 0,
                 "error": None,
+                "progress": None,
             }
             for step in steps
         ],

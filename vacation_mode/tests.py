@@ -257,8 +257,8 @@ class GetExpectedStateTests(TestCase):
 
     def test_number_set_value(self):
         check, expected = _get_expected_state("number/set_value", {"value": "28"})
-        self.assertEqual(check, "state")
-        self.assertEqual(expected, "28")
+        self.assertEqual(check, "state_numeric")
+        self.assertEqual(expected, 28.0)
 
     def test_unknown_action(self):
         check, expected = _get_expected_state("light/turn_on", {})
@@ -373,7 +373,7 @@ class VerifyEntityStateTests(TestCase):
         action = {"action": "climate/set_temperature", "data": {"entity_id": "climate.main_floor", "temperature": 13.5}}
         success, error = verify_entity_state(action)
         self.assertFalse(success)
-        self.assertIn("expected temperature=13.5, got 20.0", error)
+        self.assertIn("expected temperature~=13.5, got 20.0", error)
 
     @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
     @patch("vacation_mode.executor.requests.get")
@@ -406,6 +406,18 @@ class VerifyEntityStateTests(TestCase):
             json=lambda: {"state": "28", "attributes": {}},
         )
         action = {"action": "number/set_value", "data": {"entity_id": "number.buffer_tank", "value": "28"}}
+        success, error = verify_entity_state(action)
+        self.assertTrue(success)
+
+    @patch("vacation_mode.executor.STATE_VERIFY_DELAY", 0)
+    @patch("vacation_mode.executor.requests.get")
+    def test_number_set_value_within_tolerance(self, mock_get):
+        """Values within C/F rounding tolerance (0.5) should pass verification."""
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"state": "37.8", "attributes": {}},
+        )
+        action = {"action": "number/set_value", "data": {"entity_id": "number.buffer_tank", "value": "38"}}
         success, error = verify_entity_state(action)
         self.assertTrue(success)
 
@@ -879,7 +891,7 @@ class AdditionalViewTests(TestCase):
         mock_away.return_value = False
         mock_active.return_value = None
         response = self.client.get("/vacation_mode/")
-        self.assertContains(response, "Set Vacation Mode")
+        self.assertContains(response, "Put Black Diamond Lodge into Vacation Mode")
 
     @patch("vacation_mode.views.get_away_mode_state")
     @patch("vacation_mode.views.get_active_run")
@@ -887,7 +899,7 @@ class AdditionalViewTests(TestCase):
         mock_away.return_value = True
         mock_active.return_value = None
         response = self.client.get("/vacation_mode/")
-        self.assertContains(response, "Prepare for Arrival")
+        self.assertContains(response, "Prepare Black Diamond Lodge for Arrival")
 
     @patch("vacation_mode.views.get_away_mode_state")
     @patch("vacation_mode.views.get_active_run")
@@ -1105,16 +1117,24 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
             EC.presence_of_element_located((By.ID, "action-btn"))
         )
         self.assertTrue(btn.is_displayed())
-        self.assertIn("Set Vacation Mode", btn.text)
+        self.assertIn("Activate", btn.text)
 
-    def test_action_button_shows_arrival_when_away(self):
-        """When away, button should show Prepare for Arrival."""
+    def test_action_label_shows_vacation_when_home(self):
+        """When home, label should describe vacation mode action."""
+        self.driver.get(f"{self.live_server_url}/vacation_mode/")
+        label = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.ID, "action-label"))
+        )
+        self.assertIn("Put Black Diamond Lodge into Vacation Mode", label.text)
+
+    def test_action_label_shows_arrival_when_away(self):
+        """When away, label should describe arrival action."""
         self._set_away_state(True)
         self.driver.get(f"{self.live_server_url}/vacation_mode/")
-        btn = WebDriverWait(self.driver, 20).until(
-            EC.presence_of_element_located((By.ID, "action-btn"))
+        label = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.ID, "action-label"))
         )
-        self.assertIn("Prepare for Arrival", btn.text)
+        self.assertIn("Prepare Black Diamond Lodge for Arrival", label.text)
 
     def test_dry_run_unchecked_by_default(self):
         """Dry run checkbox should be unchecked by default."""
