@@ -25,6 +25,7 @@ VACATION_STEPS = [
                     "entity_id": "climate.econet_hpwh",
                     "preset_mode": "Off",
                 },
+                "description": "Setting water heater to Off",
             },
         ],
     },
@@ -38,19 +39,30 @@ VACATION_STEPS = [
                     "entity_id": "climate.hot_tub_heater",
                     "preset_mode": "Away From Home",
                 },
+                "description": "Setting hot tub to Away From Home",
             },
         ],
     },
     {
-        "alias": "Set Buffer Tank & Backup Differential",
+        "alias": "Heat Pump Vacation Setup",
         "icon": "fas fa-temperature-arrow-down",
         "actions": [
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.aeco_1988_hot_tank_outdoor_reset",
+                },
+                "description": "Disabling outdoor reset",
+                "delay_after": 2,
+            },
             {
                 "action": "number/set_value",
                 "data": {
                     "entity_id": "number.aeco_1988_hot_tank_target_temperature",
                     "value": "28",
                 },
+                "description": "Setting target temperature to 28°C",
+                "verify_delay": 10,
             },
             {
                 "action": "number/set_value",
@@ -58,6 +70,8 @@ VACATION_STEPS = [
                     "entity_id": "number.aeco_1988_backup_differential",
                     "value": "8",
                 },
+                "description": "Setting backup differential to 8°C",
+                "verify_delay": 10,
             },
         ],
     },
@@ -72,6 +86,7 @@ VACATION_STEPS = [
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
+                "description": "Master Bedroom → 13.5°C",
                 "delay_after": 1,
             },
             {
@@ -81,6 +96,7 @@ VACATION_STEPS = [
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
+                "description": "Basement Bunk Rooms → 13.5°C",
                 "delay_after": 1,
             },
             {
@@ -90,6 +106,7 @@ VACATION_STEPS = [
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
+                "description": "Main Floor → 13.5°C",
                 "delay_after": 1,
             },
             {
@@ -99,6 +116,7 @@ VACATION_STEPS = [
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
+                "description": "Basement Master → 13.5°C",
                 "delay_after": 1,
             },
             {
@@ -108,6 +126,7 @@ VACATION_STEPS = [
                     "temperature": 13.5,
                     "hvac_mode": "heat",
                 },
+                "description": "Ski Room → 13.5°C",
             },
         ],
     },
@@ -121,6 +140,7 @@ VACATION_STEPS = [
                     "entity_id": "climate.garage_thermostat_thermostat",
                     "temperature": 5,
                 },
+                "description": "Garage → 5°C",
                 "delay_after": 1,
             },
             {
@@ -129,6 +149,7 @@ VACATION_STEPS = [
                     "entity_id": "climate.storage_room_thermostat_thermostat",
                     "temperature": 5,
                 },
+                "description": "Storage Room → 5°C",
             },
         ],
     },
@@ -141,18 +162,21 @@ VACATION_STEPS = [
                 "data": {
                     "entity_id": "switch.freezer_eco_mode",
                 },
+                "description": "Enabling freezer eco mode",
             },
             {
                 "action": "switch/turn_off",
                 "data": {
                     "entity_id": "switch.freezer_dispenser",
                 },
+                "description": "Disabling freezer dispenser",
             },
             {
                 "action": "switch/turn_on",
                 "data": {
                     "entity_id": "switch.refrigerator_eco_mode",
                 },
+                "description": "Enabling fridge eco mode",
             },
         ],
     },
@@ -165,6 +189,7 @@ VACATION_STEPS = [
                 "data": {
                     "entity_id": "switch.living_room_tv_socket_1",
                 },
+                "description": "Living Room TV",
                 "delay_after": 1,
             },
             {
@@ -172,20 +197,25 @@ VACATION_STEPS = [
                 "data": {
                     "entity_id": "switch.basement_master_tv_socket_1",
                 },
+                "description": "Basement Master TV",
                 "delay_after": 1,
             },
-            {
-                "action": "switch/turn_off",
-                "data": {
-                    "entity_id": "switch.media_room_tv_socket_1",
-                },
-                "delay_after": 1,
-            },
+            # TODO: Media Room TV socket powers hot tub controller — re-enable
+            # when hot tub controller is moved to a dedicated outlet.
+            # {
+            #     "action": "switch/turn_off",
+            #     "data": {
+            #         "entity_id": "switch.media_room_tv_socket_1",
+            #     },
+            #     "description": "Media Room TV",
+            #     "delay_after": 1,
+            # },
             {
                 "action": "switch/turn_off",
                 "data": {
                     "entity_id": "switch.office_tv_socket_1",
                 },
+                "description": "Office TV",
                 "delay_after": 1,
             },
             {
@@ -193,6 +223,7 @@ VACATION_STEPS = [
                 "data": {
                     "entity_id": "switch.master_bedroom_tv_socket_1",
                 },
+                "description": "Master Bedroom TV",
             },
         ],
     },
@@ -205,6 +236,7 @@ VACATION_STEPS = [
                 "data": {
                     "entity_id": "input_boolean.home_away_mode_enabled",
                 },
+                "description": "Enabling away mode flag",
             },
         ],
     },
@@ -224,6 +256,7 @@ HOME_STEPS = [
                     "entity_id": "climate.econet_hpwh",
                     "preset_mode": "Eco Mode",
                 },
+                "description": "Setting water heater to Eco Mode",
             },
         ],
     },
@@ -237,26 +270,48 @@ HOME_STEPS = [
                     "entity_id": "climate.hot_tub_heater",
                     "preset_mode": "Standard",
                 },
+                "description": "Setting hot tub to Standard mode",
             },
         ],
     },
     {
-        "alias": "Set Buffer Tank & Backup Differential",
+        "alias": "Heat Pump Home Setup",
         "icon": "fas fa-temperature-arrow-up",
         "actions": [
             {
-                "action": "number/set_value",
+                "action": "switch/turn_on",
                 "data": {
-                    "entity_id": "number.aeco_1988_hot_tank_target_temperature",
-                    "value": "36",
+                    "entity_id": "switch.aeco_1988_hot_tank_outdoor_reset",
                 },
+                "description": "Enabling outdoor reset",
+                "delay_after": 2,
             },
             {
                 "action": "number/set_value",
                 "data": {
-                    "entity_id": "number.aeco_1988_backup_differential",
-                    "value": "6",
+                    "entity_id": "number.aeco_1988_hot_tank_min_temperature",
+                    "value": "27",
                 },
+                "description": "Setting min temperature to 27°C",
+                "verify_delay": 10,
+            },
+            {
+                "action": "number/set_value",
+                "data": {
+                    "entity_id": "number.aeco_1988_hot_tank_max_temperature",
+                    "value": "38",
+                },
+                "description": "Setting max temperature to 38°C",
+                "verify_delay": 10,
+            },
+            {
+                "action": "number/set_value",
+                "data": {
+                    "entity_id": "number.aeco_1988_hot_tank_outdoor_reset",
+                    "value": "-20",
+                },
+                "description": "Setting outdoor reset to -20°C",
+                "verify_delay": 10,
             },
         ],
     },
@@ -276,6 +331,7 @@ HOME_STEPS = [
                     ],
                     "preset_mode": "none",
                 },
+                "description": "Clearing presets on all thermostats",
                 "delay_after": 2,
             },
             {
@@ -285,6 +341,7 @@ HOME_STEPS = [
                     "temperature": 20,
                     "hvac_mode": "heat",
                 },
+                "description": "Master Bedroom → 20°C",
                 "delay_after": 1,
             },
             {
@@ -294,6 +351,7 @@ HOME_STEPS = [
                     "temperature": 20,
                     "hvac_mode": "heat",
                 },
+                "description": "Basement Bunk Rooms → 20°C",
                 "delay_after": 1,
             },
             {
@@ -303,6 +361,7 @@ HOME_STEPS = [
                     "temperature": 20,
                     "hvac_mode": "heat",
                 },
+                "description": "Main Floor → 20°C",
                 "delay_after": 1,
             },
             {
@@ -312,6 +371,7 @@ HOME_STEPS = [
                     "temperature": 20,
                     "hvac_mode": "heat",
                 },
+                "description": "Basement Master → 20°C",
                 "delay_after": 1,
             },
             {
@@ -321,6 +381,7 @@ HOME_STEPS = [
                     "temperature": 19,
                     "hvac_mode": "heat",
                 },
+                "description": "Ski Room → 19°C",
                 "delay_after": 1,
             },
             {
@@ -329,6 +390,7 @@ HOME_STEPS = [
                     "entity_id": "climate.garage_thermostat_thermostat",
                     "temperature": 10,
                 },
+                "description": "Garage → 10°C",
                 "delay_after": 1,
             },
             {
@@ -337,6 +399,7 @@ HOME_STEPS = [
                     "entity_id": "climate.storage_room_thermostat_thermostat",
                     "temperature": 10,
                 },
+                "description": "Storage Room → 10°C",
             },
         ],
     },
@@ -349,18 +412,21 @@ HOME_STEPS = [
                 "data": {
                     "entity_id": "switch.freezer_eco_mode",
                 },
+                "description": "Disabling freezer eco mode",
             },
             {
                 "action": "switch/turn_on",
                 "data": {
                     "entity_id": "switch.freezer_dispenser",
                 },
+                "description": "Enabling freezer dispenser",
             },
             {
                 "action": "switch/turn_off",
                 "data": {
                     "entity_id": "switch.refrigerator_eco_mode",
                 },
+                "description": "Disabling fridge eco mode",
             },
         ],
     },
@@ -373,6 +439,7 @@ HOME_STEPS = [
                 "data": {
                     "entity_id": "switch.living_room_tv_socket_1",
                 },
+                "description": "Living Room TV",
                 "delay_after": 1,
             },
             {
@@ -380,20 +447,25 @@ HOME_STEPS = [
                 "data": {
                     "entity_id": "switch.basement_master_tv_socket_1",
                 },
+                "description": "Basement Master TV",
                 "delay_after": 1,
             },
-            {
-                "action": "switch/turn_on",
-                "data": {
-                    "entity_id": "switch.media_room_tv_socket_1",
-                },
-                "delay_after": 1,
-            },
+            # TODO: Media Room TV socket powers hot tub controller — re-enable
+            # when hot tub controller is moved to a dedicated outlet.
+            # {
+            #     "action": "switch/turn_on",
+            #     "data": {
+            #         "entity_id": "switch.media_room_tv_socket_1",
+            #     },
+            #     "description": "Media Room TV",
+            #     "delay_after": 1,
+            # },
             {
                 "action": "switch/turn_on",
                 "data": {
                     "entity_id": "switch.office_tv_socket_1",
                 },
+                "description": "Office TV",
                 "delay_after": 1,
             },
             {
@@ -401,6 +473,7 @@ HOME_STEPS = [
                 "data": {
                     "entity_id": "switch.master_bedroom_tv_socket_1",
                 },
+                "description": "Master Bedroom TV",
             },
         ],
     },
@@ -413,6 +486,7 @@ HOME_STEPS = [
                 "data": {
                     "entity_id": "input_boolean.home_away_mode_enabled",
                 },
+                "description": "Disabling away mode flag",
             },
         ],
     },

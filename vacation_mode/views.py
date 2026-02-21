@@ -23,7 +23,7 @@ def vacation_mode_view(request):
         mode = "home" if is_away else "vacation"
         steps_def = HOME_STEPS if is_away else VACATION_STEPS
         steps = [
-            {"alias": s["alias"], "icon": s["icon"], "status": "pending", "attempt": 0, "error": None}
+            {"alias": s["alias"], "icon": s["icon"], "status": "pending", "attempt": 0, "error": None, "progress": None}
             for s in steps_def
         ]
         run_id = None

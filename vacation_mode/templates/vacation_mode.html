@@ -18,7 +18,7 @@
 
     .vacation-header {
         text-align: center;
-        margin-bottom: 12px;
+        margin-bottom: 30px;
     }
 
     .vacation-header h1 {
@@ -48,10 +48,20 @@
 
     .controls-row {
         display: flex;
-        justify-content: center;
+        flex-direction: column;
         align-items: center;
-        gap: 16px;
+        gap: 12px;
         margin-bottom: 14px;
+    }
+
+    .action-label {
+        font-size: 20px;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .action-label i {
+        margin-right: 6px;
     }
 
     #action-btn {
@@ -158,7 +168,7 @@
     .step-item {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         align-items: center;
         padding: 12px 20px;
         margin-bottom: 5px;
@@ -219,12 +229,20 @@
     }
 
     .step-detail {
-        font-size: 18px;
+        font-size: 14px;
         color: #999;
-        margin-left: auto;
-        padding-left: 20px;
+        padding-left: 12px;
         white-space: nowrap;
-        text-align: right;
+    }
+
+    .step-detail.has-error {
+        width: 100%;
+        margin-left: 48px;
+        padding-left: 12px;
+        padding-top: 4px;
+        text-align: left;
+        white-space: normal;
+        font-size: 14px;
     }
 
     .step-item.running .step-detail {
@@ -248,7 +266,7 @@
         text-align: center;
         font-size: 24px;
         flex-shrink: 0;
-        margin-left: 12px;
+        margin-left: auto;
     }
 
     /* Spinner animation */
@@ -282,6 +300,24 @@
         color: #856404;
     }
 
+    #continue-btn {
+        display: none;
+        margin: 16px auto 0;
+        padding: 12px 40px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        background-color: #6c757d;
+        color: #fff;
+        transition: background-color 0.2s ease;
+    }
+
+    #continue-btn:hover {
+        background-color: #5a6268;
+    }
+
     .dry-run-row {
         text-align: center;
         margin-top: 16px;
@@ -301,16 +337,21 @@
     </div>
 
     <div class="controls-row">
+        <div id="action-label" class="action-label">
+            {% if is_away %}
+                <i class="fas fa-house"></i> Prepare Black Diamond Lodge for Arrival
+            {% else %}
+                <i class="fas fa-plane-departure"></i> Put Black Diamond Lodge into Vacation Mode
+            {% endif %}
+        </div>
         <button id="action-btn"
                 class="{% if is_away %}home-btn{% else %}vacation-btn{% endif %}"
                 onclick="startExecution()"
                 {% if active_run %}disabled{% endif %}>
             {% if active_run %}
                 <i class="fas fa-spinner fa-spin"></i> Running...
-            {% elif is_away %}
-                <i class="fas fa-house"></i> Prepare for Arrival
             {% else %}
-                <i class="fas fa-plane-departure"></i> Set Vacation Mode
+                Activate
             {% endif %}
         </button>
     </div>
@@ -325,6 +366,10 @@
     <ul class="step-list" id="step-list"></ul>
 
     <div class="run-summary" id="run-summary"></div>
+
+    <div style="text-align: center;">
+        <button id="continue-btn" onclick="continueAfterRun()">Continue</button>
+    </div>
 
     <div class="dry-run-row" style="display: none;">
         <label class="dry-run-toggle" id="dry-run-label">
@@ -370,15 +415,16 @@
             const li = document.createElement('li');
             li.className = 'step-item ' + step.status;
             li.id = 'step-' + idx;
+            const detailClass = step.status === 'failed' && step.error ? 'step-detail has-error' : 'step-detail';
             li.innerHTML = `
                 <div class="step-icon">
                     <i class="${step.icon}"></i>
                 </div>
                 <div class="step-name">${step.alias}</div>
-                <div class="step-detail" id="step-detail-${idx}">${getStepDetail(step)}</div>
                 <div class="step-status-icon">
                     ${getStatusIcon(step.status)}
                 </div>
+                <div class="${detailClass}" id="step-detail-${idx}">${getStepDetail(step)}</div>
             `;
             list.appendChild(li);
         });
@@ -386,9 +432,13 @@
 
     function getStepDetail(step) {
         switch (step.status) {
-            case 'running': return 'Running...';
-            case 'retrying': return `Retrying (attempt ${step.attempt})...`;
-            case 'success': return 'Complete';
+            case 'running':
+                return step.progress || 'Running...';
+            case 'retrying':
+                return step.progress
+                    ? `Retrying: ${step.progress}`
+                    : `Retrying (attempt ${step.attempt})...`;
+            case 'success': return '';
             case 'failed': return step.error || 'Failed';
             default: return '';
         }
@@ -491,9 +541,15 @@
         if (failCount === 0) {
             summary.className = 'run-summary all-success';
             summary.innerHTML = `<i class="fas fa-check-circle"></i> All ${total} steps completed successfully!`;
+            // Auto-reload after a brief delay on full success
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
         } else {
             summary.className = 'run-summary has-failures';
             summary.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${successCount} of ${total} steps succeeded, ${failCount} failed.`;
+            // Show continue button so user can read errors
+            document.getElementById('continue-btn').style.display = 'inline-block';
         }
 
         // Flip the state
@@ -511,21 +567,22 @@
             badge.innerHTML = '<i class="fas fa-house"></i> Home Mode Active';
         }
 
-        // Update button
+        // Update label and button
+        const label = document.getElementById('action-label');
         const btn = document.getElementById('action-btn');
         btn.disabled = false;
+        btn.innerHTML = 'Activate';
         if (isAway) {
             btn.className = 'home-btn';
-            btn.innerHTML = '<i class="fas fa-house"></i> Prepare for Arrival';
+            label.innerHTML = '<i class="fas fa-house"></i> Prepare Black Diamond Lodge for Arrival';
         } else {
             btn.className = 'vacation-btn';
-            btn.innerHTML = '<i class="fas fa-plane-departure"></i> Set Vacation Mode';
+            label.innerHTML = '<i class="fas fa-plane-departure"></i> Put Black Diamond Lodge into Vacation Mode';
         }
+    }
 
-        // Reload the page after a brief delay to show fresh state
-        setTimeout(() => {
-            window.location.reload();
-        }, 4000);
+    function continueAfterRun() {
+        window.location.reload();
     }
 </script>
 
