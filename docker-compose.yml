@@ -38,6 +38,11 @@ services:
       # go2rtc URL (browser-accessible, for camera page)
       GO2RTC_URL: ${GO2RTC_URL}
 
+      # UniFi Protect API credentials (for camera discovery)
+      UNIFI_PROTECT_HOST: ${UNIFI_PROTECT_HOST}
+      UNIFI_PROTECT_USERNAME: ${UNIFI_PROTECT_USERNAME}
+      UNIFI_PROTECT_PASSWORD: ${UNIFI_PROTECT_PASSWORD}
+
     ports:
       - "8000:8000"
     
@@ -46,7 +51,6 @@ services:
   go2rtc:
     image: alexxit/go2rtc
     container_name: go2rtc
-    env_file: .env
     volumes:
       - ./go2rtc/go2rtc.yaml:/config/go2rtc.yaml
     ports:
