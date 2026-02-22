@@ -19,7 +19,7 @@ BlackDiamondHub is a Django-based home automation and management hub for a vacat
 ## Tech Stack
 
 - **Backend**: Django 5.1, Python 3.11, PostgreSQL, Daphne/Channels (ASGI)
-- **Frontend**: Bootstrap 5 (crispy-bootstrap5), Font Awesome icons
+- **Frontend**: Bootstrap 5 (crispy-bootstrap5), Font Awesome 6 icons
 - **Auth**: Django auth + social-auth-app-django (Spotify OAuth)
 - **Home Assistant**: REST API at `192.168.10.212:8123`, token stored in `.env` as `HA_TOKEN`
 - **Containerization**: Docker + docker-compose (see Deployment section)
@@ -108,3 +108,21 @@ BlackDiamondHub is a Django-based home automation and management hub for a vacat
 - `tests/selenium_helpers.py` — Shared Selenium test utilities (login, Chrome options, network waits)
 - `.env` — Environment variables (HA_TOKEN, DB credentials, etc.)
 - `requirements.txt` — Python dependencies
+
+## Base Template & Navbar (`templates/base.html`)
+
+All pages extend `base.html`, which provides:
+- **Navbar**: Bootstrap 5 `navbar-dark bg-dark fixed-top` with brand "Black Diamond Hub" on the left, icon buttons (feedback, notifications, login/logout) on the right
+- **Touch targets**: All navbar buttons/links have 48×48px minimum tap targets for touchscreen use
+- **Navbar colour**: `.nav-link` elements inside the navbar have explicit `color: rgba(255,255,255,0.85)` because they sit outside a `.navbar-nav` wrapper — Bootstrap's `navbar-dark` rules don't reach them otherwise
+- **Content wrapper**: `<div class="container-fluid content-wrapper">` with `margin-top: 62px` to clear the fixed navbar
+
+### `{% block navbar_extras %}`
+
+A template block in the navbar between the brand and the right-side icon group. Pages that need unit-conversion toggles (or other page-specific navbar controls) fill this block:
+
+- **Landing page** (`index.html`): `°C/°F` button — client-side JS `toggleUnits()` converts temperature/elevation in-place via `data-metric` attributes
+- **Snow report** (`snow_report.html`): `°C, m` / `°F, ft` buttons — server-side reload via `?units=metric` / `?units=imperial` query param
+- **All other pages**: Block is empty, no toggle shown
+
+Use the `.navbar-toggle-btn` class for toggle buttons in this block. When adding a new page that needs a unit toggle or similar control, fill `{% block navbar_extras %}` with the appropriate buttons — don't add inline toggles to the page body.

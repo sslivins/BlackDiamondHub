@@ -128,3 +128,5 @@ streams:
     - rtsps://192.168.1.26:7441/uxCgrve4EW4cx49l
   mercer_island_side_of_house_low:
     - rtsps://192.168.1.26:7441/Nu4LWjNn6yGa6NCE
+  test_cam:
+    - ffmpeg:virtual?video#video=h264

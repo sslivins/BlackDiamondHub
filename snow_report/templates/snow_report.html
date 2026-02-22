@@ -3,6 +3,17 @@
 
 {% block title %}Snow Report{% endblock %}
 
+{% block navbar_extras %}
+<div class="navbar-extras">
+    <button class="navbar-toggle-btn{% if units == 'metric' %} active{% endif %}"
+            onclick="window.location.href='?units=metric'"
+            {% if units == 'metric' %}disabled{% endif %}>°C, m</button>
+    <button class="navbar-toggle-btn{% if units == 'imperial' %} active{% endif %}"
+            onclick="window.location.href='?units=imperial'"
+            {% if units == 'imperial' %}disabled{% endif %}>°F, ft</button>
+</div>
+{% endblock %}
+
 {% block content %}
 {% load static %}
 <!DOCTYPE html>
@@ -40,22 +51,7 @@
             color: #FFD700;
         }
 
-        .unit-toggle-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
 
-        .unit-toggle-button {
-            background-color: #FFD700;
-            color: black;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 5px;
-        }
 
         .grid {
             display: grid;
@@ -98,35 +94,39 @@
             margin-bottom: 10px;
         }
 
-        .unit-toggle-container {
+        /* Scroll hint: fade gradient + bouncing chevron */
+        .scroll-hint {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(transparent, #222);
             display: flex;
-            justify-content: flex-end;  /* Right-align */
-            margin-bottom: 10px;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 10px;
+            pointer-events: none;
+            z-index: 10;
+            transition: opacity 0.4s ease;
         }
-        
-        .unit-toggle-button {
-            background-color: #FFD700;
-            color: black;
-            border: none;
-            padding: 8px 15px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 5px;
-            margin-left: 10px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+
+        .scroll-hint.hidden {
+            opacity: 0;
         }
-        
-        .unit-toggle-button i {
-            font-size: 16px;
+
+        .scroll-hint i {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 24px;
+            animation: bounce 1.5s infinite;
         }
-        
-        .unit-toggle-button:disabled {
-            opacity: 0.5;
-            cursor: default;
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
+
+
         
     </style>
 </head>
@@ -134,17 +134,6 @@
 
 <div class="container">
     <h1>❄ Sun Peaks Snow Report</h1>
-
-    <!-- Unit Toggle Button -->
-    <div class="unit-toggle-container">
-        <button class="unit-toggle-button" onclick="window.location.href='?units=metric'" {% if units == "metric" %}disabled{% endif %}>
-            <i class="fas fa-ruler-combined"></i> °C, m
-        </button>
-        <button class="unit-toggle-button" onclick="window.location.href='?units=imperial'" {% if units == "imperial" %}disabled{% endif %}>
-            <i class="fas fa-ruler-combined"></i> °F, ft
-        </button>
-    </div>
-    
 
     <!-- Current Weather -->
     <div class="section">
@@ -225,7 +214,28 @@
         </div>
     </div>
 
+    <div id="scroll-sentinel" style="height: 1px;"></div>
 </div>
+
+<div class="scroll-hint" id="scroll-hint">
+    <i class="fas fa-chevron-down"></i>
+</div>
+
+<script>
+    // Hide scroll hint when the bottom of the content is visible
+    const scrollHint = document.getElementById('scroll-hint');
+    const sentinel = document.getElementById('scroll-sentinel');
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                scrollHint.classList.add('hidden');
+            } else {
+                scrollHint.classList.remove('hidden');
+            }
+        });
+    }, { threshold: 0 });
+    observer.observe(sentinel);
+</script>
 
 <script>
     async function fetchData() {

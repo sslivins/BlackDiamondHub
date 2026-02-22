@@ -206,15 +206,16 @@ class SunPeaksWebcamsTest(StaticLiveServerTestCase):
             EC.visibility_of_element_located((By.ID, 'webcam-image-modal-image'))
         )
 
-        close_button = self.browser.find_element(By.CSS_SELECTOR, '#webcam-image-modal .close')
-        close_button.click()
+        # Tap anywhere on the modal to close (tap-to-dismiss pattern)
+        modal = self.browser.find_element(By.ID, 'webcam-image-modal')
+        modal.click()
 
         WebDriverWait(self.browser, 20).until(
             EC.invisibility_of_element((By.ID, 'webcam-image-modal-image'))
         )
 
-        modal = self.browser.find_element(By.ID, 'webcam-image-modal-image')
-        self.assertFalse(modal.is_displayed(), "Modal did not close when the close button was clicked")
+        modal_image = self.browser.find_element(By.ID, 'webcam-image-modal-image')
+        self.assertFalse(modal_image.is_displayed(), "Modal did not close when tapped")
 
 @tag('selenium')
 class FeedbackModalTest(StaticLiveServerTestCase):
