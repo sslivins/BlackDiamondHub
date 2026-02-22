@@ -7,15 +7,17 @@
     body {
         background-color: #0a0a0a !important;
         color: #ffffff;
+        margin: 0;
+        overflow: hidden;
     }
 
     .cameras-header {
         text-align: center;
-        padding: 20px 10px 10px;
+        padding: 8px 10px 4px;
     }
 
     .cameras-header h1 {
-        font-size: 1.4rem;
+        font-size: 1.1rem;
         font-weight: 600;
         color: #e0e0e0;
         letter-spacing: 1px;
@@ -25,33 +27,29 @@
 
     .camera-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-        gap: 12px;
-        padding: 10px 16px 24px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        padding: 4px 8px 8px;
         max-width: 1920px;
         margin: 0 auto;
+        /* Fill the viewport: 100vh minus header (≈40px) and base.html nav elements */
+        height: calc(100vh - 50px);
     }
 
     .cam-card {
         position: relative;
         background: #111;
-        border-radius: 10px;
+        border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
-        transition: box-shadow 0.2s ease, transform 0.2s ease;
         cursor: pointer;
-    }
-
-    .cam-card:hover {
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-        transform: scale(1.01);
     }
 
     .cam-card video-stream,
     .cam-card video {
         display: block;
         width: 100%;
-        aspect-ratio: 16 / 9;
+        height: 100%;
         object-fit: contain;
         background: #000;
     }
@@ -61,9 +59,9 @@
         bottom: 0;
         left: 0;
         right: 0;
-        padding: 6px 12px;
+        padding: 4px 10px;
         background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         font-weight: 500;
         color: #fff;
         letter-spacing: 0.5px;
@@ -72,42 +70,14 @@
 
     .cam-status {
         position: absolute;
-        top: 8px;
-        right: 10px;
-        width: 8px;
-        height: 8px;
+        top: 6px;
+        right: 8px;
+        width: 7px;
+        height: 7px;
         border-radius: 50%;
         background: #4caf50;
         box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
         pointer-events: none;
-    }
-
-    .cam-fullscreen {
-        position: absolute;
-        top: 6px;
-        left: 6px;
-        width: 30px;
-        height: 30px;
-        border: none;
-        border-radius: 6px;
-        background: rgba(0, 0, 0, 0.5);
-        color: #fff;
-        font-size: 14px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        z-index: 2;
-    }
-
-    .cam-card:hover .cam-fullscreen {
-        opacity: 1;
-    }
-
-    .cam-fullscreen:hover {
-        background: rgba(255, 255, 255, 0.2);
     }
 
     .no-cameras {
@@ -154,18 +124,26 @@
         padding: 10px 16px;
     }
 
-    /* Responsive */
+    /* Mobile: single column, allow scroll */
     @media (max-width: 900px) {
+        body {
+            overflow: auto;
+        }
         .camera-grid {
             grid-template-columns: 1fr;
+            height: auto;
             padding: 8px;
             gap: 8px;
         }
+        .cam-card {
+            aspect-ratio: 16 / 9;
+        }
     }
 
-    @media (min-width: 1600px) {
+    /* 2-column for medium screens */
+    @media (min-width: 901px) and (max-width: 1200px) {
         .camera-grid {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
         }
     }
 </style>
@@ -181,9 +159,6 @@
             data-url="{{ go2rtc_url }}/api/ws?src={{ stream.name }}"
             data-mode="webrtc,mse,mp4">
         </video-stream>
-        <button class="cam-fullscreen" onclick="toggleFullscreen(this.parentElement)" title="Fullscreen">
-            <i class="fas fa-expand"></i>
-        </button>
         <div class="cam-status"></div>
         <div class="cam-label">{{ stream.display_name }}</div>
     </div>
@@ -205,29 +180,36 @@
         el.src = el.dataset.url;
     });
 
-    window.toggleFullscreen = function(card) {
-        if (!document.fullscreenElement) {
-            card.requestFullscreen().catch(() => {});
-        } else {
-            document.exitFullscreen();
-        }
-    };
+    // Tap/click anywhere on the card to toggle fullscreen,
+    // while preventing the video element from pausing.
+    document.querySelectorAll('.cam-card').forEach(card => {
+        card.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!document.fullscreenElement) {
+                card.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen();
+            }
+        });
 
-    // Prevent click-to-pause on the video elements
-    document.querySelectorAll('video-stream').forEach(el => {
-        el.addEventListener('click', e => e.stopPropagation());
-        // Also intercept the internal video element once it's created
+        // Intercept the internal video element to prevent pause on click
         const observer = new MutationObserver(() => {
-            const video = el.querySelector('video');
+            const video = card.querySelector('video');
             if (video) {
                 video.addEventListener('click', e => {
                     e.preventDefault();
                     e.stopPropagation();
+                    if (!document.fullscreenElement) {
+                        card.requestFullscreen().catch(() => {});
+                    } else {
+                        document.exitFullscreen();
+                    }
                 });
                 observer.disconnect();
             }
         });
-        observer.observe(el, { childList: true, subtree: true });
+        observer.observe(card, { childList: true, subtree: true });
     });
 </script>
 {% endblock %}
