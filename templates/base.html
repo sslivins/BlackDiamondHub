@@ -52,6 +52,20 @@
             padding: 8px 14px;
         }
 
+        /* Explicit white for nav-link icons inside the navbar.
+           Without .navbar-nav wrapper, Bootstrap's navbar-dark
+           colour rules don't reach these links, so the icon
+           colour would fall back to the inherited body text
+           colour — invisible on pages that keep the default
+           dark body colour. */
+        .navbar .nav-link {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .navbar .nav-link:hover {
+            color: #fff;
+        }
+
         .nav-link i {
             font-size: 1.35rem;
         }

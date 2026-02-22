@@ -148,6 +148,51 @@ class WeatherUnitToggleTest(StaticLiveServerTestCase):
         self.assertEqual(elevation_text, "Elevation: 1000 m")
 
 @tag('selenium')
+class NavbarLoginButtonTest(StaticLiveServerTestCase):
+    """Test that the login button is visible to unauthenticated users."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
+        cls.browser.set_window_size(1920, 1080)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.quit()
+        super().tearDownClass()
+
+    def test_login_button_visible_when_not_authenticated(self):
+        """Login icon should be visible in the navbar for anonymous visitors.
+
+        Checks both DOM visibility and that the icon's computed colour
+        is light enough to be seen on the dark navbar (luminance > 128).
+        Without an explicit colour rule, .nav-link inherits the body
+        text colour which is near-black on pages that don't override it.
+        """
+        self.browser.get(self.live_server_url)
+        login_btn = WebDriverWait(self.browser, 10).until(
+            EC.visibility_of_element_located((By.ID, 'login-button'))
+        )
+        self.assertTrue(login_btn.is_displayed())
+
+        # The icon inside the link must render with a light colour
+        # so it's actually visible on the dark navbar background.
+        icon = login_btn.find_element(By.TAG_NAME, 'i')
+        rgba = self.browser.execute_script(
+            "return window.getComputedStyle(arguments[0]).color;", icon
+        )
+        # Parse "rgb(r, g, b)" or "rgba(r, g, b, a)"
+        parts = [int(x) for x in rgba.replace('rgba', '').replace('rgb', '')
+                 .strip('() ').split(',')[:3]]
+        luminance = 0.299 * parts[0] + 0.587 * parts[1] + 0.114 * parts[2]
+        self.assertGreater(
+            luminance, 128,
+            f"Login icon colour {rgba} is too dark to see on the navbar"
+        )
+
+
+@tag('selenium')
 class FeedbackModalTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
