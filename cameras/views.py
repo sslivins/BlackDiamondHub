@@ -3,6 +3,7 @@ import logging
 import urllib.request
 import urllib.error
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -54,16 +55,26 @@ def _register_streams_with_go2rtc(go2rtc_url, cameras):
     except (urllib.error.URLError, json.JSONDecodeError, OSError):
         existing = set()
 
+    # Collect streams that need registration
+    to_register = []
     for camera in cameras:
-        # Register high quality stream
+        # High quality stream
         if camera['stream_name'] not in existing:
-            _put_stream(go2rtc_url, camera['stream_name'], camera['rtsp_url'])
+            to_register.append((camera['stream_name'], camera['rtsp_url']))
 
-        # Register low quality stream (if available)
+        # Low quality stream (if available)
         low_url = camera.get('rtsp_url_low', '')
         low_name = f"{camera['stream_name']}_low"
         if low_url and low_name not in existing:
-            _put_stream(go2rtc_url, low_name, low_url)
+            to_register.append((low_name, low_url))
+
+    # Register all new streams in parallel
+    if to_register:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            pool.map(
+                lambda args: _put_stream(go2rtc_url, *args),
+                to_register,
+            )
 
 
 def _put_stream(go2rtc_url, name, rtsp_url):

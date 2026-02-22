@@ -12,6 +12,7 @@ Auth: X-API-KEY header
 
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 import urllib3
@@ -52,32 +53,53 @@ def get_protect_cameras():
     if not sites:
         return []
 
-    result = []
     now = time.time()
 
-    for site in sites:
-        host = site['host']
-        api_key = site['api_key']
-        site_name = site.get('name', host)
+    # Separate cached vs uncached sites
+    result_map = {}  # index -> site dict
+    to_fetch = []    # (index, site) pairs needing API calls
 
-        # Check per-site cache
+    for i, site in enumerate(sites):
+        host = site['host']
         cached = _cache.get(host)
         if cached and (now - cached['timestamp']) < CACHE_TTL:
-            cameras = cached['cameras']
+            result_map[i] = {
+                'name': site.get('name', host),
+                'host': host,
+                'cameras': cached['cameras'],
+            }
         else:
-            cameras = _fetch_cameras_from_site(host, api_key, site_name)
-            if cameras is not None:
-                _cache[host] = {'cameras': cameras, 'timestamp': now}
-            else:
-                cameras = []
+            to_fetch.append((i, site))
 
-        result.append({
-            'name': site_name,
-            'host': host,
-            'cameras': cameras,
-        })
+    # Fetch uncached sites in parallel
+    if to_fetch:
+        with ThreadPoolExecutor(max_workers=len(to_fetch)) as pool:
+            futures = {}
+            for i, site in to_fetch:
+                host = site['host']
+                api_key = site['api_key']
+                site_name = site.get('name', host)
+                f = pool.submit(
+                    _fetch_cameras_from_site, host, api_key, site_name,
+                )
+                futures[f] = (i, site)
 
-    return result
+            for f in as_completed(futures):
+                i, site = futures[f]
+                host = site['host']
+                site_name = site.get('name', host)
+                cameras = f.result()
+                if cameras is not None:
+                    _cache[host] = {'cameras': cameras, 'timestamp': now}
+                else:
+                    cameras = []
+                result_map[i] = {
+                    'name': site_name,
+                    'host': host,
+                    'cameras': cameras,
+                }
+
+    return [result_map[i] for i in sorted(result_map)]
 
 
 def clear_cache():
@@ -264,44 +286,46 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
         if isinstance(cameras_data, dict):
             cameras_data = list(cameras_data.values())
 
-        cameras = []
+        # Build basic camera info (no RTSPS yet)
+        pending = []
         for camera in cameras_data:
             name = camera.get('name', 'Unknown')
             camera_id = camera.get('id')
             if not camera_id:
                 continue
+            if site_name:
+                stream_name = _camera_name_to_stream_name(
+                    f"{site_name} {name}",
+                )
+            else:
+                stream_name = _camera_name_to_stream_name(name)
+            pending.append((camera_id, name, stream_name))
 
-            rtsps_urls = _get_rtsps_url(host, api_key, camera_id)
-            if rtsps_urls:
-                # Prefix stream name with site name to avoid collisions
-                # across sites (e.g., both have "Front Door")
-                if site_name:
-                    stream_name = _camera_name_to_stream_name(
-                        f"{site_name} {name}",
-                    )
-                else:
-                    stream_name = _camera_name_to_stream_name(name)
-                cam_info = {
-                    'name': name,
-                    'camera_id': camera_id,
-                    'stream_name': stream_name,
-                    'rtsp_url': rtsps_urls.get('high', ''),
-                    'rtsp_url_low': rtsps_urls.get('low', ''),
-                    'is_ptz': False,
-                    'ptz_presets': 0,
-                }
+        # Fetch RTSPS URLs for all cameras in parallel
+        cameras = []
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            future_to_cam = {
+                pool.submit(_get_rtsps_url, host, api_key, cid): (cid, name, sn)
+                for cid, name, sn in pending
+            }
+            for f in as_completed(future_to_cam):
+                camera_id, name, stream_name = future_to_cam[f]
+                rtsps_urls = f.result()
+                if rtsps_urls:
+                    cameras.append({
+                        'name': name,
+                        'camera_id': camera_id,
+                        'stream_name': stream_name,
+                        'rtsp_url': rtsps_urls.get('high', ''),
+                        'rtsp_url_low': rtsps_urls.get('low', ''),
+                        'is_ptz': False,
+                        'ptz_presets': 0,
+                    })
 
-                # PTZ probe disabled — probing POST /ptz/goto/0 moves the
-                # camera to preset 0, which disrupts the active view.
-                # TODO: re-enable when the Protect API exposes PTZ feature
-                # flags without side effects.
-                # if _is_ptz_camera(host, api_key, camera_id):
-                #     cam_info['is_ptz'] = True
-                #     cam_info['ptz_presets'] = _get_ptz_preset_count(
-                #         host, api_key, camera_id,
-                #     )
-
-                cameras.append(cam_info)
+                    # PTZ probe disabled — probing POST /ptz/goto/0 moves the
+                    # camera to preset 0, which disrupts the active view.
+                    # TODO: re-enable when the Protect API exposes PTZ feature
+                    # flags without side effects.
 
         cameras.sort(key=lambda c: c['name'])
         return cameras
