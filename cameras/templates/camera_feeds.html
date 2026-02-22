@@ -262,6 +262,7 @@
 
 <div class="cameras-header">
     <h1><i class="fas fa-shield-alt"></i> &nbsp;Security Cameras</h1>
+    <span style="font-size: 0.6rem; color: #555;">v2</span>
 </div>
 
 {% if sites|length > 1 %}
@@ -309,10 +310,15 @@
     const GO2RTC_BASE = `http://${window.location.hostname}:${GO2RTC_PORT}`;
 
     // Dynamically load video-stream.js from go2rtc
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = `${GO2RTC_BASE}/video-stream.js`;
-    document.head.appendChild(script);
+    // Returns a promise that resolves when the script is loaded
+    const go2rtcReady = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = `${GO2RTC_BASE}/video-stream.js`;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load video-stream.js from go2rtc'));
+        document.head.appendChild(script);
+    });
 </script>
 <script type="module">
     // Initialize video-stream elements for the active tab only
@@ -326,9 +332,12 @@
         });
     }
 
-    // Initialize the first (active) panel
-    const activePanel = document.querySelector('.site-panel.active');
-    if (activePanel) initStreams(activePanel);
+    // Wait for video-stream.js to load before initializing
+    go2rtcReady.then(() => {
+        // Initialize the first (active) panel
+        const activePanel = document.querySelector('.site-panel.active');
+        if (activePanel) initStreams(activePanel);
+    }).catch(err => console.error(err));
 
     // Tab switching
     document.querySelectorAll('.site-tab').forEach(tab => {
