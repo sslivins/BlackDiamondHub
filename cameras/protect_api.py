@@ -291,12 +291,15 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
                     'ptz_presets': 0,
                 }
 
-                # Probe for PTZ capability
-                if _is_ptz_camera(host, api_key, camera_id):
-                    cam_info['is_ptz'] = True
-                    cam_info['ptz_presets'] = _get_ptz_preset_count(
-                        host, api_key, camera_id,
-                    )
+                # PTZ probe disabled — probing POST /ptz/goto/0 moves the
+                # camera to preset 0, which disrupts the active view.
+                # TODO: re-enable when the Protect API exposes PTZ feature
+                # flags without side effects.
+                # if _is_ptz_camera(host, api_key, camera_id):
+                #     cam_info['is_ptz'] = True
+                #     cam_info['ptz_presets'] = _get_ptz_preset_count(
+                #         host, api_key, camera_id,
+                #     )
 
                 cameras.append(cam_info)
 
