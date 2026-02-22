@@ -106,8 +106,9 @@ def _get_rtsps_url(host, api_key, camera_id):
         for quality in ('high', 'low'):
             if data.get(quality):
                 urls[quality] = _clean_rtsps_url(data[quality])
-        if urls:
+        if 'high' in urls and 'low' in urls:
             return urls
+        # Have high but missing low — fall through to POST to create both
     except requests.RequestException:
         pass  # Fall through to create
 
