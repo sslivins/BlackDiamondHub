@@ -776,7 +776,7 @@ class FetchCamerasWithPtzTests(TestCase):
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
     def test_ptz_camera_detected_with_presets(self, mock_get, mock_post):
-        """PTZ camera is detected and preset count is correct."""
+        """PTZ probe is currently disabled — all cameras report is_ptz=False."""
         def get_side_effect(url, **kwargs):
             if url.endswith('/cameras'):
                 return _make_mock_response([
@@ -806,8 +806,9 @@ class FetchCamerasWithPtzTests(TestCase):
         cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(len(cameras), 1)
-        self.assertTrue(cameras[0]['is_ptz'])
-        self.assertEqual(cameras[0]['ptz_presets'], 3)
+        # PTZ probe disabled — camera defaults to non-PTZ
+        self.assertFalse(cameras[0]['is_ptz'])
+        self.assertEqual(cameras[0]['ptz_presets'], 0)
         self.assertEqual(cameras[0]['camera_id'], 'cam_ptz')
 
     @patch('cameras.protect_api.requests.post')
