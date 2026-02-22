@@ -290,19 +290,41 @@
             color: #4a4a4a;
         }
 
-        .toggle-container {
-            margin: 0 20px;
+        /* ── Navbar extras (unit-toggle buttons etc.) ── */
+        .navbar-extras {
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .toggle-button {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
+        .navbar-toggle-btn {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 6px 14px;
             border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            min-height: 38px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .navbar-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        .navbar-toggle-btn:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .navbar-toggle-btn.active {
+            background: rgba(255, 255, 255, 0.85);
+            color: #212529;
+            border-color: rgba(255, 255, 255, 0.85);
         }
     </style>
 </head>
@@ -314,6 +336,9 @@
             <a class="navbar-brand" href="{% url 'landing_page' %}" id="home-button">
                 <i class="fas fa-house me-2"></i>Black Diamond Hub
             </a>
+
+            <!-- Page-specific navbar extras (unit toggles, etc.) -->
+            {% block navbar_extras %}{% endblock %}
 
             <!-- Right-side icons -->
             <div class="d-flex align-items-center gap-1">

@@ -4,6 +4,12 @@
 
 {% block title %}Black Diamond Lodge Hub{% endblock %}
 
+{% block navbar_extras %}
+<div class="navbar-extras">
+    <button class="navbar-toggle-btn toggle-button" onclick="toggleUnits()">°C/°F</button>
+</div>
+{% endblock %}
+
 {% block content %}
 <!DOCTYPE html>
 <html lang="en">
@@ -73,22 +79,7 @@
             color: #4a4a4a;
         }
         
-        .toggle-container {
-            margin: 0 20px;
-        }
-        
-        .toggle-button {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            white-space: nowrap;  /* Prevent text from wrapping */
-            width: auto;          /* Allow the button to grow with content */            
-        }
+
         
         /* Ensure the main container takes up full height minus the weather container */
         .main-container {
@@ -195,9 +186,6 @@
                 </div>
             </li>
             {% endfor %}
-        </div>
-        <div class="toggle-container">
-            <button class="toggle-button" onclick="toggleUnits()">°C/°F</button>
         </div>
     </div>
 
