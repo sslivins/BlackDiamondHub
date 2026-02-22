@@ -1,7 +1,13 @@
 import os
 import requests
-from django.test import TestCase
+from django.test import TestCase, tag
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from snow_report.views import parse_weather_html
+from tests.selenium_helpers import get_chrome_options
 
 class LiveParseWeatherHtmlTests(TestCase):
     def parse_weather_html_live_data_and_test(self, units=""):
@@ -164,3 +170,38 @@ class OfflineParseWeatherHtmlTests(TestCase):
         # self.assertIsNotNone(weather_data_imperial)
         # self.assertNotIn('', weather_data_imperial.values(), "Empty string found in imperial weather data")
         # self.assertNotIn('', [item for sublist in weather_data_imperial.values() if isinstance(sublist, list) for item in sublist], "Empty string found in imperial weather data list items")
+
+
+@tag('selenium')
+class SnowReportScrollHintTest(StaticLiveServerTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
+        cls.browser.set_window_size(1920, 1080)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.quit()
+        super().tearDownClass()
+
+    def test_scroll_hint_hides_at_bottom(self):
+        """Scroll hint should disappear when the user scrolls to the bottom."""
+        self.browser.get(f'{self.live_server_url}/snow_report/')
+
+        # Wait for scroll hint to be visible
+        scroll_hint = WebDriverWait(self.browser, 10).until(
+            EC.visibility_of_element_located((By.ID, 'scroll-hint'))
+        )
+        self.assertTrue(scroll_hint.is_displayed(), "Scroll hint should be visible initially")
+
+        # Scroll the sentinel element into view to trigger IntersectionObserver
+        self.browser.execute_script(
+            "document.getElementById('scroll-sentinel').scrollIntoView();"
+        )
+
+        # Wait for the 'hidden' class to appear on the scroll hint
+        WebDriverWait(self.browser, 5).until(
+            lambda driver: 'hidden' in driver.find_element(By.ID, 'scroll-hint').get_attribute('class'),
+            "Scroll hint should have 'hidden' class after scrolling to bottom"
+        )
