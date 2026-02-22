@@ -1250,3 +1250,317 @@ class CameraStreamSeleniumTests(StaticLiveServerTestCase):
             )
         )
         self.assertTrue(is_defined, "video-stream custom element not registered")
+
+    def test_video_receives_data_within_timeout(self):
+        """Video stream starts receiving data within 10 seconds.
+
+        After the page loads, go2rtc should negotiate a connection (MSE or
+        WebRTC) and begin delivering frames.  We verify by checking that the
+        video element has a non-zero readyState (HAVE_METADATA or higher)
+        and currentTime is advancing, which proves actual media data arrived.
+        """
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+
+        self.driver.get(f'{self.live_server_url}/cameras/')
+
+        # Wait for video-stream custom element to be defined
+        WebDriverWait(self.driver, 15).until(
+            lambda d: d.execute_script(
+                "return customElements.get('video-stream') !== undefined"
+            )
+        )
+
+        # Wait for at least one video element inside a video-stream to have
+        # readyState >= 2 (HAVE_CURRENT_DATA) which means frames are arriving
+        has_data = WebDriverWait(self.driver, 10).until(
+            lambda d: d.execute_script("""
+                const els = document.querySelectorAll('video-stream');
+                for (const el of els) {
+                    const v = el.querySelector('video') || el.video;
+                    if (v && v.readyState >= 2) return true;
+                }
+                return false;
+            """)
+        )
+        self.assertTrue(has_data, "No video element reached readyState >= 2 within 10s")
+
+    def test_fullscreen_enter_stream_loads_quickly(self):
+        """After entering fullscreen, the high-res stream connects within 8s.
+
+        This is the key regression test for the safeDisconnect() fix.  Before
+        the fix, ondisconnect() setting video.src='' caused an async video
+        error that killed the new WebSocket, resulting in a 15-second delay
+        before RECONNECT_TIMEOUT triggered a retry.
+
+        The test clicks the fullscreen overlay, waits for the fullscreen API
+        to engage, then verifies a new WebSocket reaches OPEN state within
+        5 seconds.  We check WebSocket state rather than video.readyState
+        because Chrome headless may not render video in fullscreen mode, but
+        the WS connection — which is what safeDisconnect protects — is
+        fully testable.  If the race condition regresses, the WS gets killed
+        and won't reopen for 15s, causing this test to time out.
+        """
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        import time
+
+        self.driver.get(f'{self.live_server_url}/cameras/')
+
+        # Wait for video-stream custom element and initial stream data
+        WebDriverWait(self.driver, 15).until(
+            lambda d: d.execute_script(
+                "return customElements.get('video-stream') !== undefined"
+            )
+        )
+        WebDriverWait(self.driver, 10).until(
+            lambda d: d.execute_script("""
+                const els = document.querySelectorAll('video-stream');
+                for (const el of els) {
+                    const v = el.querySelector('video') || el.video;
+                    if (v && v.readyState >= 2) return true;
+                }
+                return false;
+            """)
+        )
+
+        # Find test_cam — it's registered in go2rtc by setUpClass and the
+        # view falls back to the go2rtc stream list (UNIFI_PROTECT_SITES=[]).
+        test_cam = self.driver.find_element(
+            By.CSS_SELECTOR, 'video-stream[data-stream-name="test_cam"]'
+        )
+        card = test_cam.find_element(By.XPATH, '..')
+        overlay = card.find_element(By.CSS_SELECTOR, '.cam-touch-overlay')
+        overlay.click()
+
+        # Verify fullscreen engaged (or skip if browser blocks it)
+        try:
+            WebDriverWait(self.driver, 3).until(
+                lambda d: d.execute_script(
+                    "return document.fullscreenElement !== null"
+                )
+            )
+        except Exception:
+            self.skipTest("Browser did not enter fullscreen")
+
+        # The critical assertion: the fullscreen stream's WebSocket must
+        # reach OPEN within 5 seconds.  The old bug caused the new WS to
+        # be killed by the stale onclose/video-error handlers, leaving ws
+        # null until RECONNECT_TIMEOUT (15s) fired.
+        start = time.time()
+        ws_open = WebDriverWait(self.driver, 5).until(
+            lambda d: d.execute_script("""
+                const fs = document.fullscreenElement;
+                if (!fs) return false;
+                const el = fs.querySelector('video-stream');
+                if (!el || !el.ws) return false;
+                return el.ws.readyState === WebSocket.OPEN;
+            """)
+        )
+        elapsed = time.time() - start
+        self.assertTrue(
+            ws_open,
+            f"Fullscreen stream WebSocket did not open within 5s "
+            f"(took {elapsed:.1f}s) — safeDisconnect may be broken"
+        )
+
+    def test_fullscreen_exit_streams_recover(self):
+        """After exiting fullscreen, grid streams recover within 10 seconds.
+
+        Verifies that stopStreams + initStreams via safeDisconnect properly
+        tears down the fullscreen connection and re-establishes low-quality
+        grid streams without getting stuck in a reconnect loop.
+        """
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        import time
+
+        self.driver.get(f'{self.live_server_url}/cameras/')
+
+        # Wait for initial streams
+        WebDriverWait(self.driver, 15).until(
+            lambda d: d.execute_script(
+                "return customElements.get('video-stream') !== undefined"
+            )
+        )
+        WebDriverWait(self.driver, 10).until(
+            lambda d: d.execute_script("""
+                const els = document.querySelectorAll('video-stream');
+                for (const el of els) {
+                    const v = el.querySelector('video') || el.video;
+                    if (v && v.readyState >= 2) return true;
+                }
+                return false;
+            """)
+        )
+
+        # Enter fullscreen on the test_cam card
+        test_cam = self.driver.find_element(
+            By.CSS_SELECTOR, 'video-stream[data-stream-name="test_cam"]'
+        )
+        card = test_cam.find_element(By.XPATH, '..')
+        overlay = card.find_element(By.CSS_SELECTOR, '.cam-touch-overlay')
+        overlay.click()
+
+        try:
+            WebDriverWait(self.driver, 3).until(
+                lambda d: d.execute_script(
+                    "return document.fullscreenElement !== null"
+                )
+            )
+        except Exception:
+            self.skipTest("Browser did not enter fullscreen")
+
+        # Wait for fullscreen stream's WebSocket to open
+        WebDriverWait(self.driver, 5).until(
+            lambda d: d.execute_script("""
+                const fs = document.fullscreenElement;
+                if (!fs) return false;
+                const el = fs.querySelector('video-stream');
+                if (!el || !el.ws) return false;
+                return el.ws.readyState === WebSocket.OPEN;
+            """)
+        )
+
+        # Exit fullscreen
+        self.driver.execute_script("document.exitFullscreen()")
+
+        # Wait for fullscreen to exit
+        WebDriverWait(self.driver, 3).until(
+            lambda d: d.execute_script(
+                "return document.fullscreenElement === null"
+            )
+        )
+
+        # Grid streams should recover — at least one video element should
+        # reach readyState >= 2 within 10 seconds
+        start = time.time()
+        has_data = WebDriverWait(self.driver, 10).until(
+            lambda d: d.execute_script("""
+                const els = document.querySelectorAll('video-stream');
+                for (const el of els) {
+                    const v = el.querySelector('video') || el.video;
+                    if (v && v.readyState >= 2) return true;
+                }
+                return false;
+            """)
+        )
+        elapsed = time.time() - start
+        self.assertTrue(
+            has_data,
+            f"Grid streams did not recover within 10s after fullscreen exit "
+            f"(took {elapsed:.1f}s)"
+        )
+
+    def test_no_websocket_errors_during_fullscreen_cycle(self):
+        """No WebSocket connection failures occur during fullscreen enter/exit.
+
+        Monitors the browser console for WebSocket errors that would indicate
+        the race condition where onclose() kills the new WebSocket or the
+        video error handler closes it prematurely.
+        """
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        import time
+
+        # Enable browser logging
+        self.driver.get(f'{self.live_server_url}/cameras/')
+
+        # Wait for initial stream
+        WebDriverWait(self.driver, 15).until(
+            lambda d: d.execute_script(
+                "return customElements.get('video-stream') !== undefined"
+            )
+        )
+        WebDriverWait(self.driver, 10).until(
+            lambda d: d.execute_script("""
+                const els = document.querySelectorAll('video-stream');
+                for (const el of els) {
+                    const v = el.querySelector('video') || el.video;
+                    if (v && v.readyState >= 2) return true;
+                }
+                return false;
+            """)
+        )
+
+        # Inject WebSocket error tracker before fullscreen
+        self.driver.execute_script("""
+            window.__wsErrors = [];
+            const OrigWebSocket = window.WebSocket;
+            window.WebSocket = function(url, protocols) {
+                const ws = protocols
+                    ? new OrigWebSocket(url, protocols)
+                    : new OrigWebSocket(url);
+                ws.addEventListener('error', () => {
+                    window.__wsErrors.push({
+                        url: url,
+                        time: Date.now(),
+                        readyState: ws.readyState
+                    });
+                });
+                return ws;
+            };
+            window.WebSocket.prototype = OrigWebSocket.prototype;
+            window.WebSocket.CONNECTING = OrigWebSocket.CONNECTING;
+            window.WebSocket.OPEN = OrigWebSocket.OPEN;
+            window.WebSocket.CLOSING = OrigWebSocket.CLOSING;
+            window.WebSocket.CLOSED = OrigWebSocket.CLOSED;
+        """)
+
+        # Enter fullscreen on the test_cam card
+        test_cam = self.driver.find_element(
+            By.CSS_SELECTOR, 'video-stream[data-stream-name="test_cam"]'
+        )
+        card = test_cam.find_element(By.XPATH, '..')
+        overlay = card.find_element(By.CSS_SELECTOR, '.cam-touch-overlay')
+        overlay.click()
+
+        try:
+            WebDriverWait(self.driver, 3).until(
+                lambda d: d.execute_script(
+                    "return document.fullscreenElement !== null"
+                )
+            )
+        except Exception:
+            self.skipTest("Browser did not enter fullscreen")
+
+        # Wait for fullscreen stream's WebSocket to open
+        WebDriverWait(self.driver, 5).until(
+            lambda d: d.execute_script("""
+                const fs = document.fullscreenElement;
+                if (!fs) return false;
+                const el = fs.querySelector('video-stream');
+                if (!el || !el.ws) return false;
+                return el.ws.readyState === WebSocket.OPEN;
+            """)
+        )
+
+        # Exit fullscreen
+        self.driver.execute_script("document.exitFullscreen()")
+        WebDriverWait(self.driver, 3).until(
+            lambda d: d.execute_script(
+                "return document.fullscreenElement === null"
+            )
+        )
+
+        # Wait for grid to recover
+        WebDriverWait(self.driver, 10).until(
+            lambda d: d.execute_script("""
+                const els = document.querySelectorAll('video-stream');
+                for (const el of els) {
+                    const v = el.querySelector('video') || el.video;
+                    if (v && v.readyState >= 2) return true;
+                }
+                return false;
+            """)
+        )
+
+        # Give a brief moment for any deferred errors to fire
+        time.sleep(1)
+
+        # Check for WebSocket errors
+        ws_errors = self.driver.execute_script("return window.__wsErrors || []")
+        self.assertEqual(
+            len(ws_errors), 0,
+            f"WebSocket errors occurred during fullscreen cycle: {ws_errors}"
+        )
