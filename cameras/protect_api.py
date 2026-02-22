@@ -86,42 +86,48 @@ def clear_cache():
 
 
 def _get_rtsps_url(host, api_key, camera_id):
-    """Get or create an RTSPS stream URL for a camera.
+    """Get or create RTSPS stream URLs for a camera (high and low quality).
 
-    First tries GET to retrieve an existing stream. If none exists,
-    creates one via POST with 'high' quality.
+    First tries GET to retrieve existing streams. If none exist,
+    creates them via POST with both 'high' and 'low' qualities.
 
-    Returns the RTSPS URL string, or None on failure.
+    Returns a dict {'high': url, 'low': url} with available URLs,
+    or None on failure. At minimum 'high' will be present.
     """
     base = f'https://{host}{API_BASE}/cameras/{camera_id}/rtsps-stream'
     headers = {'X-API-KEY': api_key}
 
-    # Try to get existing RTSPS stream
+    # Try to get existing RTSPS streams
     try:
         resp = requests.get(base, headers=headers, verify=False, timeout=15)
         resp.raise_for_status()
         data = resp.json()
-        # Return the highest quality available URL
-        for quality in ('high', 'medium', 'low'):
+        urls = {}
+        for quality in ('high', 'low'):
             if data.get(quality):
-                return _clean_rtsps_url(data[quality])
+                urls[quality] = _clean_rtsps_url(data[quality])
+        if urls:
+            return urls
     except requests.RequestException:
         pass  # Fall through to create
 
-    # No existing stream — create one
+    # No existing streams — create both high and low
     try:
         resp = requests.post(
             base,
             headers={**headers, 'Content-Type': 'application/json'},
-            json={'qualities': ['high']},
+            json={'qualities': ['high', 'low']},
             verify=False,
             timeout=15,
         )
         resp.raise_for_status()
         data = resp.json()
-        for quality in ('high', 'medium', 'low'):
+        urls = {}
+        for quality in ('high', 'low'):
             if data.get(quality):
-                return _clean_rtsps_url(data[quality])
+                urls[quality] = _clean_rtsps_url(data[quality])
+        if urls:
+            return urls
     except requests.RequestException as e:
         logger.warning("Failed to create RTSPS stream for camera %s: %s",
                        camera_id, e)
@@ -260,13 +266,14 @@ def _fetch_cameras_from_site(host, api_key):
             if not camera_id:
                 continue
 
-            rtsp_url = _get_rtsps_url(host, api_key, camera_id)
-            if rtsp_url:
+            rtsps_urls = _get_rtsps_url(host, api_key, camera_id)
+            if rtsps_urls:
                 cam_info = {
                     'name': name,
                     'camera_id': camera_id,
                     'stream_name': _camera_name_to_stream_name(name),
-                    'rtsp_url': rtsp_url,
+                    'rtsp_url': rtsps_urls.get('high', ''),
+                    'rtsp_url_low': rtsps_urls.get('low', ''),
                     'is_ptz': False,
                     'ptz_presets': 0,
                 }

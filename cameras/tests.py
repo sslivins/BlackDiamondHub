@@ -42,12 +42,12 @@ MOCK_CAMERAS_RESPONSE = [
 MOCK_RTSPS_FRONT = {
     'high': 'rtsps://192.168.10.1:7441/abc123high',
     'medium': None,
-    'low': None,
+    'low': 'rtsps://192.168.10.1:7441/abc123low',
 }
 MOCK_RTSPS_BACK = {
     'high': 'rtsps://192.168.10.1:7441/xyz789high',
     'medium': None,
-    'low': None,
+    'low': 'rtsps://192.168.10.1:7441/xyz789low',
 }
 MOCK_RTSPS_EMPTY = {'high': None, 'medium': None, 'low': None}
 
@@ -119,6 +119,7 @@ class FetchCamerasFromSiteTests(TestCase):
 
         front_door = next(c for c in cameras if c['name'] == 'Front Door')
         self.assertEqual(front_door['rtsp_url'], 'rtsps://192.168.10.1:7441/abc123high')
+        self.assertEqual(front_door['rtsp_url_low'], 'rtsps://192.168.10.1:7441/abc123low')
 
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
@@ -146,6 +147,8 @@ class FetchCamerasFromSiteTests(TestCase):
 
         self.assertEqual(len(cameras), 1)
         self.assertEqual(cameras[0]['rtsp_url'], 'rtsps://192.168.10.1:7441/newstream')
+        # No low URL available in this case
+        self.assertEqual(cameras[0]['rtsp_url_low'], '')
 
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
@@ -206,7 +209,7 @@ class FetchCamerasFromSiteTests(TestCase):
                 })
             return _make_mock_response({
                 'high': 'rtsps://192.168.10.1:7441/garageAlias',
-                'medium': None, 'low': None,
+                'medium': None, 'low': 'rtsps://192.168.10.1:7441/garageAliaslow',
             })
 
         mock_get.side_effect = get_side_effect
@@ -216,6 +219,7 @@ class FetchCamerasFromSiteTests(TestCase):
 
         self.assertEqual(len(cameras), 1)
         self.assertEqual(cameras[0]['name'], 'Garage')
+        self.assertEqual(cameras[0]['rtsp_url_low'], 'rtsps://192.168.10.1:7441/garageAliaslow')
 
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
@@ -241,7 +245,7 @@ class FetchCamerasFromSiteTests(TestCase):
                 ])
             return _make_mock_response({
                 'high': 'rtsps://192.168.10.1:7441/stream1?enableSrtp',
-                'medium': None, 'low': None,
+                'medium': None, 'low': 'rtsps://192.168.10.1:7441/stream1low?enableSrtp',
             })
 
         mock_get.side_effect = get_side_effect
@@ -250,6 +254,7 @@ class FetchCamerasFromSiteTests(TestCase):
         cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(cameras[0]['rtsp_url'], 'rtsps://192.168.10.1:7441/stream1')
+        self.assertEqual(cameras[0]['rtsp_url_low'], 'rtsps://192.168.10.1:7441/stream1low')
 
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
@@ -283,7 +288,7 @@ class ProtectCachingTests(TestCase):
     @patch('cameras.protect_api._fetch_cameras_from_site')
     def test_caches_result(self, mock_fetch):
         """Second call uses cached result, doesn't re-fetch."""
-        mock_fetch.return_value = [{'name': 'Cam1', 'stream_name': 'cam1', 'rtsp_url': 'rtsps://x'}]
+        mock_fetch.return_value = [{'name': 'Cam1', 'stream_name': 'cam1', 'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low'}]
 
         result1 = get_protect_cameras()
         result2 = get_protect_cameras()
@@ -399,8 +404,8 @@ class CameraFeedViewWithProtectTests(TestCase):
             'name': 'Test Site', 'host': '192.168.10.1',
             'cameras': [
                 {'name': 'Front Door', 'stream_name': 'front_door',
-                 'rtsp_url': 'rtsps://x', 'camera_id': 'cam1',
-                 'is_ptz': False, 'ptz_presets': 0},
+                 'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                 'camera_id': 'cam1', 'is_ptz': False, 'ptz_presets': 0},
             ],
         }]
 
@@ -418,8 +423,8 @@ class CameraFeedViewWithProtectTests(TestCase):
         """Discovered cameras are registered with go2rtc."""
         cameras = [
             {'name': 'Front Door', 'stream_name': 'front_door',
-             'rtsp_url': 'rtsps://x', 'camera_id': 'cam1',
-             'is_ptz': False, 'ptz_presets': 0},
+             'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+             'camera_id': 'cam1', 'is_ptz': False, 'ptz_presets': 0},
         ]
         mock_cameras.return_value = [{
             'name': 'Test Site', 'host': '192.168.10.1', 'cameras': cameras,
@@ -447,11 +452,11 @@ class CameraFeedViewWithProtectTests(TestCase):
             'name': 'Test Site', 'host': '192.168.10.1',
             'cameras': [
                 {'name': 'Front Door', 'stream_name': 'front_door',
-                 'rtsp_url': 'rtsps://x', 'camera_id': 'cam1',
-                 'is_ptz': False, 'ptz_presets': 0},
+                 'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                 'camera_id': 'cam1', 'is_ptz': False, 'ptz_presets': 0},
                 {'name': 'Backyard', 'stream_name': 'backyard',
-                 'rtsp_url': 'rtsps://y', 'camera_id': 'cam2',
-                 'is_ptz': False, 'ptz_presets': 0},
+                 'rtsp_url': 'rtsps://y', 'rtsp_url_low': 'rtsps://y_low',
+                 'camera_id': 'cam2', 'is_ptz': False, 'ptz_presets': 0},
             ],
         }]
 
@@ -467,6 +472,8 @@ class CameraFeedViewWithProtectTests(TestCase):
         # Stream names stored as data attributes for dynamic URL construction
         self.assertIn('data-stream-name="front_door"', content)
         self.assertIn('data-stream-name="backyard"', content)
+        # Low-quality flag is set
+        self.assertIn('data-has-low="true"', content)
         # Properties set via JS using dynamic go2rtc base URL
         self.assertIn('el.dataset.streamName', content)
         # Loads the correct JS module (video-stream.js, not video-rtc.js)
@@ -483,8 +490,8 @@ class CameraFeedViewWithProtectTests(TestCase):
             'name': 'Test Site', 'host': '192.168.10.1',
             'cameras': [
                 {'name': 'Front Door', 'stream_name': 'front_door',
-                 'rtsp_url': 'rtsps://x', 'camera_id': 'cam1',
-                 'is_ptz': False, 'ptz_presets': 0},
+                 'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                 'camera_id': 'cam1', 'is_ptz': False, 'ptz_presets': 0},
             ],
         }]
 
@@ -497,6 +504,9 @@ class CameraFeedViewWithProtectTests(TestCase):
         self.assertIn('requestFullscreen', content)
         self.assertIn('exitFullscreen', content)
         self.assertIn('.cam-touch-overlay', content)
+        # Stream quality management JS
+        self.assertIn('fullscreenchange', content)
+        self.assertIn('stopStreams', content)
 
 
 @override_settings(
@@ -533,28 +543,34 @@ class RegisterStreamsTests(TestCase):
 
     @patch("cameras.views.urllib.request.urlopen")
     def test_registers_missing_streams(self, mock_urlopen):
-        """Registers streams that don't exist in go2rtc yet."""
+        """Registers both high and low streams that don't exist in go2rtc."""
         # First call: GET existing streams (empty)
         get_resp = MagicMock()
         get_resp.read.return_value = json.dumps({}).encode()
         get_resp.__enter__ = lambda s: s
         get_resp.__exit__ = MagicMock(return_value=False)
 
-        # Second call: PUT to register
+        # PUT calls for high and low streams
         put_resp = MagicMock()
         put_resp.__enter__ = lambda s: s
         put_resp.__exit__ = MagicMock(return_value=False)
 
-        mock_urlopen.side_effect = [get_resp, put_resp]
+        put_resp2 = MagicMock()
+        put_resp2.__enter__ = lambda s: s
+        put_resp2.__exit__ = MagicMock(return_value=False)
+
+        mock_urlopen.side_effect = [get_resp, put_resp, put_resp2]
 
         cameras = [
-            {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://host:7441/abc'},
+            {'name': 'Front Door', 'stream_name': 'front_door',
+             'rtsp_url': 'rtsps://host:7441/abc',
+             'rtsp_url_low': 'rtsps://host:7441/abc_low'},
         ]
 
         _register_streams_with_go2rtc('http://localhost:1984', cameras)
 
-        # Two calls: GET streams + PUT new stream
-        self.assertEqual(mock_urlopen.call_count, 2)
+        # Three calls: GET streams + PUT high + PUT low
+        self.assertEqual(mock_urlopen.call_count, 3)
 
     @patch("cameras.views.urllib.request.urlopen")
     def test_skips_existing_streams(self, mock_urlopen):
@@ -562,18 +578,21 @@ class RegisterStreamsTests(TestCase):
         get_resp = MagicMock()
         get_resp.read.return_value = json.dumps({
             "front_door": [{"url": "rtsps://host:7441/abc"}],
+            "front_door_low": [{"url": "rtsps://host:7441/abc_low"}],
         }).encode()
         get_resp.__enter__ = lambda s: s
         get_resp.__exit__ = MagicMock(return_value=False)
         mock_urlopen.return_value = get_resp
 
         cameras = [
-            {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://host:7441/abc'},
+            {'name': 'Front Door', 'stream_name': 'front_door',
+             'rtsp_url': 'rtsps://host:7441/abc',
+             'rtsp_url_low': 'rtsps://host:7441/abc_low'},
         ]
 
         _register_streams_with_go2rtc('http://localhost:1984', cameras)
 
-        # Only one call: GET streams (no PUT needed)
+        # Only one call: GET streams (no PUTs needed)
         self.assertEqual(mock_urlopen.call_count, 1)
 
     @patch("cameras.views.urllib.request.urlopen")
@@ -582,7 +601,9 @@ class RegisterStreamsTests(TestCase):
         mock_urlopen.side_effect = OSError("Connection refused")
 
         cameras = [
-            {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://host:7441/abc'},
+            {'name': 'Front Door', 'stream_name': 'front_door',
+             'rtsp_url': 'rtsps://host:7441/abc',
+             'rtsp_url_low': 'rtsps://host:7441/abc_low'},
         ]
 
         # Should not raise
@@ -749,7 +770,7 @@ class FetchCamerasWithPtzTests(TestCase):
                 ])
             return _make_mock_response({
                 'high': 'rtsps://192.168.10.1:7441/hottub',
-                'medium': None, 'low': None,
+                'medium': None, 'low': 'rtsps://192.168.10.1:7441/hottublow',
             })
 
         def post_side_effect(url, **kwargs):
@@ -878,8 +899,8 @@ class PtzTemplateTests(TestCase):
             'cameras': [
                 {
                     'name': 'Hot Tub', 'stream_name': 'hot_tub',
-                    'rtsp_url': 'rtsps://x', 'camera_id': 'cam_ptz',
-                    'is_ptz': True, 'ptz_presets': 4,
+                    'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                    'camera_id': 'cam_ptz', 'is_ptz': True, 'ptz_presets': 4,
                 },
             ],
         }]
@@ -902,8 +923,8 @@ class PtzTemplateTests(TestCase):
             'cameras': [
                 {
                     'name': 'Front Door', 'stream_name': 'front_door',
-                    'rtsp_url': 'rtsps://x', 'camera_id': 'cam_front',
-                    'is_ptz': False, 'ptz_presets': 0,
+                    'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                    'camera_id': 'cam_front', 'is_ptz': False, 'ptz_presets': 0,
                 },
             ],
         }]
@@ -923,8 +944,8 @@ class PtzTemplateTests(TestCase):
             'cameras': [
                 {
                     'name': 'Hot Tub', 'stream_name': 'hot_tub',
-                    'rtsp_url': 'rtsps://x', 'camera_id': 'cam_ptz',
-                    'is_ptz': True, 'ptz_presets': 2,
+                    'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                    'camera_id': 'cam_ptz', 'is_ptz': True, 'ptz_presets': 2,
                 },
             ],
         }]
@@ -990,16 +1011,16 @@ class MultiSiteTabTests(TestCase):
                 'name': 'Sun Peaks', 'host': '192.168.10.1',
                 'cameras': [
                     {'name': 'Front Door', 'stream_name': 'front_door',
-                     'rtsp_url': 'rtsps://x', 'camera_id': 'c1',
-                     'is_ptz': False, 'ptz_presets': 0},
+                     'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                     'camera_id': 'c1', 'is_ptz': False, 'ptz_presets': 0},
                 ],
             },
             {
                 'name': 'Mercer Island', 'host': '192.168.1.26',
                 'cameras': [
                     {'name': 'Garage', 'stream_name': 'garage',
-                     'rtsp_url': 'rtsps://y', 'camera_id': 'c2',
-                     'is_ptz': False, 'ptz_presets': 0},
+                     'rtsp_url': 'rtsps://y', 'rtsp_url_low': 'rtsps://y_low',
+                     'camera_id': 'c2', 'is_ptz': False, 'ptz_presets': 0},
                 ],
             },
         ]
@@ -1021,8 +1042,8 @@ class MultiSiteTabTests(TestCase):
                 'name': 'Sun Peaks', 'host': '192.168.10.1',
                 'cameras': [
                     {'name': 'Cam1', 'stream_name': 'cam1',
-                     'rtsp_url': 'rtsps://x', 'camera_id': 'c1',
-                     'is_ptz': False, 'ptz_presets': 0},
+                     'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                     'camera_id': 'c1', 'is_ptz': False, 'ptz_presets': 0},
                 ],
             },
             {
@@ -1046,13 +1067,13 @@ class MultiSiteTabTests(TestCase):
         """Cameras from all sites are registered with go2rtc."""
         cams1 = [
             {'name': 'Cam1', 'stream_name': 'cam1',
-             'rtsp_url': 'rtsps://x', 'camera_id': 'c1',
-             'is_ptz': False, 'ptz_presets': 0},
+             'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+             'camera_id': 'c1', 'is_ptz': False, 'ptz_presets': 0},
         ]
         cams2 = [
             {'name': 'Cam2', 'stream_name': 'cam2',
-             'rtsp_url': 'rtsps://y', 'camera_id': 'c2',
-             'is_ptz': False, 'ptz_presets': 0},
+             'rtsp_url': 'rtsps://y', 'rtsp_url_low': 'rtsps://y_low',
+             'camera_id': 'c2', 'is_ptz': False, 'ptz_presets': 0},
         ]
         mock_cameras.return_value = [
             {'name': 'Site 1', 'host': '192.168.10.1', 'cameras': cams1},

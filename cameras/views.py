@@ -40,7 +40,10 @@ def get_go2rtc_streams(go2rtc_url):
 def _register_streams_with_go2rtc(go2rtc_url, cameras):
     """Register camera RTSP streams with go2rtc via its API.
 
-    Uses PATCH (upsert) so existing streams are updated and new ones created.
+    Registers both high and low quality streams for each camera:
+    - {stream_name} — high quality (used for fullscreen)
+    - {stream_name}_low — low quality (used in grid view)
+
     Only registers streams that don't already exist in go2rtc.
     """
     # Fetch existing streams once
@@ -52,19 +55,29 @@ def _register_streams_with_go2rtc(go2rtc_url, cameras):
         existing = set()
 
     for camera in cameras:
-        if camera['stream_name'] in existing:
-            continue
-        try:
-            src = urllib.parse.quote(camera['rtsp_url'], safe='')
-            url = f"{go2rtc_url}/api/streams?name={camera['stream_name']}&src={src}"
-            req = urllib.request.Request(url, method='PUT', data=b'')
-            with urllib.request.urlopen(req, timeout=5):
-                pass
-        except (urllib.error.URLError, OSError) as e:
-            logger.warning(
-                "Failed to register stream %s with go2rtc: %s",
-                camera['stream_name'], e,
-            )
+        # Register high quality stream
+        if camera['stream_name'] not in existing:
+            _put_stream(go2rtc_url, camera['stream_name'], camera['rtsp_url'])
+
+        # Register low quality stream (if available)
+        low_url = camera.get('rtsp_url_low', '')
+        low_name = f"{camera['stream_name']}_low"
+        if low_url and low_name not in existing:
+            _put_stream(go2rtc_url, low_name, low_url)
+
+
+def _put_stream(go2rtc_url, name, rtsp_url):
+    """Register a single stream with go2rtc."""
+    try:
+        src = urllib.parse.quote(rtsp_url, safe='')
+        url = f"{go2rtc_url}/api/streams?name={name}&src={src}"
+        req = urllib.request.Request(url, method='PUT', data=b'')
+        with urllib.request.urlopen(req, timeout=5):
+            pass
+    except (urllib.error.URLError, OSError) as e:
+        logger.warning(
+            "Failed to register stream %s with go2rtc: %s", name, e,
+        )
 
 
 def camera_feed_view(request):
@@ -94,6 +107,7 @@ def camera_feed_view(request):
                     'is_ptz': cam.get('is_ptz', False),
                     'ptz_presets': cam.get('ptz_presets', 0),
                     'preset_range': list(range(cam.get('ptz_presets', 0))),
+                    'has_low': bool(cam.get('rtsp_url_low', '')),
                 }
                 for cam in all_cameras
             ]
