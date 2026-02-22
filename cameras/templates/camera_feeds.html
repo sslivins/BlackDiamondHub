@@ -262,7 +262,6 @@
 
 <div class="cameras-header">
     <h1><i class="fas fa-shield-alt"></i> &nbsp;Security Cameras</h1>
-    <span style="font-size: 0.6rem; color: #555;">v2</span>
 </div>
 
 {% if sites|length > 1 %}
@@ -279,6 +278,7 @@
     <div class="cam-card">
         <video-stream
             data-stream-name="{{ stream.name }}"
+            data-has-low="{% if stream.has_low %}true{% else %}false{% endif %}"
             data-mode="webrtc,mse,mp4"
             data-site="{{ forloop.parentloop.counter0 }}">
         </video-stream>
@@ -321,13 +321,28 @@
     });
 </script>
 <script type="module">
-    // Initialize video-stream elements for the active tab only
+    // Initialize video-stream elements for a panel (low quality for grid)
     function initStreams(panel) {
         panel.querySelectorAll('video-stream').forEach(el => {
-            if (!el.src) {
+            if (!el.dataset.active) {
+                const streamName = el.dataset.streamName;
+                const hasLow = el.dataset.hasLow === 'true';
+                const src = hasLow ? `${streamName}_low` : streamName;
                 el.background = true;
                 el.mode = el.dataset.mode;
-                el.src = `${GO2RTC_BASE}/api/ws?src=${el.dataset.streamName}`;
+                if (el.video) el.video.muted = true;
+                el.src = `${GO2RTC_BASE}/api/ws?src=${src}`;
+                el.dataset.active = 'true';
+            }
+        });
+    }
+
+    // Stop all streams in a panel (free bandwidth)
+    function stopStreams(panel) {
+        panel.querySelectorAll('video-stream').forEach(el => {
+            if (el.dataset.active) {
+                el.ondisconnect();
+                delete el.dataset.active;
             }
         });
     }
@@ -339,10 +354,14 @@
         if (activePanel) initStreams(activePanel);
     }).catch(err => console.error(err));
 
-    // Tab switching
+    // Tab switching — stop old tab streams, start new tab streams
     document.querySelectorAll('.site-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const siteIdx = tab.dataset.site;
+
+            // Stop streams on the currently active panel
+            const oldPanel = document.querySelector('.site-panel.active');
+            if (oldPanel) stopStreams(oldPanel);
 
             // Update tab styles
             document.querySelectorAll('.site-tab').forEach(t => t.classList.remove('active'));
@@ -353,12 +372,12 @@
             const panel = document.querySelector(`.site-panel[data-site="${siteIdx}"]`);
             panel.classList.add('active');
 
-            // Initialize streams on first view
+            // Start streams on the new panel
             initStreams(panel);
         });
     });
 
-    // Tap/click the overlay to toggle fullscreen
+    // Fullscreen: switch to high-res, pause others
     document.querySelectorAll('.cam-touch-overlay').forEach(overlay => {
         overlay.addEventListener('click', () => {
             const card = overlay.closest('.cam-card');
@@ -368,6 +387,46 @@
                 document.exitFullscreen();
             }
         });
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+        const activePanel = document.querySelector('.site-panel.active');
+        if (!activePanel) return;
+
+        if (document.fullscreenElement) {
+            // Entering fullscreen — switch this stream to high-res, stop others
+            const fsCard = document.fullscreenElement;
+            const fsStream = fsCard.querySelector('video-stream');
+            if (fsStream) {
+                const streamName = fsStream.dataset.streamName;
+                // Disconnect current stream before switching to high quality
+                fsStream.ondisconnect();
+                if (fsStream.video) fsStream.video.muted = true;
+                fsStream.src = `${GO2RTC_BASE}/api/ws?src=${streamName}`;
+            }
+
+            // Stop all other streams to save bandwidth
+            activePanel.querySelectorAll('video-stream').forEach(el => {
+                if (el !== fsStream && el.dataset.active) {
+                    el.ondisconnect();
+                    delete el.dataset.active;
+                }
+            });
+        } else {
+            // Exiting fullscreen — restart all streams at low quality
+            initStreams(activePanel);
+
+            // The previously fullscreen stream needs to switch back to low
+            activePanel.querySelectorAll('video-stream').forEach(el => {
+                const streamName = el.dataset.streamName;
+                const hasLow = el.dataset.hasLow === 'true';
+                if (hasLow) {
+                    el.ondisconnect();
+                    if (el.video) el.video.muted = true;
+                    el.src = `${GO2RTC_BASE}/api/ws?src=${streamName}_low`;
+                }
+            });
+        }
     });
 
     // PTZ preset buttons
