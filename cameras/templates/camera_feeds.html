@@ -413,19 +413,19 @@
                 }
             });
         } else {
-            // Exiting fullscreen — restart all streams at low quality
-            initStreams(activePanel);
+            // Exiting fullscreen — the fullscreen stream is on high quality
+            // and all others were stopped. Restart everything at low quality.
 
-            // The previously fullscreen stream needs to switch back to low
+            // First, disconnect the previously-fullscreen stream (it's on high-res)
             activePanel.querySelectorAll('video-stream').forEach(el => {
-                const streamName = el.dataset.streamName;
-                const hasLow = el.dataset.hasLow === 'true';
-                if (hasLow) {
+                if (el.dataset.active) {
                     el.ondisconnect();
-                    if (el.video) el.video.muted = true;
-                    el.src = `${GO2RTC_BASE}/api/ws?src=${streamName}_low`;
+                    delete el.dataset.active;
                 }
             });
+
+            // Now start all streams fresh at low quality
+            initStreams(activePanel);
         }
     });
 
