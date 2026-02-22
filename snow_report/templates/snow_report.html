@@ -223,15 +223,22 @@
 <script>
     // Hide scroll hint when near the bottom
     const scrollHint = document.getElementById('scroll-hint');
-    window.addEventListener('scroll', function() {
-        const scrollBottom = window.innerHeight + window.scrollY;
-        const docHeight = document.documentElement.scrollHeight;
+    function checkScroll() {
+        const scrollBottom = window.pageYOffset + window.innerHeight;
+        const docHeight = Math.max(
+            document.body.scrollHeight,
+            document.documentElement.scrollHeight
+        );
         if (docHeight - scrollBottom < 100) {
             scrollHint.classList.add('hidden');
         } else {
             scrollHint.classList.remove('hidden');
         }
-    });
+    }
+    window.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+    // Initial check in case content fits on screen
+    document.addEventListener('DOMContentLoaded', checkScroll);
 </script>
 
 <script>
