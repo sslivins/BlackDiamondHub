@@ -331,6 +331,7 @@
                 const src = hasLow ? `${streamName}_low` : streamName;
                 el.background = true;
                 el.mode = el.dataset.mode;
+                if (el.video) el.video.muted = true;
                 el.src = `${GO2RTC_BASE}/api/ws?src=${src}`;
                 el.dataset.active = 'true';
             }
@@ -400,6 +401,7 @@
             if (fsStream) {
                 const streamName = fsStream.dataset.streamName;
                 // Switch to high quality
+                if (fsStream.video) fsStream.video.muted = true;
                 fsStream.src = `${GO2RTC_BASE}/api/ws?src=${streamName}`;
             }
 

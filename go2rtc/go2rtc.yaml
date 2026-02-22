@@ -34,3 +34,17 @@ streams:
     - rtsps://192.168.10.1:7441/rHRCKhSyCtkSk7fc
   ski_room___entry:
     - rtsps://192.168.10.1:7441/pbImN58W5DpmabTh
+  doorbell_camera_low:
+    - rtsps://192.168.10.1:7441/EeWGfHbDgT13rh5O
+  front_door___entry_low:
+    - rtsps://192.168.10.1:7441/IrxYYYYsqP5aInuL
+  ski_room___entry_low:
+    - rtsps://192.168.10.1:7441/0LOSB470tw1akaFO
+  backyard_low:
+    - rtsps://192.168.1.26:7441/SSAgrkjdPYQ8rJks
+  driveway_low:
+    - rtsps://192.168.1.26:7441/JYbrUIchzEDIhSFt
+  front_door_camera_low:
+    - rtsps://192.168.1.26:7441/FwsjnkvwbLfzsD4R
+  side_of_house_low:
+    - rtsps://192.168.1.26:7441/Nu4LWjNn6yGa6NCE
