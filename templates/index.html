@@ -92,14 +92,29 @@
             align-items: center;
             text-align: center;
             background-color: #000000;
+            position: relative;
+            overflow: hidden;
         }
-        
+
+        /* Large background diamond watermark */
+        .main-container::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background-color: rgba(255, 255, 255, 0.05);
+            transform: rotate(45deg);
+            z-index: 0;
+        }
+
         .btn-container {
             background-color: #ffffff;
             padding: 30px 40px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
             display: inline-block;
+            position: relative;
+            z-index: 1;
         }
 
         .btn-container h2, .btn-container p {
@@ -193,7 +208,7 @@
 
     <div class="main-container">
         <div class="btn-container">
-            <h2>◆ Welcome to Black Diamond Hub</h2>
+            <h2>Welcome to Black Diamond Hub</h2>
             <p>Manage your home with ease. Choose an option below to get started:</p>
             <div class="icon-grid" id="icon-grid">
                 <a href="{% url 'webcams' %}" class="btn-icon">
