@@ -406,17 +406,27 @@ class CameraFeedViewWithProtectTests(TestCase):
     @patch("cameras.views._register_streams_with_go2rtc")
     @patch("cameras.views.get_protect_cameras")
     def test_view_renders_camera_streams(self, mock_cameras, mock_register):
-        """Renders video-rtc elements for each discovered camera."""
+        """Renders video-stream elements for each discovered camera."""
         mock_cameras.return_value = [
             {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://x'},
             {'name': 'Backyard', 'stream_name': 'backyard', 'rtsp_url': 'rtsps://y'},
         ]
 
         response = self.client.get("/cameras/")
+        content = response.content.decode()
 
+        # Camera names are displayed
         self.assertContains(response, "Front Door")
         self.assertContains(response, "Backyard")
-        self.assertContains(response, "/api/ws?src=front_door")
+        # Uses the correct video-stream custom element (not video-rtc)
+        self.assertIn("<video-stream", content)
+        self.assertNotIn("<video-rtc", content)
+        # WebSocket URLs point to go2rtc API
+        self.assertIn("/api/ws?src=front_door", content)
+        self.assertIn("/api/ws?src=backyard", content)
+        # Loads the correct JS module (video-stream.js, not video-rtc.js)
+        self.assertIn('video-stream.js"', content)
+        self.assertNotIn('video-rtc.js"', content)
 
 
 @override_settings(
