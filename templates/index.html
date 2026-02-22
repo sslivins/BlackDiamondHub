@@ -93,18 +93,18 @@
             text-align: center;
             background-color: #000000;
             position: relative;
-            overflow: hidden;
         }
 
         /* Large background diamond watermark */
-        .main-container::before {
-            content: '';
+        .background-diamond {
             position: absolute;
-            width: 900px;
-            height: 900px;
+            top: 50%;
+            left: 50%;
+            width: 800px;
+            height: 800px;
             background-color: rgba(255, 255, 255, 0.06);
-            transform: rotate(45deg);
-            z-index: 0;
+            transform: translate(-50%, -50%) rotate(45deg);
+            pointer-events: none;
         }
 
         .btn-container {
@@ -207,6 +207,7 @@
     </div>
 
     <div class="main-container">
+        <div class="background-diamond"></div>
         <div class="btn-container">
             <h2>Welcome to Black Diamond Hub</h2>
             <p>Manage your home with ease. Choose an option below to get started:</p>
