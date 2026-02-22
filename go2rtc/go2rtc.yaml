@@ -1,0 +1,36 @@
+# go2rtc configuration for BlackDiamondHub cameras
+# Documentation: https://github.com/AlexxIT/go2rtc
+#
+# Camera streams are registered dynamically by Django via the Protect API.
+# No hardcoded streams are needed here.
+#
+# If you don't use UniFi Protect, you can manually add streams below:
+# streams:
+#   front_door: rtsps://nvr-ip:7441/CAMERA_RTSP_ALIAS
+#   backyard: rtsp://camera-ip:554/s0
+
+api:
+  listen: ":1984"
+  origin: "*"       # Allow CORS from Django app
+
+webrtc:
+  listen: ":8555"
+streams:
+  backyard:
+    - rtsps://192.168.10.1:7441/Fx4CI9O2N6UuXCjz
+  doorbell_camera:
+    - rtsps://192.168.10.1:7441/Ymr7QkkgjaHT6Ny4
+  front_door___entry:
+    - rtsps://192.168.10.1:7441/nCrA9HBXSmFKGGxw
+  garage___side_entry:
+    - rtsps://192.168.10.1:7441/1hUJcE0td8fhXEUK
+  hot_tub:
+    - rtsps://192.168.10.1:7441/CAcdkf6TSWJDsknk
+  side_yard:
+    - rtsps://192.168.10.1:7441/jtOjvPv9U5I43SdM
+  side_of_house___generator:
+    - rtsps://192.168.10.1:7441/lCi76j9TveRaIyEC
+  side_of_house___hvac:
+    - rtsps://192.168.10.1:7441/rHRCKhSyCtkSk7fc
+  ski_room___entry:
+    - rtsps://192.168.10.1:7441/pbImN58W5DpmabTh

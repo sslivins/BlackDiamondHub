@@ -1,119 +1,140 @@
+import json
+import logging
+import urllib.request
+import urllib.error
+import urllib.parse
+
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
-import json
-import asyncio
-import websockets
-from urllib.parse import urljoin
+from django.views.decorators.http import require_POST
 
-async def get_camera_feeds_ws(authenticated=False):
-    """Fetch the list of camera entities and extract HLS stream URLs using WebSocket API."""
-    camera_feeds = []
-    instance_index = 1
-    request_id = 1
+from .protect_api import get_protect_cameras, ptz_goto_preset
 
-    while True:
-        if instance_index == 1:
-            base_url = getattr(settings, 'HOMEASSISTANT_URL', None)
-            access_token = getattr(settings, 'HOMEASSISTANT_ACCESS_TOKEN', None)
-        else:
-            if not authenticated:
-                break
-            base_url = getattr(settings, f'HOMEASSISTANT_URL_{instance_index}', None)
-            access_token = getattr(settings, f'HOMEASSISTANT_ACCESS_TOKEN_{instance_index}', None)
+logger = logging.getLogger(__name__)
 
-        if not base_url or not access_token:
-            break
 
-        ws_url = urljoin(base_url.replace("http", "ws"), "/api/websocket")
-        
-        try:
-            async with websockets.connect(ws_url) as websocket:
+def get_go2rtc_streams(go2rtc_url):
+    """Fetch the list of configured streams from go2rtc API.
 
-                #should receive an message type of auth_required
-                auth_required_message = await websocket.recv()
-                auth_required = json.loads(auth_required_message)
-                print("Auth required message:", auth_required)
-                
-                if auth_required.get("type") != "auth_required":
-                    print("Unexpected message:", auth_required)
-                    break
-                
-                # Send authentication message 
-                auth_message = {
-                    "type": "auth",
-                    "access_token": access_token
+    Used as a fallback when UniFi Protect is not configured — shows
+    whatever streams are already registered in go2rtc (e.g. manually
+    configured in go2rtc.yaml).
+    """
+    try:
+        req = urllib.request.Request(f'{go2rtc_url}/api/streams')
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read())
+            return [
+                {
+                    'name': name,
+                    'display_name': name.replace('_', ' ').replace('-', ' ').title(),
                 }
-                await websocket.send(json.dumps(auth_message))
-                # Wait for authentication response
-                auth_response_message = await websocket.recv()
-                
-                auth_response = json.loads(auth_response_message)
-                
-                if auth_response.get("type") != "auth_ok":
-                    print("Authentication failed:", auth_response)
-                    break
-
-                # Request all states
-                await websocket.send(json.dumps({
-                    "id": request_id,
-                    "type": "get_states"
-                }))
-                request_id += 1
-                
-                state_response = await websocket.recv()
-                states = json.loads(state_response)
-
-                # Iterate through cameras
-                for entity in states.get("result", []):
-                    if entity["entity_id"].startswith("camera."):
-                        camera_entity_id = entity["entity_id"]
-
-                        # Request HLS Stream
-                        stream_url = await get_hls_stream_ws(websocket, request_id, camera_entity_id)
-                        request_id += 1
-
-                        if stream_url:
-                            camera_feeds.append({
-                                "name": entity["attributes"].get("friendly_name", camera_entity_id),
-                                "url": urljoin(base_url,stream_url),
-                            })
-
-        except Exception as e:
-            print(f"WebSocket Error: {e}")
-
-        instance_index += 1
-
-    return camera_feeds
+                for name in sorted(data.keys())
+            ]
+    except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
+        logger.warning("Failed to fetch streams from go2rtc at %s: %s", go2rtc_url, e)
+        return []
 
 
-async def get_hls_stream_ws(websocket, request_id, camera_entity_id):
-    """Request an HLS stream URL for a given camera entity via WebSocket."""
-    request = {
-        "id": request_id,
-        "type": "camera/stream",
-        "entity_id": camera_entity_id,
-        "format": "hls"
-    }
+def _register_streams_with_go2rtc(go2rtc_url, cameras):
+    """Register camera RTSP streams with go2rtc via its API.
 
-    await websocket.send(json.dumps(request))
-    response = await websocket.recv()
-    stream_data = json.loads(response)
+    Uses PATCH (upsert) so existing streams are updated and new ones created.
+    Only registers streams that don't already exist in go2rtc.
+    """
+    # Fetch existing streams once
+    try:
+        req = urllib.request.Request(f'{go2rtc_url}/api/streams')
+        with urllib.request.urlopen(req, timeout=5) as response:
+            existing = set(json.loads(response.read()).keys())
+    except (urllib.error.URLError, json.JSONDecodeError, OSError):
+        existing = set()
 
-    #print(f"Stream response for {camera_entity_id}: {stream_data}")  # Debugging line to check the response
-
-    if "result" in stream_data:
-        return stream_data["result"].get("url")
-    else:
-        print(f"Failed to get HLS stream for {camera_entity_id}: {stream_data}")
-        return None
+    for camera in cameras:
+        if camera['stream_name'] in existing:
+            continue
+        try:
+            src = urllib.parse.quote(camera['rtsp_url'], safe='')
+            url = f"{go2rtc_url}/api/streams?name={camera['stream_name']}&src={src}"
+            req = urllib.request.Request(url, method='PUT', data=b'')
+            with urllib.request.urlopen(req, timeout=5):
+                pass
+        except (urllib.error.URLError, OSError) as e:
+            logger.warning(
+                "Failed to register stream %s with go2rtc: %s",
+                camera['stream_name'], e,
+            )
 
 
 def camera_feed_view(request):
-    """View to display camera feeds."""
-    authenticated = request.user.is_authenticated
-    camera_feeds = asyncio.run(get_camera_feeds_ws(authenticated=authenticated))
+    """Display camera feeds via go2rtc, with tabs for multiple sites.
 
-    #print(f"Camera feeds: {camera_feeds}")  # Debugging line to check the fetched camera feeds
+    If UniFi Protect sites are configured, cameras are discovered dynamically
+    from each Protect API and registered with go2rtc on the fly.
 
-    return render(request, "camera_feeds.html", {"camera_feeds": camera_feeds})
+    Falls back to showing whatever streams are already in go2rtc if
+    no Protect sites are configured.
+    """
+    go2rtc_url = getattr(settings, 'GO2RTC_URL', 'http://localhost:1984')
+    protect_sites = getattr(settings, 'UNIFI_PROTECT_SITES', [])
+
+    if protect_sites:
+        # Multi-site discovery via Protect API
+        site_data = get_protect_cameras()
+        sites = []
+        for site in site_data:
+            all_cameras = site.get('cameras', [])
+            _register_streams_with_go2rtc(go2rtc_url, all_cameras)
+            streams = [
+                {
+                    'name': cam['stream_name'],
+                    'display_name': cam['name'],
+                    'camera_id': cam.get('camera_id', ''),
+                    'is_ptz': cam.get('is_ptz', False),
+                    'ptz_presets': cam.get('ptz_presets', 0),
+                    'preset_range': list(range(cam.get('ptz_presets', 0))),
+                }
+                for cam in all_cameras
+            ]
+            sites.append({
+                'name': site['name'],
+                'streams': streams,
+            })
+    else:
+        # Fallback: show streams already configured in go2rtc
+        streams = get_go2rtc_streams(go2rtc_url)
+        sites = [{'name': 'Cameras', 'streams': streams}]
+
+    return render(request, 'camera_feeds.html', {
+        'sites': sites,
+        'go2rtc_url': go2rtc_url,
+    })
+
+
+@require_POST
+def ptz_goto(request):
+    """AJAX endpoint to move a PTZ camera to a preset.
+
+    Expects JSON body: {"camera_id": "...", "slot": 0}
+    Returns JSON: {"success": true/false}
+    """
+    try:
+        data = json.loads(request.body)
+        camera_id = data.get('camera_id')
+        slot = data.get('slot')
+
+        if not camera_id or slot is None:
+            return JsonResponse(
+                {'success': False, 'error': 'Missing camera_id or slot'},
+                status=400,
+            )
+
+        success = ptz_goto_preset(camera_id, int(slot))
+        return JsonResponse({'success': success})
+
+    except (json.JSONDecodeError, ValueError, TypeError) as e:
+        return JsonResponse(
+            {'success': False, 'error': str(e)},
+            status=400,
+        )

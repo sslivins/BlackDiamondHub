@@ -1,213 +1,376 @@
-<!-- filepath: /j:/blackdiamondlodge/BlackDiamondHub/cameras/templates/camera_feeds.html -->
 {% extends 'base.html' %}
 
 {% block title %}Camera Feeds{% endblock %}
 
 {% block content %}
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Feeds</title>
+<style>
+    body {
+        background-color: #0a0a0a !important;
+        color: #ffffff;
+        margin: 0;
+        overflow: hidden;
+    }
 
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    .cameras-header {
+        text-align: center;
+        padding: 8px 10px 4px;
+    }
 
-    <style>
+    .cameras-header h1 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #e0e0e0;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    /* Site tabs */
+    .site-tabs {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        padding: 4px 8px 0;
+    }
+
+    .site-tab {
+        padding: 4px 16px;
+        border: none;
+        border-radius: 6px 6px 0 0;
+        background: #1a1a1a;
+        color: #888;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .site-tab:hover {
+        background: #252525;
+        color: #bbb;
+    }
+
+    .site-tab.active {
+        background: #222;
+        color: #fff;
+    }
+
+    .site-panel {
+        display: none;
+    }
+
+    .site-panel.active {
+        display: grid;
+    }
+
+    .camera-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        padding: 4px 8px 8px;
+        max-width: 1920px;
+        margin: 0 auto;
+    }
+
+    .camera-grid.has-tabs {
+        height: calc(100vh - 76px);
+    }
+
+    .camera-grid.no-tabs {
+        height: calc(100vh - 50px);
+    }
+
+    .cam-card {
+        position: relative;
+        background: #111;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+        cursor: pointer;
+    }
+
+    .cam-card video-stream,
+    .cam-card video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #000;
+    }
+
+    .cam-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 4px 10px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #fff;
+        letter-spacing: 0.5px;
+        pointer-events: none;
+    }
+
+    .cam-status {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #4caf50;
+        box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+        pointer-events: none;
+    }
+
+    .cam-touch-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+        cursor: pointer;
+    }
+
+    .ptz-controls {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+    }
+
+    .cam-card:hover .ptz-controls,
+    .cam-card:fullscreen .ptz-controls {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .ptz-btn {
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 700;
+        cursor: pointer;
+        backdrop-filter: blur(4px);
+        transition: background 0.15s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .ptz-btn:hover {
+        background: rgba(255, 255, 255, 0.45);
+    }
+
+    .ptz-btn.active {
+        background: rgba(76, 175, 80, 0.7);
+        box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+    }
+
+    /* Larger PTZ buttons in fullscreen */
+    .cam-card:fullscreen .ptz-controls {
+        bottom: 60px;
+        gap: 8px;
+    }
+
+    .cam-card:fullscreen .ptz-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 0.9rem;
+    }
+
+    .no-cameras {
+        text-align: center;
+        padding: 80px 20px;
+        color: #555;
+        grid-column: 1 / -1;
+    }
+
+    .no-cameras i {
+        font-size: 56px;
+        margin-bottom: 20px;
+        display: block;
+        color: #333;
+    }
+
+    .no-cameras h2 {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .no-cameras p {
+        color: #444;
+        font-size: 0.9rem;
+    }
+
+    /* Fullscreen mode */
+    .cam-card:fullscreen {
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cam-card:fullscreen video-stream,
+    .cam-card:fullscreen video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .cam-card:fullscreen .cam-label {
+        font-size: 1rem;
+        padding: 10px 16px;
+    }
+
+    /* Mobile: single column, allow scroll */
+    @media (max-width: 900px) {
         body {
-            background-color: #000000;
-            color: #ffffff;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            overflow: hidden;            
+            overflow: auto;
         }
-
-        /* Webcam container styling */
-        #webcams {
-            display: flex;
-            flex-wrap: wrap;
+        .camera-grid {
+            grid-template-columns: 1fr;
+            height: auto !important;
+            padding: 8px;
             gap: 8px;
-            padding: 10px;
-            justify-content: center;
-            align-items: flex-start;
-            width: 100%;
-            max-height: 100vh;
         }
-
-        /* Camera container */
-        .cam {
-            display: flex;
-            flex-direction: column;
-            align-items: center;     
-            justify-content: flex-start; 
-            overflow: hidden;
-            max-height: 325px; /* Set a fixed height for uniformity */
+        .cam-card {
+            aspect-ratio: 16 / 9;
         }
+    }
 
-        /* Video styling */
-        .cam video {
-            height: 325px;  /* Fixed height */
-            width: auto;    /* Adjust width based on aspect ratio */
-            object-fit: cover;
-            border-radius: 4px;
+    /* 2-column for medium screens */
+    @media (min-width: 901px) and (max-width: 1200px) {
+        .camera-grid {
+            grid-template-columns: repeat(2, 1fr);
         }
-        
-        /* Display camera name on the main page */
-        .cam h2 {
-            margin: 5px 0;
-            color: #ddd;
-            font-size: 14px;
-            text-align: center;
-            width: 100%;
-        }
+    }
+</style>
 
-        /* Fullscreen styles */
-        .fullscreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
+<div class="cameras-header">
+    <h1><i class="fas fa-shield-alt"></i> &nbsp;Security Cameras</h1>
+</div>
 
-        .fullscreen video {
-            max-width: 100%;
-            max-height: 100%;
-        }
+{% if sites|length > 1 %}
+<div class="site-tabs">
+    {% for site in sites %}
+    <button class="site-tab{% if forloop.first %} active{% endif %}" data-site="{{ forloop.counter0 }}">{{ site.name }}</button>
+    {% endfor %}
+</div>
+{% endif %}
 
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 30px;
-            color: #fff;
-            cursor: pointer;
-            z-index: 1001;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 1200px) {
-            .cam video {
-                height: 200px; /* Slightly smaller for medium screens */
-            }
-        }
-
-        @media (max-width: 768px) {
-            .cam video {
-                height: 180px; /* Smaller for mobile screens */
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <div id="webcams">
-        {% for feed in camera_feeds %}
-        <div class="cam" data-camera-name="{{ feed.name }}">
-            <h2>{{ feed.name }}</h2>
-            <video id="video-{{ forloop.counter }}" controls autoplay muted onclick="openFullscreen(this)"></video>
-            <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                    var video = document.getElementById("video-{{ forloop.counter }}");
-                    var videoSrc = "{{ feed.url }}";
-
-                    if (Hls.isSupported()) {
-                        var hls = new Hls();
-                        hls.loadSource(videoSrc);
-                        hls.attachMedia(video);
-                        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                            video.play();
-                        });
-                    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-                        video.src = videoSrc;
-                        video.addEventListener("loadedmetadata", function () {
-                            video.play();
-                        });
-                    }
-                });
-            </script>
+{% for site in sites %}
+<div class="camera-grid site-panel{% if forloop.first %} active{% endif %}{% if sites|length > 1 %} has-tabs{% else %} no-tabs{% endif %}" data-site="{{ forloop.counter0 }}">
+    {% for stream in site.streams %}
+    <div class="cam-card">
+        <video-stream
+            data-url="{{ go2rtc_url }}/api/ws?src={{ stream.name }}"
+            data-mode="webrtc,mse,mp4"
+            data-site="{{ forloop.parentloop.counter0 }}">
+        </video-stream>
+        <div class="cam-touch-overlay"></div>
+        {% if stream.is_ptz and stream.ptz_presets > 0 %}
+        <div class="ptz-controls">
+            {% for i in stream.preset_range %}
+            <button class="ptz-btn" data-camera-id="{{ stream.camera_id }}" data-slot="{{ i }}">{{ i|add:1 }}</button>
+            {% endfor %}
         </div>
-        {% endfor %}
+        {% endif %}
+        <div class="cam-status"></div>
+        <div class="cam-label">{{ stream.display_name }}</div>
     </div>
-
-    <div id="fullscreen-container" class="fullscreen" style="display: none;">
-        <span class="close-btn" onclick="closeFullscreen()">&times;</span>
-        <video id="fullscreen-video" controls autoplay muted></video>
+    {% empty %}
+    <div class="no-cameras">
+        <i class="fas fa-video-slash"></i>
+        <h2>No Cameras Available</h2>
+        <p>No camera streams found for {{ site.name }}.</p>
     </div>
+    {% endfor %}
+</div>
+{% endfor %}
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            var videos = document.querySelectorAll(".cam video");
-        
-            videos.forEach(function(video) {
-                video.addEventListener("click", function(event) {
-                    console.log("Video clicked, requesting fullscreen");
-                    openFullscreen(video);
-                });
-        
-                video.addEventListener("touchstart", function(event) {
-                    console.log("Video touched, requesting fullscreen");
-                    openFullscreen(video);
-                });
-            });
-        
-            // Listen for fullscreen changes and attach click/tap exit functionality
-            document.addEventListener("fullscreenchange", exitOnTap);
-            document.addEventListener("webkitfullscreenchange", exitOnTap);
-            document.addEventListener("mozfullscreenchange", exitOnTap);
-            document.addEventListener("MSFullscreenChange", exitOnTap);
+<script type="module" src="{{ go2rtc_url }}/video-stream.js"></script>
+{% load static %}
+<script type="module">
+    // Initialize video-stream elements for the active tab only
+    function initStreams(panel) {
+        panel.querySelectorAll('video-stream').forEach(el => {
+            if (!el.src) {
+                el.background = true;
+                el.mode = el.dataset.mode;
+                el.src = el.dataset.url;
+            }
         });
-        
-        function openFullscreen(videoElement) {
-            console.log("Opening fullscreen for video:", videoElement);
-        
-            if (videoElement.requestFullscreen) {
-                videoElement.requestFullscreen().catch(err => console.warn("Fullscreen request denied:", err));
-            } else if (videoElement.mozRequestFullScreen) {
-                videoElement.mozRequestFullScreen();
-            } else if (videoElement.webkitRequestFullscreen) {
-                videoElement.webkitRequestFullscreen();
-            } else if (videoElement.msRequestFullscreen) {
-                videoElement.msRequestFullscreen();
-            }
-        
-            videoElement.play();
-        
-            // Add event listener for exit fullscreen on tap
-            videoElement.addEventListener("click", closeFullscreen);
-        }
-        
-        function closeFullscreen() {
-            console.log("Exiting fullscreen...");
-        
-            if (document.fullscreenElement) {
+    }
+
+    // Initialize the first (active) panel
+    const activePanel = document.querySelector('.site-panel.active');
+    if (activePanel) initStreams(activePanel);
+
+    // Tab switching
+    document.querySelectorAll('.site-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const siteIdx = tab.dataset.site;
+
+            // Update tab styles
+            document.querySelectorAll('.site-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Show/hide panels
+            document.querySelectorAll('.site-panel').forEach(p => p.classList.remove('active'));
+            const panel = document.querySelector(`.site-panel[data-site="${siteIdx}"]`);
+            panel.classList.add('active');
+
+            // Initialize streams on first view
+            initStreams(panel);
+        });
+    });
+
+    // Tap/click the overlay to toggle fullscreen
+    document.querySelectorAll('.cam-touch-overlay').forEach(overlay => {
+        overlay.addEventListener('click', () => {
+            const card = overlay.closest('.cam-card');
+            if (!document.fullscreenElement) {
+                card.requestFullscreen().catch(() => {});
+            } else {
                 document.exitFullscreen();
-            } else if (document.webkitFullscreenElement) {
-                document.webkitExitFullscreen();
-            } else if (document.mozFullScreenElement) {
-                document.mozCancelFullScreen();
-            } else if (document.msFullscreenElement) {
-                document.msExitFullscreen();
             }
-        }
-        
-        // Handles tapping anywhere to exit fullscreen
-        function exitOnTap() {
-            if (document.fullscreenElement) {
-                document.fullscreenElement.addEventListener("click", closeFullscreen);
-            }
-        }
-        
-        
-    </script>
-</body>
-</html>
+        });
+    });
+
+    // PTZ preset buttons
+    document.querySelectorAll('.ptz-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const cameraId = btn.dataset.cameraId;
+            const slot = parseInt(btn.dataset.slot);
+
+            // Visual feedback - highlight active preset
+            btn.closest('.ptz-controls').querySelectorAll('.ptz-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            fetch('{% url "ptz_goto" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({camera_id: cameraId, slot: slot}),
+            }).catch(() => {});
+        });
+    });
+</script>
 {% endblock %}

@@ -7,3 +7,6 @@ __pycache__/
 .venv/
 venv/
 media/items/test_image_*.png
+
+# go2rtc binary (for local testing)
+go2rtc/go2rtc.exe

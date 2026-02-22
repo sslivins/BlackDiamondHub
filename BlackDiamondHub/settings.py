@@ -247,6 +247,27 @@ HOMEASSISTANT_ACCESS_TOKEN = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN')
 HOMEASSISTANT_URL_2 = os.environ.get('HOMEASSISTANT_URL_2', 'http://homeassistant.local:8123')
 HOMEASSISTANT_ACCESS_TOKEN_2 = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN_2')
 
+###########################
+### go2rtc Camera Settings ###
+###########################
+GO2RTC_URL = os.environ.get('GO2RTC_URL', 'http://localhost:1984')
+
+#################################
+### UniFi Protect Settings ###
+#################################
+# Multi-site: numbered pairs (UNIFI_PROTECT_HOST_1, _API_KEY_1, _NAME_1, etc.)
+UNIFI_PROTECT_SITES = []
+for i in range(1, 10):
+    host = os.environ.get(f'UNIFI_PROTECT_HOST_{i}', '')
+    api_key = os.environ.get(f'UNIFI_PROTECT_API_KEY_{i}', '')
+    name = os.environ.get(f'UNIFI_PROTECT_NAME_{i}', f'Site {i}')
+    if host and api_key:
+        UNIFI_PROTECT_SITES.append({
+            'host': host,
+            'api_key': api_key,
+            'name': name,
+        })
+
 ##############################
 ### SCENE CONTROL SETTINGS ###
 ##############################
