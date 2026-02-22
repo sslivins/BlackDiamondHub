@@ -68,38 +68,46 @@ def _register_streams_with_go2rtc(go2rtc_url, cameras):
 
 
 def camera_feed_view(request):
-    """Display camera feeds via go2rtc.
+    """Display camera feeds via go2rtc, with tabs for multiple sites.
 
-    If UniFi Protect is configured, cameras are discovered dynamically
-    from the Protect API and registered with go2rtc on the fly.
+    If UniFi Protect sites are configured, cameras are discovered dynamically
+    from each Protect API and registered with go2rtc on the fly.
 
     Falls back to showing whatever streams are already in go2rtc if
-    Protect is not configured.
+    no Protect sites are configured.
     """
     go2rtc_url = getattr(settings, 'GO2RTC_URL', 'http://localhost:1984')
-    protect_host = getattr(settings, 'UNIFI_PROTECT_HOST', '')
+    protect_sites = getattr(settings, 'UNIFI_PROTECT_SITES', [])
 
-    if protect_host:
-        # Dynamic discovery via Protect API
-        cameras = get_protect_cameras()
-        _register_streams_with_go2rtc(go2rtc_url, cameras)
-        streams = [
-            {
-                'name': cam['stream_name'],
-                'display_name': cam['name'],
-                'camera_id': cam.get('camera_id', ''),
-                'is_ptz': cam.get('is_ptz', False),
-                'ptz_presets': cam.get('ptz_presets', 0),
-                'preset_range': list(range(cam.get('ptz_presets', 0))),
-            }
-            for cam in cameras
-        ]
+    if protect_sites:
+        # Multi-site discovery via Protect API
+        site_data = get_protect_cameras()
+        sites = []
+        for site in site_data:
+            all_cameras = site.get('cameras', [])
+            _register_streams_with_go2rtc(go2rtc_url, all_cameras)
+            streams = [
+                {
+                    'name': cam['stream_name'],
+                    'display_name': cam['name'],
+                    'camera_id': cam.get('camera_id', ''),
+                    'is_ptz': cam.get('is_ptz', False),
+                    'ptz_presets': cam.get('ptz_presets', 0),
+                    'preset_range': list(range(cam.get('ptz_presets', 0))),
+                }
+                for cam in all_cameras
+            ]
+            sites.append({
+                'name': site['name'],
+                'streams': streams,
+            })
     else:
         # Fallback: show streams already configured in go2rtc
         streams = get_go2rtc_streams(go2rtc_url)
+        sites = [{'name': 'Cameras', 'streams': streams}]
 
     return render(request, 'camera_feeds.html', {
-        'streams': streams,
+        'sites': sites,
         'go2rtc_url': go2rtc_url,
     })
 

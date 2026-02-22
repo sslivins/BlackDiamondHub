@@ -1,5 +1,8 @@
 """UniFi Protect API client for dynamic camera discovery.
 
+Supports multiple Protect sites configured via UNIFI_PROTECT_SITES in settings.
+Each site has: host, api_key, name.
+
 Uses the UniFi Protect Integration (Public) API with API key auth.
 - GET  /proxy/protect/integration/v1/cameras           — list cameras
 - POST /proxy/protect/integration/v1/cameras/{id}/rtsps-stream — create RTSPS URL
@@ -20,11 +23,8 @@ logger = logging.getLogger(__name__)
 # Suppress InsecureRequestWarning for self-signed NVR certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Simple in-memory cache to avoid hitting the Protect API on every page load
-_cache = {
-    'cameras': None,
-    'timestamp': 0,
-}
+# Per-site in-memory cache: {host: {'cameras': [...], 'timestamp': float}}
+_cache = {}
 CACHE_TTL = 300  # 5 minutes
 
 API_BASE = '/proxy/protect/integration/v1'
@@ -39,29 +39,50 @@ def _camera_name_to_stream_name(name):
 
 
 def get_protect_cameras():
-    """Fetch cameras from UniFi Protect API, with in-memory caching.
+    """Fetch cameras from all configured UniFi Protect sites, with caching.
 
-    Returns a list of dicts:
-        [{'name': 'Front Door', 'stream_name': 'front_door',
-          'rtsp_url': 'rtsps://host:7441/...'}, ...]
+    Returns a list of site dicts:
+        [{'name': 'Sun Peaks', 'cameras': [...]}, ...]
 
-    Returns an empty list on failure or if Protect is not configured.
+    Each camera dict has: name, camera_id, stream_name, rtsp_url,
+    is_ptz, ptz_presets.
+    Returns an empty list if no sites are configured.
     """
-    now = time.time()
-    if _cache['cameras'] is not None and (now - _cache['timestamp']) < CACHE_TTL:
-        return _cache['cameras']
+    sites = getattr(settings, 'UNIFI_PROTECT_SITES', [])
+    if not sites:
+        return []
 
-    cameras = _fetch_cameras_from_protect()
-    if cameras is not None:
-        _cache['cameras'] = cameras
-        _cache['timestamp'] = now
-    return cameras if cameras is not None else []
+    result = []
+    now = time.time()
+
+    for site in sites:
+        host = site['host']
+        api_key = site['api_key']
+        site_name = site.get('name', host)
+
+        # Check per-site cache
+        cached = _cache.get(host)
+        if cached and (now - cached['timestamp']) < CACHE_TTL:
+            cameras = cached['cameras']
+        else:
+            cameras = _fetch_cameras_from_site(host, api_key)
+            if cameras is not None:
+                _cache[host] = {'cameras': cameras, 'timestamp': now}
+            else:
+                cameras = []
+
+        result.append({
+            'name': site_name,
+            'host': host,
+            'cameras': cameras,
+        })
+
+    return result
 
 
 def clear_cache():
-    """Clear the camera cache (useful for testing or manual refresh)."""
-    _cache['cameras'] = None
-    _cache['timestamp'] = 0
+    """Clear the camera cache for all sites."""
+    _cache.clear()
 
 
 def _get_rtsps_url(host, api_key, camera_id):
@@ -157,13 +178,13 @@ def _get_ptz_preset_count(host, api_key, camera_id):
 def ptz_goto_preset(camera_id, slot):
     """Move a PTZ camera to the given preset slot.
 
+    Looks up the correct site by searching cached camera data.
     Returns True on success (204), False on failure.
     """
-    host = getattr(settings, 'UNIFI_PROTECT_HOST', None)
-    api_key = getattr(settings, 'UNIFI_PROTECT_API_KEY', None)
-
-    if not all([host, api_key]):
-        logger.warning("UniFi Protect not configured")
+    # Find which site owns this camera
+    host, api_key = _find_site_for_camera(camera_id)
+    if not host:
+        logger.warning("Camera %s not found in any configured site", camera_id)
         return False
 
     url = f'https://{host}{API_BASE}/cameras/{camera_id}/ptz/goto/{slot}'
@@ -183,17 +204,37 @@ def ptz_goto_preset(camera_id, slot):
         return False
 
 
-def _fetch_cameras_from_protect():
-    """Fetch all cameras with RTSPS streams from UniFi Protect Integration API.
+def _find_site_for_camera(camera_id):
+    """Find the site (host, api_key) that owns a camera_id.
+
+    Searches cached camera data first. Returns (host, api_key) or (None, None).
+    """
+    sites = getattr(settings, 'UNIFI_PROTECT_SITES', [])
+
+    # Search cache for the camera
+    for site in sites:
+        host = site['host']
+        cached = _cache.get(host)
+        if cached:
+            for cam in cached['cameras']:
+                if cam['camera_id'] == camera_id:
+                    return host, site['api_key']
+
+    # Not in cache — try all sites
+    for site in sites:
+        return site['host'], site['api_key']
+
+    return None, None
+
+
+def _fetch_cameras_from_site(host, api_key):
+    """Fetch all cameras with RTSPS streams from a single Protect site.
 
     Uses API key authentication (X-API-KEY header). Discovers cameras via
     GET /v1/cameras, then fetches/creates RTSPS stream URLs for each.
 
     Returns a list of camera dicts, or None on failure.
     """
-    host = getattr(settings, 'UNIFI_PROTECT_HOST', None)
-    api_key = getattr(settings, 'UNIFI_PROTECT_API_KEY', None)
-
     if not all([host, api_key]):
         logger.warning("UniFi Protect not configured (need host and API key)")
         return None

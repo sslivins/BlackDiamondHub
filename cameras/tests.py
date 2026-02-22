@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock, call
 from .views import get_go2rtc_streams, _register_streams_with_go2rtc
 from .protect_api import (
     get_protect_cameras, clear_cache, _camera_name_to_stream_name,
-    _fetch_cameras_from_protect, _is_ptz_camera, _get_ptz_preset_count,
+    _fetch_cameras_from_site, _is_ptz_camera, _get_ptz_preset_count,
     ptz_goto_preset,
 )
 
@@ -87,11 +87,10 @@ def _mock_post_non_ptz(url, **kwargs):
 
 
 @override_settings(
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
+    UNIFI_PROTECT_SITES=[{'host': '192.168.10.1', 'api_key': 'test_api_key', 'name': 'Test Site'}],
 )
-class FetchCamerasFromProtectTests(TestCase):
-    """Tests for _fetch_cameras_from_protect."""
+class FetchCamerasFromSiteTests(TestCase):
+    """Tests for _fetch_cameras_from_site."""
 
     def setUp(self):
         clear_cache()
@@ -103,7 +102,7 @@ class FetchCamerasFromProtectTests(TestCase):
         mock_get.side_effect = _mock_get_side_effect
         mock_post.side_effect = _mock_post_non_ptz
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(len(cameras), 2)
         self.assertEqual(cameras[0]['name'], 'Backyard')
@@ -116,7 +115,7 @@ class FetchCamerasFromProtectTests(TestCase):
         mock_get.side_effect = _mock_get_side_effect
         mock_post.side_effect = _mock_post_non_ptz
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         front_door = next(c for c in cameras if c['name'] == 'Front Door')
         self.assertEqual(front_door['rtsp_url'], 'rtsps://192.168.10.1:7441/abc123high')
@@ -130,7 +129,6 @@ class FetchCamerasFromProtectTests(TestCase):
                 return _make_mock_response([
                     {'id': 'cam1', 'name': 'New Cam', 'state': 'CONNECTED'},
                 ])
-            # GET rtsps-stream returns all nulls
             return _make_mock_response(MOCK_RTSPS_EMPTY)
 
         def post_side_effect(url, **kwargs):
@@ -144,7 +142,7 @@ class FetchCamerasFromProtectTests(TestCase):
         mock_get.side_effect = get_side_effect
         mock_post.side_effect = post_side_effect
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(len(cameras), 1)
         self.assertEqual(cameras[0]['rtsp_url'], 'rtsps://192.168.10.1:7441/newstream')
@@ -165,7 +163,7 @@ class FetchCamerasFromProtectTests(TestCase):
         mock_get.side_effect = get_side_effect
         mock_post.side_effect = req_lib.RequestException("Failed")
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(cameras, [])
 
@@ -175,14 +173,13 @@ class FetchCamerasFromProtectTests(TestCase):
         import requests
         mock_get.side_effect = requests.RequestException("Connection refused")
 
-        result = _fetch_cameras_from_protect()
+        result = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertIsNone(result)
 
-    @override_settings(UNIFI_PROTECT_HOST='', UNIFI_PROTECT_API_KEY='')
     def test_returns_none_when_not_configured(self):
-        """Returns None when Protect credentials are not set."""
-        result = _fetch_cameras_from_protect()
+        """Returns None when host/key are empty."""
+        result = _fetch_cameras_from_site('', '')
 
         self.assertIsNone(result)
 
@@ -193,7 +190,7 @@ class FetchCamerasFromProtectTests(TestCase):
         mock_get.side_effect = _mock_get_side_effect
         mock_post.side_effect = _mock_post_non_ptz
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         front_door = next(c for c in cameras if c['name'] == 'Front Door')
         self.assertEqual(front_door['stream_name'], 'front_door')
@@ -215,7 +212,7 @@ class FetchCamerasFromProtectTests(TestCase):
         mock_get.side_effect = get_side_effect
         mock_post.side_effect = _mock_post_non_ptz
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(len(cameras), 1)
         self.assertEqual(cameras[0]['name'], 'Garage')
@@ -227,9 +224,8 @@ class FetchCamerasFromProtectTests(TestCase):
         mock_get.side_effect = lambda url, **kwargs: _make_mock_response([])
         mock_get.return_value = _make_mock_response([])
 
-        _fetch_cameras_from_protect()
+        _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
-        # First call should be the camera list
         first_call = mock_get.call_args_list[0]
         self.assertEqual(first_call.kwargs['headers']['X-API-KEY'], 'test_api_key')
         self.assertIn('/cameras', first_call.args[0])
@@ -251,7 +247,7 @@ class FetchCamerasFromProtectTests(TestCase):
         mock_get.side_effect = get_side_effect
         mock_post.side_effect = _mock_post_non_ptz
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(cameras[0]['rtsp_url'], 'rtsps://192.168.10.1:7441/stream1')
 
@@ -268,7 +264,7 @@ class FetchCamerasFromProtectTests(TestCase):
 
         mock_get.side_effect = get_side_effect
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(cameras, [])
 
@@ -276,8 +272,7 @@ class FetchCamerasFromProtectTests(TestCase):
 # --- Cache tests ---
 
 @override_settings(
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
+    UNIFI_PROTECT_SITES=[{'host': '192.168.10.1', 'api_key': 'test_api_key', 'name': 'Test Site'}],
 )
 class ProtectCachingTests(TestCase):
     """Tests for the camera list caching."""
@@ -285,7 +280,7 @@ class ProtectCachingTests(TestCase):
     def setUp(self):
         clear_cache()
 
-    @patch('cameras.protect_api._fetch_cameras_from_protect')
+    @patch('cameras.protect_api._fetch_cameras_from_site')
     def test_caches_result(self, mock_fetch):
         """Second call uses cached result, doesn't re-fetch."""
         mock_fetch.return_value = [{'name': 'Cam1', 'stream_name': 'cam1', 'rtsp_url': 'rtsps://x'}]
@@ -296,25 +291,31 @@ class ProtectCachingTests(TestCase):
         mock_fetch.assert_called_once()
         self.assertEqual(result1, result2)
 
-    @patch('cameras.protect_api._fetch_cameras_from_protect')
+    @patch('cameras.protect_api._fetch_cameras_from_site')
     def test_returns_empty_list_on_failure(self, mock_fetch):
-        """Returns empty list when fetch fails (returns None)."""
+        """Returns site with empty cameras when fetch fails (returns None)."""
         mock_fetch.return_value = None
 
         result = get_protect_cameras()
 
-        self.assertEqual(result, [])
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['cameras'], [])
 
     def test_clear_cache(self):
         """clear_cache resets the internal cache."""
         from cameras.protect_api import _cache
-        _cache['cameras'] = [{'name': 'test'}]
-        _cache['timestamp'] = 9999999999
+        _cache['192.168.10.1'] = {'cameras': [{'name': 'test'}], 'timestamp': 9999999999}
 
         clear_cache()
 
-        self.assertIsNone(_cache['cameras'])
-        self.assertEqual(_cache['timestamp'], 0)
+        self.assertEqual(_cache, {})
+
+    @override_settings(UNIFI_PROTECT_SITES=[])
+    def test_returns_empty_list_when_no_sites(self):
+        """Returns empty list when no sites are configured."""
+        result = get_protect_cameras()
+
+        self.assertEqual(result, [])
 
 
 # --- go2rtc fallback stream tests ---
@@ -371,8 +372,7 @@ class GetGo2rtcStreamsTests(TestCase):
 
 @override_settings(
     GO2RTC_URL='http://localhost:1984',
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
+    UNIFI_PROTECT_SITES=[{'host': '192.168.10.1', 'api_key': 'test_api_key', 'name': 'Test Site'}],
 )
 class CameraFeedViewWithProtectTests(TestCase):
     """Tests for camera_feed_view when Protect is configured."""
@@ -385,7 +385,7 @@ class CameraFeedViewWithProtectTests(TestCase):
     @patch("cameras.views.get_protect_cameras")
     def test_view_returns_200(self, mock_cameras, mock_register):
         """Camera page returns 200."""
-        mock_cameras.return_value = []
+        mock_cameras.return_value = [{'name': 'Test Site', 'host': '192.168.10.1', 'cameras': []}]
 
         response = self.client.get("/cameras/")
 
@@ -395,23 +395,35 @@ class CameraFeedViewWithProtectTests(TestCase):
     @patch("cameras.views.get_protect_cameras")
     def test_view_uses_protect_cameras(self, mock_cameras, mock_register):
         """Streams come from Protect API, not go2rtc fallback."""
-        mock_cameras.return_value = [
-            {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://x'},
-        ]
+        mock_cameras.return_value = [{
+            'name': 'Test Site', 'host': '192.168.10.1',
+            'cameras': [
+                {'name': 'Front Door', 'stream_name': 'front_door',
+                 'rtsp_url': 'rtsps://x', 'camera_id': 'cam1',
+                 'is_ptz': False, 'ptz_presets': 0},
+            ],
+        }]
 
         response = self.client.get("/cameras/")
 
-        self.assertEqual(len(response.context['streams']), 1)
-        self.assertEqual(response.context['streams'][0]['display_name'], 'Front Door')
+        sites = response.context['sites']
+        self.assertEqual(len(sites), 1)
+        self.assertEqual(sites[0]['name'], 'Test Site')
+        self.assertEqual(len(sites[0]['streams']), 1)
+        self.assertEqual(sites[0]['streams'][0]['display_name'], 'Front Door')
 
     @patch("cameras.views._register_streams_with_go2rtc")
     @patch("cameras.views.get_protect_cameras")
     def test_view_registers_streams_with_go2rtc(self, mock_cameras, mock_register):
         """Discovered cameras are registered with go2rtc."""
         cameras = [
-            {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://x'},
+            {'name': 'Front Door', 'stream_name': 'front_door',
+             'rtsp_url': 'rtsps://x', 'camera_id': 'cam1',
+             'is_ptz': False, 'ptz_presets': 0},
         ]
-        mock_cameras.return_value = cameras
+        mock_cameras.return_value = [{
+            'name': 'Test Site', 'host': '192.168.10.1', 'cameras': cameras,
+        }]
 
         self.client.get("/cameras/")
 
@@ -421,7 +433,7 @@ class CameraFeedViewWithProtectTests(TestCase):
     @patch("cameras.views.get_protect_cameras")
     def test_view_shows_no_cameras_message(self, mock_cameras, mock_register):
         """Shows 'No Cameras Available' when Protect returns no cameras."""
-        mock_cameras.return_value = []
+        mock_cameras.return_value = [{'name': 'Test Site', 'host': '192.168.10.1', 'cameras': []}]
 
         response = self.client.get("/cameras/")
 
@@ -431,10 +443,17 @@ class CameraFeedViewWithProtectTests(TestCase):
     @patch("cameras.views.get_protect_cameras")
     def test_view_renders_camera_streams(self, mock_cameras, mock_register):
         """Renders video-stream elements for each discovered camera."""
-        mock_cameras.return_value = [
-            {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://x'},
-            {'name': 'Backyard', 'stream_name': 'backyard', 'rtsp_url': 'rtsps://y'},
-        ]
+        mock_cameras.return_value = [{
+            'name': 'Test Site', 'host': '192.168.10.1',
+            'cameras': [
+                {'name': 'Front Door', 'stream_name': 'front_door',
+                 'rtsp_url': 'rtsps://x', 'camera_id': 'cam1',
+                 'is_ptz': False, 'ptz_presets': 0},
+                {'name': 'Backyard', 'stream_name': 'backyard',
+                 'rtsp_url': 'rtsps://y', 'camera_id': 'cam2',
+                 'is_ptz': False, 'ptz_presets': 0},
+            ],
+        }]
 
         response = self.client.get("/cameras/")
         content = response.content.decode()
@@ -460,9 +479,14 @@ class CameraFeedViewWithProtectTests(TestCase):
     @patch("cameras.views.get_protect_cameras")
     def test_view_includes_fullscreen_overlay_and_js(self, mock_cameras, mock_register):
         """Touch overlay and fullscreen JS are present in the rendered page."""
-        mock_cameras.return_value = [
-            {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://x'},
-        ]
+        mock_cameras.return_value = [{
+            'name': 'Test Site', 'host': '192.168.10.1',
+            'cameras': [
+                {'name': 'Front Door', 'stream_name': 'front_door',
+                 'rtsp_url': 'rtsps://x', 'camera_id': 'cam1',
+                 'is_ptz': False, 'ptz_presets': 0},
+            ],
+        }]
 
         response = self.client.get("/cameras/")
         content = response.content.decode()
@@ -477,7 +501,7 @@ class CameraFeedViewWithProtectTests(TestCase):
 
 @override_settings(
     GO2RTC_URL='http://localhost:1984',
-    UNIFI_PROTECT_HOST='',
+    UNIFI_PROTECT_SITES=[],
 )
 class CameraFeedViewFallbackTests(TestCase):
     """Tests for camera_feed_view when Protect is NOT configured (fallback)."""
@@ -495,8 +519,11 @@ class CameraFeedViewFallbackTests(TestCase):
         response = self.client.get("/cameras/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context['streams']), 1)
-        self.assertEqual(response.context['streams'][0]['name'], 'manual_cam')
+        sites = response.context['sites']
+        self.assertEqual(len(sites), 1)
+        self.assertEqual(sites[0]['name'], 'Cameras')
+        self.assertEqual(len(sites[0]['streams']), 1)
+        self.assertEqual(sites[0]['streams'][0]['name'], 'manual_cam')
 
 
 # --- Stream registration tests ---
@@ -564,10 +591,6 @@ class RegisterStreamsTests(TestCase):
 
 # --- PTZ API tests ---
 
-@override_settings(
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
-)
 class PtzDetectionTests(TestCase):
     """Tests for PTZ camera detection via probing."""
 
@@ -601,10 +624,6 @@ class PtzDetectionTests(TestCase):
         self.assertFalse(result)
 
 
-@override_settings(
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
-)
 class PtzPresetCountTests(TestCase):
     """Tests for PTZ preset discovery."""
 
@@ -649,11 +668,20 @@ class PtzPresetCountTests(TestCase):
 
 
 @override_settings(
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
+    UNIFI_PROTECT_SITES=[{'host': '192.168.10.1', 'api_key': 'test_api_key', 'name': 'Test Site'}],
 )
 class PtzGotoPresetTests(TestCase):
     """Tests for ptz_goto_preset."""
+
+    def setUp(self):
+        clear_cache()
+        # Populate cache so _find_site_for_camera can find the host
+        from cameras.protect_api import _cache
+        _cache['192.168.10.1'] = {
+            'cameras': [{'camera_id': 'cam_ptz', 'name': 'PTZ Cam'},
+                        {'camera_id': 'cam_fixed', 'name': 'Fixed Cam'}],
+            'timestamp': 9999999999,
+        }
 
     @patch('cameras.protect_api.requests.post')
     def test_returns_true_on_success(self, mock_post):
@@ -679,24 +707,20 @@ class PtzGotoPresetTests(TestCase):
         import requests
         mock_post.side_effect = requests.RequestException("Timeout")
 
-        result = ptz_goto_preset('cam1', 0)
+        result = ptz_goto_preset('cam_ptz', 0)
 
         self.assertFalse(result)
 
-    @override_settings(UNIFI_PROTECT_HOST='', UNIFI_PROTECT_API_KEY='')
+    @override_settings(UNIFI_PROTECT_SITES=[])
     def test_returns_false_when_not_configured(self):
-        """Returns False when Protect credentials are not set."""
+        """Returns False when Protect is not configured."""
         result = ptz_goto_preset('cam1', 0)
 
         self.assertFalse(result)
 
 
-@override_settings(
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
-)
 class FetchCamerasWithPtzTests(TestCase):
-    """Tests for PTZ info in _fetch_cameras_from_protect results."""
+    """Tests for PTZ info in _fetch_cameras_from_site results."""
 
     def setUp(self):
         clear_cache()
@@ -708,7 +732,7 @@ class FetchCamerasWithPtzTests(TestCase):
         mock_get.side_effect = _mock_get_side_effect
         mock_post.side_effect = _mock_post_non_ptz
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         for cam in cameras:
             self.assertFalse(cam['is_ptz'])
@@ -744,7 +768,7 @@ class FetchCamerasWithPtzTests(TestCase):
         mock_get.side_effect = get_side_effect
         mock_post.side_effect = post_side_effect
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(len(cameras), 1)
         self.assertTrue(cameras[0]['is_ptz'])
@@ -758,7 +782,7 @@ class FetchCamerasWithPtzTests(TestCase):
         mock_get.side_effect = _mock_get_side_effect
         mock_post.side_effect = _mock_post_non_ptz
 
-        cameras = _fetch_cameras_from_protect()
+        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
 
         self.assertEqual(cameras[0]['camera_id'], 'cam_back')
         self.assertEqual(cameras[1]['camera_id'], 'cam_front')
@@ -768,8 +792,7 @@ class FetchCamerasWithPtzTests(TestCase):
 
 @override_settings(
     GO2RTC_URL='http://localhost:1984',
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
+    UNIFI_PROTECT_SITES=[{'host': '192.168.10.1', 'api_key': 'test_api_key', 'name': 'Test Site'}],
 )
 class PtzGotoViewTests(TestCase):
     """Tests for the ptz_goto view endpoint."""
@@ -837,8 +860,7 @@ class PtzGotoViewTests(TestCase):
 
 @override_settings(
     GO2RTC_URL='http://localhost:1984',
-    UNIFI_PROTECT_HOST='192.168.10.1',
-    UNIFI_PROTECT_API_KEY='test_api_key',
+    UNIFI_PROTECT_SITES=[{'host': '192.168.10.1', 'api_key': 'test_api_key', 'name': 'Test Site'}],
 )
 class PtzTemplateTests(TestCase):
     """Tests for PTZ controls in the camera template."""
@@ -851,13 +873,16 @@ class PtzTemplateTests(TestCase):
     @patch("cameras.views.get_protect_cameras")
     def test_ptz_buttons_shown_for_ptz_camera(self, mock_cameras, mock_register):
         """PTZ preset buttons appear for PTZ cameras."""
-        mock_cameras.return_value = [
-            {
-                'name': 'Hot Tub', 'stream_name': 'hot_tub',
-                'rtsp_url': 'rtsps://x', 'camera_id': 'cam_ptz',
-                'is_ptz': True, 'ptz_presets': 4,
-            },
-        ]
+        mock_cameras.return_value = [{
+            'name': 'Test Site', 'host': '192.168.10.1',
+            'cameras': [
+                {
+                    'name': 'Hot Tub', 'stream_name': 'hot_tub',
+                    'rtsp_url': 'rtsps://x', 'camera_id': 'cam_ptz',
+                    'is_ptz': True, 'ptz_presets': 4,
+                },
+            ],
+        }]
 
         response = self.client.get("/cameras/")
         content = response.content.decode()
@@ -872,13 +897,16 @@ class PtzTemplateTests(TestCase):
     @patch("cameras.views.get_protect_cameras")
     def test_no_ptz_buttons_for_non_ptz_camera(self, mock_cameras, mock_register):
         """Non-PTZ cameras do not get PTZ buttons."""
-        mock_cameras.return_value = [
-            {
-                'name': 'Front Door', 'stream_name': 'front_door',
-                'rtsp_url': 'rtsps://x', 'camera_id': 'cam_front',
-                'is_ptz': False, 'ptz_presets': 0,
-            },
-        ]
+        mock_cameras.return_value = [{
+            'name': 'Test Site', 'host': '192.168.10.1',
+            'cameras': [
+                {
+                    'name': 'Front Door', 'stream_name': 'front_door',
+                    'rtsp_url': 'rtsps://x', 'camera_id': 'cam_front',
+                    'is_ptz': False, 'ptz_presets': 0,
+                },
+            ],
+        }]
 
         response = self.client.get("/cameras/")
         content = response.content.decode()
@@ -890,16 +918,149 @@ class PtzTemplateTests(TestCase):
     @patch("cameras.views.get_protect_cameras")
     def test_ptz_js_sends_to_correct_endpoint(self, mock_cameras, mock_register):
         """PTZ JavaScript posts to the ptz_goto URL."""
-        mock_cameras.return_value = [
-            {
-                'name': 'Hot Tub', 'stream_name': 'hot_tub',
-                'rtsp_url': 'rtsps://x', 'camera_id': 'cam_ptz',
-                'is_ptz': True, 'ptz_presets': 2,
-            },
-        ]
+        mock_cameras.return_value = [{
+            'name': 'Test Site', 'host': '192.168.10.1',
+            'cameras': [
+                {
+                    'name': 'Hot Tub', 'stream_name': 'hot_tub',
+                    'rtsp_url': 'rtsps://x', 'camera_id': 'cam_ptz',
+                    'is_ptz': True, 'ptz_presets': 2,
+                },
+            ],
+        }]
 
         response = self.client.get("/cameras/")
         content = response.content.decode()
 
         self.assertIn('/cameras/ptz/goto/', content)
         self.assertIn('X-CSRFToken', content)
+
+
+# --- Multi-site tab tests ---
+
+@override_settings(
+    GO2RTC_URL='http://localhost:1984',
+    UNIFI_PROTECT_SITES=[
+        {'host': '192.168.10.1', 'api_key': 'key1', 'name': 'Sun Peaks'},
+        {'host': '192.168.1.26', 'api_key': 'key2', 'name': 'Mercer Island'},
+    ],
+)
+class MultiSiteTabTests(TestCase):
+    """Tests for tabbed multi-site camera display."""
+
+    def setUp(self):
+        self.client = Client()
+        clear_cache()
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_tabs_shown_for_multiple_sites(self, mock_cameras, mock_register):
+        """Tab buttons appear when multiple sites are configured."""
+        mock_cameras.return_value = [
+            {'name': 'Sun Peaks', 'host': '192.168.10.1', 'cameras': []},
+            {'name': 'Mercer Island', 'host': '192.168.1.26', 'cameras': []},
+        ]
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertIn('class="site-tab', content)
+        self.assertIn('Sun Peaks', content)
+        self.assertIn('Mercer Island', content)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_no_tabs_for_single_site(self, mock_cameras, mock_register):
+        """Tab buttons are hidden when only one site is configured."""
+        mock_cameras.return_value = [
+            {'name': 'Sun Peaks', 'host': '192.168.10.1', 'cameras': []},
+        ]
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertNotIn('class="site-tab', content)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_each_site_has_own_panel(self, mock_cameras, mock_register):
+        """Each site gets its own camera grid panel."""
+        mock_cameras.return_value = [
+            {
+                'name': 'Sun Peaks', 'host': '192.168.10.1',
+                'cameras': [
+                    {'name': 'Front Door', 'stream_name': 'front_door',
+                     'rtsp_url': 'rtsps://x', 'camera_id': 'c1',
+                     'is_ptz': False, 'ptz_presets': 0},
+                ],
+            },
+            {
+                'name': 'Mercer Island', 'host': '192.168.1.26',
+                'cameras': [
+                    {'name': 'Garage', 'stream_name': 'garage',
+                     'rtsp_url': 'rtsps://y', 'camera_id': 'c2',
+                     'is_ptz': False, 'ptz_presets': 0},
+                ],
+            },
+        ]
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertIn('data-site="0"', content)
+        self.assertIn('data-site="1"', content)
+        self.assertIn('Front Door', content)
+        self.assertIn('Garage', content)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_sites_passed_in_context(self, mock_cameras, mock_register):
+        """Context contains sites list with correct structure."""
+        mock_cameras.return_value = [
+            {
+                'name': 'Sun Peaks', 'host': '192.168.10.1',
+                'cameras': [
+                    {'name': 'Cam1', 'stream_name': 'cam1',
+                     'rtsp_url': 'rtsps://x', 'camera_id': 'c1',
+                     'is_ptz': False, 'ptz_presets': 0},
+                ],
+            },
+            {
+                'name': 'Mercer Island', 'host': '192.168.1.26',
+                'cameras': [],
+            },
+        ]
+
+        response = self.client.get("/cameras/")
+
+        sites = response.context['sites']
+        self.assertEqual(len(sites), 2)
+        self.assertEqual(sites[0]['name'], 'Sun Peaks')
+        self.assertEqual(len(sites[0]['streams']), 1)
+        self.assertEqual(sites[1]['name'], 'Mercer Island')
+        self.assertEqual(len(sites[1]['streams']), 0)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_registers_all_sites_with_go2rtc(self, mock_cameras, mock_register):
+        """Cameras from all sites are registered with go2rtc."""
+        cams1 = [
+            {'name': 'Cam1', 'stream_name': 'cam1',
+             'rtsp_url': 'rtsps://x', 'camera_id': 'c1',
+             'is_ptz': False, 'ptz_presets': 0},
+        ]
+        cams2 = [
+            {'name': 'Cam2', 'stream_name': 'cam2',
+             'rtsp_url': 'rtsps://y', 'camera_id': 'c2',
+             'is_ptz': False, 'ptz_presets': 0},
+        ]
+        mock_cameras.return_value = [
+            {'name': 'Site 1', 'host': '192.168.10.1', 'cameras': cams1},
+            {'name': 'Site 2', 'host': '192.168.1.26', 'cameras': cams2},
+        ]
+
+        self.client.get("/cameras/")
+
+        self.assertEqual(mock_register.call_count, 2)
+        mock_register.assert_any_call('http://localhost:1984', cams1)
+        mock_register.assert_any_call('http://localhost:1984', cams2)
