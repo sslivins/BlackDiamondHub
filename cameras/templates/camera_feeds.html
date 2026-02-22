@@ -80,6 +80,16 @@
         pointer-events: none;
     }
 
+    .cam-touch-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+        cursor: pointer;
+    }
+
     .no-cameras {
         text-align: center;
         padding: 80px 20px;
@@ -159,6 +169,7 @@
             data-url="{{ go2rtc_url }}/api/ws?src={{ stream.name }}"
             data-mode="webrtc,mse,mp4">
         </video-stream>
+        <div class="cam-touch-overlay"></div>
         <div class="cam-status"></div>
         <div class="cam-label">{{ stream.display_name }}</div>
     </div>
@@ -180,36 +191,16 @@
         el.src = el.dataset.url;
     });
 
-    // Tap/click anywhere on the card to toggle fullscreen,
-    // while preventing the video element from pausing.
-    document.querySelectorAll('.cam-card').forEach(card => {
-        card.addEventListener('click', e => {
-            e.preventDefault();
-            e.stopPropagation();
+    // Tap/click the overlay to toggle fullscreen
+    document.querySelectorAll('.cam-touch-overlay').forEach(overlay => {
+        overlay.addEventListener('click', () => {
+            const card = overlay.closest('.cam-card');
             if (!document.fullscreenElement) {
                 card.requestFullscreen().catch(() => {});
             } else {
                 document.exitFullscreen();
             }
         });
-
-        // Intercept the internal video element to prevent pause on click
-        const observer = new MutationObserver(() => {
-            const video = card.querySelector('video');
-            if (video) {
-                video.addEventListener('click', e => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!document.fullscreenElement) {
-                        card.requestFullscreen().catch(() => {});
-                    } else {
-                        document.exitFullscreen();
-                    }
-                });
-                observer.disconnect();
-            }
-        });
-        observer.observe(card, { childList: true, subtree: true });
     });
 </script>
 {% endblock %}
