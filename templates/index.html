@@ -100,11 +100,15 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 800px;
-            height: 800px;
-            background-color: rgba(255, 255, 255, 0.06);
+            width: 600px;
+            height: 600px;
+            background-color: transparent;
+            border: 3px solid rgba(255, 255, 255, 0.15);
             transform: translate(-50%, -50%) rotate(45deg);
             pointer-events: none;
+            box-shadow: 
+                inset 0 0 80px rgba(255, 255, 255, 0.04),
+                0 0 80px rgba(255, 255, 255, 0.02);
         }
 
         .btn-container {
