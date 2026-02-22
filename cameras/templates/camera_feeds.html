@@ -342,7 +342,7 @@
     function stopStreams(panel) {
         panel.querySelectorAll('video-stream').forEach(el => {
             if (el.dataset.active) {
-                el.src = '';
+                el.ondisconnect();
                 delete el.dataset.active;
             }
         });
@@ -400,7 +400,8 @@
             const fsStream = fsCard.querySelector('video-stream');
             if (fsStream) {
                 const streamName = fsStream.dataset.streamName;
-                // Switch to high quality
+                // Disconnect current stream before switching to high quality
+                fsStream.ondisconnect();
                 if (fsStream.video) fsStream.video.muted = true;
                 fsStream.src = `${GO2RTC_BASE}/api/ws?src=${streamName}`;
             }
@@ -408,7 +409,7 @@
             // Stop all other streams to save bandwidth
             activePanel.querySelectorAll('video-stream').forEach(el => {
                 if (el !== fsStream && el.dataset.active) {
-                    el.src = '';
+                    el.ondisconnect();
                     delete el.dataset.active;
                 }
             });
@@ -421,6 +422,8 @@
                 const streamName = el.dataset.streamName;
                 const hasLow = el.dataset.hasLow === 'true';
                 if (hasLow) {
+                    el.ondisconnect();
+                    if (el.video) el.video.muted = true;
                     el.src = `${GO2RTC_BASE}/api/ws?src=${streamName}_low`;
                 }
             });

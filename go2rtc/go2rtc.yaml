@@ -48,3 +48,19 @@ streams:
     - rtsps://192.168.1.26:7441/FwsjnkvwbLfzsD4R
   side_of_house_low:
     - rtsps://192.168.1.26:7441/Nu4LWjNn6yGa6NCE
+  garage___side_entry_low:
+    - rtsps://192.168.10.1:7441/D6xHBqbGW9SDrNzd
+  hot_tub_low:
+    - rtsps://192.168.10.1:7441/gaTEIcsLB4Ta40eG
+  side_yard_low:
+    - rtsps://192.168.10.1:7441/QpFH1DGSe0LKqODN
+  side_of_house___generator_low:
+    - rtsps://192.168.10.1:7441/oUrsQbxp0MxQgHrS
+  side_of_house___hvac_low:
+    - rtsps://192.168.10.1:7441/NcjklzQUwfJVUhrf
+  chicken_coop_low:
+    - rtsps://192.168.1.26:7441/UCY061CY0ohLV22b
+  first_bay_low:
+    - rtsps://192.168.1.26:7441/d28kPfr5DSSm86km
+  office_door_low:
+    - rtsps://192.168.1.26:7441/yQ2rVjkHIQ51jh08
