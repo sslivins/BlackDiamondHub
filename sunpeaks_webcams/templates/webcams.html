@@ -112,6 +112,7 @@
             overflow: auto;
             padding-top: 20px;
             background-color: rgba(0, 0, 0, 0.9);
+            cursor: pointer;
         }
 
         /* Modal content (image) */
@@ -124,6 +125,7 @@
             border-radius: 16px;
             animation: zoom 0.5s;
             border: 5px solid white;
+            cursor: pointer;
         }
 
         /* Caption for modal */
@@ -132,23 +134,6 @@
             color: #ccc;
             font-size: 18px;
             padding: 10px 0;
-        }
-
-        /* Modal close button */
-        #webcam-image-modal-close {
-            position: absolute;
-            top: 20px;
-            right: 25px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        #webcam-image-modal-close:hover,
-        #webcam-image-modal-close:focus {
-            color: #bbb;
-            text-decoration: none;
         }
         
         @keyframes zoom {
@@ -188,8 +173,7 @@
         {% endfor %}
     </div>
 
-    <div id="webcam-image-modal" class="modal">
-        <span id="webcam-image-modal-close" class="close" onclick="closeModal()">&times;</span>
+    <div id="webcam-image-modal" class="modal" onclick="closeModal()">
         <img class="modal-content" id="webcam-image-modal-image">
         <div id="webcam-image-modal-caption"></div>
     </div>    
@@ -245,13 +229,6 @@
             <strong>Elevation:</strong> ${elevation}
           `;
       }
-
-      // Close modal if clicked outside the image
-      window.onclick = function(event) {
-          if (event.target == modal) {
-              modal.style.display = "none";
-          }
-      };
 
       function closeModal() {
           modal.style.display = "none";
