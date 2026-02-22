@@ -200,6 +200,20 @@ class FetchCamerasFromSiteTests(TestCase):
 
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
+    def test_stream_name_prefixed_with_site_name(self, mock_get, mock_post):
+        """Stream names include site prefix to avoid cross-site collisions."""
+        mock_get.side_effect = _mock_get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
+
+        cameras = _fetch_cameras_from_site(
+            '192.168.10.1', 'test_api_key', site_name='Sun Peaks',
+        )
+
+        front_door = next(c for c in cameras if c['name'] == 'Front Door')
+        self.assertEqual(front_door['stream_name'], 'sun_peaks_front_door')
+
+    @patch('cameras.protect_api.requests.post')
+    @patch('cameras.protect_api.requests.get')
     def test_handles_dict_format_cameras(self, mock_get, mock_post):
         """Handles response where cameras is a dict keyed by ID."""
         def get_side_effect(url, **kwargs):

@@ -65,7 +65,7 @@ def get_protect_cameras():
         if cached and (now - cached['timestamp']) < CACHE_TTL:
             cameras = cached['cameras']
         else:
-            cameras = _fetch_cameras_from_site(host, api_key)
+            cameras = _fetch_cameras_from_site(host, api_key, site_name)
             if cameras is not None:
                 _cache[host] = {'cameras': cameras, 'timestamp': now}
             else:
@@ -234,11 +234,15 @@ def _find_site_for_camera(camera_id):
     return None, None
 
 
-def _fetch_cameras_from_site(host, api_key):
+def _fetch_cameras_from_site(host, api_key, site_name=None):
     """Fetch all cameras with RTSPS streams from a single Protect site.
 
     Uses API key authentication (X-API-KEY header). Discovers cameras via
     GET /v1/cameras, then fetches/creates RTSPS stream URLs for each.
+
+    When site_name is provided, stream names are prefixed with the site
+    name to avoid collisions when multiple sites have cameras with the
+    same name (e.g., both sites have "Front Door").
 
     Returns a list of camera dicts, or None on failure.
     """
@@ -269,10 +273,18 @@ def _fetch_cameras_from_site(host, api_key):
 
             rtsps_urls = _get_rtsps_url(host, api_key, camera_id)
             if rtsps_urls:
+                # Prefix stream name with site name to avoid collisions
+                # across sites (e.g., both have "Front Door")
+                if site_name:
+                    stream_name = _camera_name_to_stream_name(
+                        f"{site_name} {name}",
+                    )
+                else:
+                    stream_name = _camera_name_to_stream_name(name)
                 cam_info = {
                     'name': name,
                     'camera_id': camera_id,
-                    'stream_name': _camera_name_to_stream_name(name),
+                    'stream_name': stream_name,
                     'rtsp_url': rtsps_urls.get('high', ''),
                     'rtsp_url_low': rtsps_urls.get('low', ''),
                     'is_ptz': False,
