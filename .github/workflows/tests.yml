@@ -76,6 +76,23 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Start go2rtc
+      run: |
+        mkdir -p /tmp/go2rtc
+        printf 'api:\n  listen: ":1984"\n  origin: "*"\nwebrtc:\n  listen: ":8555"\n' > /tmp/go2rtc/go2rtc.yaml
+        docker run -d --name go2rtc \
+          -p 1984:1984 -p 8555:8555 \
+          -v /tmp/go2rtc:/config \
+          alexxit/go2rtc
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:1984/api/streams > /dev/null 2>&1; then
+            echo "go2rtc is ready"
+            break
+          fi
+          echo "Waiting for go2rtc... ($i)"
+          sleep 1
+        done
+
     - name: Install Chrome and ChromeDriver
       run: |
           sudo apt-get update
@@ -117,6 +134,7 @@ jobs:
         DB_HOST: localhost
         DB_USER: postgres
         DB_PASSWORD: postgres
+        GO2RTC_URL: http://localhost:1984
 
     - name: Upload screenshot on failure
       if: failure()

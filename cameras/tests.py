@@ -1,5 +1,9 @@
 import json
-from django.test import TestCase, Client, override_settings
+import unittest
+import urllib.request
+import urllib.parse
+from django.test import TestCase, Client, override_settings, tag
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from unittest.mock import patch, MagicMock, call
 from .views import get_go2rtc_streams, _register_streams_with_go2rtc
 from .protect_api import (
@@ -495,6 +499,36 @@ class CameraFeedViewWithProtectTests(TestCase):
         self.assertNotIn('video-rtc.js', content)
         # Each camera card has a touch overlay div for fullscreen
         self.assertEqual(content.count('class="cam-touch-overlay"'), 2)
+        # Stream mode must include MSE — go2rtc needs MSE initialized
+        # alongside WebRTC for the WebSocket negotiation to work.
+        # Removing MSE breaks video loading entirely (PR #45 regression).
+        self.assertIn('data-mode="webrtc,mse,mp4"', content)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_stream_mode_includes_mse(self, mock_cameras, mock_register):
+        """Stream mode must be 'webrtc,mse,mp4' — MSE is required.
+
+        go2rtc uses an if/else-if chain in onopen() to pick the first video
+        protocol (mse > hls > mp4), then adds WebRTC independently. Without
+        MSE, MP4 + WebRTC compete and fail to deliver video. MSE acts as
+        a graceful placeholder that loses the race to WebRTC harmlessly.
+        """
+        mock_cameras.return_value = [{
+            'name': 'Test', 'host': '192.168.10.1',
+            'cameras': [
+                {'name': 'Cam', 'stream_name': 'cam',
+                 'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+                 'camera_id': 'c1', 'is_ptz': False, 'ptz_presets': 0},
+            ],
+        }]
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertIn('data-mode="webrtc,mse,mp4"', content)
+        # Ensure MSE was not accidentally removed
+        self.assertNotIn('data-mode="webrtc,mp4"', content)
 
     @patch("cameras.views._register_streams_with_go2rtc")
     @patch("cameras.views.get_protect_cameras")
@@ -1100,3 +1134,119 @@ class MultiSiteTabTests(TestCase):
         self.assertEqual(mock_register.call_count, 2)
         mock_register.assert_any_call('http://localhost:1984', cams1)
         mock_register.assert_any_call('http://localhost:1984', cams2)
+
+
+# --- Selenium smoke tests ---
+
+GO2RTC_CI_URL = 'http://localhost:1984'
+
+
+def _go2rtc_available():
+    """Check if go2rtc is running on localhost:1984."""
+    try:
+        req = urllib.request.Request(f'{GO2RTC_CI_URL}/api/streams')
+        with urllib.request.urlopen(req, timeout=3):
+            return True
+    except Exception:
+        return False
+
+
+@tag('selenium')
+@override_settings(
+    GO2RTC_URL=GO2RTC_CI_URL,
+    UNIFI_PROTECT_SITES=[],
+)
+class CameraStreamSeleniumTests(StaticLiveServerTestCase):
+    """Selenium smoke tests verifying video-stream elements load via go2rtc.
+
+    Requires go2rtc running on localhost:1984 (provided in CI by Docker
+    service container).  Tests register a synthetic ffmpeg test stream
+    and verify the camera page renders functional video-stream elements
+    with the correct data-mode attribute.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        if not _go2rtc_available():
+            raise unittest.SkipTest('go2rtc not available on localhost:1984')
+
+        from selenium import webdriver
+        from tests.selenium_helpers import get_chrome_options
+
+        cls.driver = webdriver.Chrome(options=get_chrome_options())
+        cls.driver.implicitly_wait(5)
+        cls._register_test_stream()
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, 'driver'):
+            cls.driver.quit()
+        super().tearDownClass()
+
+    @classmethod
+    def _register_test_stream(cls):
+        """Register a synthetic test stream in go2rtc via its API.
+
+        Uses ffmpeg's lavfi testsrc filter with H264 encoding, which is
+        built into the go2rtc Docker image. This provides a real video
+        stream without needing physical cameras.
+        """
+        source = 'ffmpeg:virtual?video#video=h264'
+        encoded = urllib.parse.quote(source, safe='')
+        url = f'{GO2RTC_CI_URL}/api/streams?name=test_cam&src={encoded}'
+        req = urllib.request.Request(url, method='PUT', data=b'')
+        with urllib.request.urlopen(req, timeout=10):
+            pass
+
+    def setUp(self):
+        self.driver.get('about:blank')
+        self.driver.delete_all_cookies()
+
+    def test_camera_page_renders_video_streams_with_correct_mode(self):
+        """video-stream elements appear with data-mode='webrtc,mse,mp4'.
+
+        This is the key regression test for PR #45: removing MSE from
+        data-mode broke video loading entirely because go2rtc's onopen()
+        if/else-if chain needs MSE as a placeholder protocol.
+        """
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+
+        self.driver.get(f'{self.live_server_url}/cameras/')
+
+        # Wait for at least one video-stream element
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'video-stream'))
+        )
+
+        elements = self.driver.find_elements(By.CSS_SELECTOR, 'video-stream')
+        self.assertGreater(len(elements), 0, "No video-stream elements found")
+
+        for el in elements:
+            mode = el.get_attribute('data-mode')
+            self.assertEqual(
+                mode, 'webrtc,mse,mp4',
+                f"Expected data-mode='webrtc,mse,mp4', got '{mode}'",
+            )
+
+    def test_video_stream_custom_element_loads(self):
+        """video-stream.js loads from go2rtc and registers the custom element.
+
+        Verifies the full chain: Django renders the page, the browser fetches
+        video-stream.js from go2rtc, and the custom element class registers.
+        If go2rtc is unreachable or video-stream.js fails to load, this test
+        catches it.
+        """
+        from selenium.webdriver.support.ui import WebDriverWait
+
+        self.driver.get(f'{self.live_server_url}/cameras/')
+
+        # Wait for the custom element to be defined (video-stream.js loaded)
+        is_defined = WebDriverWait(self.driver, 15).until(
+            lambda d: d.execute_script(
+                "return customElements.get('video-stream') !== undefined"
+            )
+        )
+        self.assertTrue(is_defined, "video-stream custom element not registered")
