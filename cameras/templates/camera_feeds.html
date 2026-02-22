@@ -277,7 +277,7 @@
     {% for stream in site.streams %}
     <div class="cam-card">
         <video-stream
-            data-url="{{ go2rtc_url }}/api/ws?src={{ stream.name }}"
+            data-stream-name="{{ stream.name }}"
             data-mode="webrtc,mse,mp4"
             data-site="{{ forloop.parentloop.counter0 }}">
         </video-stream>
@@ -302,8 +302,18 @@
 </div>
 {% endfor %}
 
-<script type="module" src="{{ go2rtc_url }}/video-stream.js"></script>
 {% load static %}
+<script>
+    // Build go2rtc base URL from the browser's current hostname
+    const GO2RTC_PORT = {{ go2rtc_port }};
+    const GO2RTC_BASE = `http://${window.location.hostname}:${GO2RTC_PORT}`;
+
+    // Dynamically load video-stream.js from go2rtc
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = `${GO2RTC_BASE}/video-stream.js`;
+    document.head.appendChild(script);
+</script>
 <script type="module">
     // Initialize video-stream elements for the active tab only
     function initStreams(panel) {
@@ -311,7 +321,7 @@
             if (!el.src) {
                 el.background = true;
                 el.mode = el.dataset.mode;
-                el.src = el.dataset.url;
+                el.src = `${GO2RTC_BASE}/api/ws?src=${el.dataset.streamName}`;
             }
         });
     }
