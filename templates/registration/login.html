@@ -1,17 +1,74 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Login</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container mt-5">
-        <h1>Login</h1>
+{% extends 'base.html' %}
+
+{% block title %}Login — Black Diamond Hub{% endblock %}
+
+{% block content %}
+<style>
+    .login-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 62px);
+        background-color: #000000;
+    }
+
+    .login-card {
+        background-color: #ffffff;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        width: 100%;
+        max-width: 400px;
+        margin: 20px;
+    }
+
+    .login-card h2 {
+        margin-bottom: 24px;
+        color: #000000;
+        text-align: center;
+    }
+
+    .login-card .form-label {
+        font-weight: 600;
+        color: #333333;
+    }
+
+    .login-card .form-control {
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 6px;
+    }
+
+    .login-card .btn {
+        min-height: 48px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <h2>Login</h2>
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+            Invalid username or password. Please try again.
+        </div>
+        {% endif %}
         <form method="post">
             {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Login</button>
+            <div class="mb-3">
+                <label for="id_username" class="form-label">Username</label>
+                <input type="text" name="username" id="id_username" class="form-control" autofocus required>
+            </div>
+            <div class="mb-3">
+                <label for="id_password" class="form-label">Password</label>
+                <input type="password" name="password" id="id_password" class="form-control" required>
+            </div>
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">Login</button>
+                <a href="{% url 'index' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
         </form>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
