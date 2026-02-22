@@ -429,6 +429,26 @@ class CameraFeedViewWithProtectTests(TestCase):
         # Loads the correct JS module (video-stream.js, not video-rtc.js)
         self.assertIn('video-stream.js"', content)
         self.assertNotIn('video-rtc.js"', content)
+        # Each camera card has a touch overlay div for fullscreen
+        self.assertEqual(content.count('class="cam-touch-overlay"'), 2)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_view_includes_fullscreen_overlay_and_js(self, mock_cameras, mock_register):
+        """Touch overlay and fullscreen JS are present in the rendered page."""
+        mock_cameras.return_value = [
+            {'name': 'Front Door', 'stream_name': 'front_door', 'rtsp_url': 'rtsps://x'},
+        ]
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        # Touch overlay div sits above video for tap handling
+        self.assertIn('class="cam-touch-overlay"', content)
+        # Fullscreen toggle JS wired to the overlay
+        self.assertIn('requestFullscreen', content)
+        self.assertIn('exitFullscreen', content)
+        self.assertIn('.cam-touch-overlay', content)
 
 
 @override_settings(
