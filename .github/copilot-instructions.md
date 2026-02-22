@@ -9,7 +9,7 @@ BlackDiamondHub is a Django-based home automation and management hub for a vacat
 - **inventory** — Property inventory management with item tracking, images, and QR code labels (uses pyzbar for scanning)
 - **vacation_mode** — Automates switching between vacation and home modes via Home Assistant REST API (thermostats, water heater, hot tub, TVs, fridge/freezer eco modes). Includes post-action state verification since HA silently drops commands to offline devices
 - **sonos_control** — Sonos speaker control with Spotify integration via OAuth (social-auth)
-- **cameras** — Live camera feeds
+- **cameras** — Live camera feeds via go2rtc + UniFi Protect Integration API
 - **sunpeaks_webcams** — Sun Peaks resort webcam viewer
 - **snow_report** — Snow/weather report display
 - **scenes** — Home Assistant scene control
@@ -24,6 +24,19 @@ BlackDiamondHub is a Django-based home automation and management hub for a vacat
 - **Home Assistant**: REST API at `192.168.10.212:8123`, token stored in `.env` as `HA_TOKEN`
 - **Containerization**: Docker + docker-compose available
 - **Environment**: `.env` file for secrets (not committed)
+
+## UniFi Protect Integration API
+
+- **API Docs**: https://developer.ui.com/protect/v6.2.88/get-v1metainfo (sidebar has all endpoints)
+- **Auth**: API key via `X-API-KEY` header, key generated at unifi.ui.com → Settings → API Keys
+- **Base URL**: `https://{UNIFI_PROTECT_HOST}/proxy/protect/integration/v1`
+- **Camera list**: `GET /v1/cameras` — returns id, name, state, featureFlags (note: PTZ flags NOT exposed)
+- **RTSPS streams**: `GET /v1/cameras/{id}/rtsps-stream` and `POST /v1/cameras/{id}/rtsps-stream` with `{"qualities": ["high"]}`
+- **PTZ endpoints** (for PTZ cameras only, non-PTZ returns 400 "Camera is not a type of PTZ"):
+  - `POST /v1/cameras/{id}/ptz/goto/{slot}` — Move to preset (slots 0-4, 204 on success, 404 if preset doesn't exist)
+  - `POST /v1/cameras/{id}/ptz/patrol/start/{slot}` — Start patrol
+  - `POST /v1/cameras/{id}/ptz/patrol/stop` — Stop patrol
+- **go2rtc**: Proxies RTSPS streams to browser via WebRTC/MSE. `video-stream.js` web component (set src/mode/background as JS properties, NOT HTML attributes). Docker image: `alexxit/go2rtc`
 
 ## CI/CD
 
@@ -59,6 +72,8 @@ BlackDiamondHub is a Django-based home automation and management hub for a vacat
 - `BlackDiamondHub/urls.py` — URL routing for all apps
 - `vacation_mode/executor.py` — HA service call execution engine with state verification
 - `vacation_mode/steps.py` — Step definitions for vacation and home mode sequences
+- `cameras/protect_api.py` — UniFi Protect API client (camera discovery, RTSPS streams, PTZ control)
+- `cameras/views.py` — Camera feed views, go2rtc stream registration
 - `tests/selenium_helpers.py` — Shared Selenium test utilities (login, Chrome options, network waits)
 - `.env` — Environment variables (HA_TOKEN, DB credentials, etc.)
 - `requirements.txt` — Python dependencies

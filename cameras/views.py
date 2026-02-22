@@ -4,10 +4,12 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.conf import settings
+from django.views.decorators.http import require_POST
 
-from .protect_api import get_protect_cameras
+from .protect_api import get_protect_cameras, ptz_goto_preset
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,14 @@ def camera_feed_view(request):
         cameras = get_protect_cameras()
         _register_streams_with_go2rtc(go2rtc_url, cameras)
         streams = [
-            {'name': cam['stream_name'], 'display_name': cam['name']}
+            {
+                'name': cam['stream_name'],
+                'display_name': cam['name'],
+                'camera_id': cam.get('camera_id', ''),
+                'is_ptz': cam.get('is_ptz', False),
+                'ptz_presets': cam.get('ptz_presets', 0),
+                'preset_range': list(range(cam.get('ptz_presets', 0))),
+            }
             for cam in cameras
         ]
     else:
@@ -93,3 +102,31 @@ def camera_feed_view(request):
         'streams': streams,
         'go2rtc_url': go2rtc_url,
     })
+
+
+@require_POST
+def ptz_goto(request):
+    """AJAX endpoint to move a PTZ camera to a preset.
+
+    Expects JSON body: {"camera_id": "...", "slot": 0}
+    Returns JSON: {"success": true/false}
+    """
+    try:
+        data = json.loads(request.body)
+        camera_id = data.get('camera_id')
+        slot = data.get('slot')
+
+        if not camera_id or slot is None:
+            return JsonResponse(
+                {'success': False, 'error': 'Missing camera_id or slot'},
+                status=400,
+            )
+
+        success = ptz_goto_preset(camera_id, int(slot))
+        return JsonResponse({'success': success})
+
+    except (json.JSONDecodeError, ValueError, TypeError) as e:
+        return JsonResponse(
+            {'success': False, 'error': str(e)},
+            status=400,
+        )

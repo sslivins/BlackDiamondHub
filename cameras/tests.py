@@ -4,7 +4,8 @@ from unittest.mock import patch, MagicMock, call
 from .views import get_go2rtc_streams, _register_streams_with_go2rtc
 from .protect_api import (
     get_protect_cameras, clear_cache, _camera_name_to_stream_name,
-    _fetch_cameras_from_protect,
+    _fetch_cameras_from_protect, _is_ptz_camera, _get_ptz_preset_count,
+    ptz_goto_preset,
 )
 
 
@@ -60,6 +61,13 @@ def _make_mock_response(json_data, status_code=200):
     return resp
 
 
+def _make_ptz_not_supported_response():
+    """Create a 400 response for non-PTZ cameras."""
+    return _make_mock_response(
+        {'error': 'Camera is not a type of PTZ'}, status_code=400,
+    )
+
+
 def _mock_get_side_effect(url, **kwargs):
     """Route mocked GET requests to correct responses."""
     if url.endswith('/cameras'):
@@ -69,6 +77,13 @@ def _mock_get_side_effect(url, **kwargs):
     elif 'cam_back/rtsps-stream' in url:
         return _make_mock_response(MOCK_RTSPS_BACK)
     return _make_mock_response(MOCK_RTSPS_EMPTY)
+
+
+def _mock_post_non_ptz(url, **kwargs):
+    """POST mock: all cameras return 400 (not PTZ)."""
+    if '/ptz/' in url:
+        return _make_ptz_not_supported_response()
+    return _make_mock_response({}, status_code=200)
 
 
 @override_settings(
@@ -86,6 +101,7 @@ class FetchCamerasFromProtectTests(TestCase):
     def test_returns_cameras_sorted_by_name(self, mock_get, mock_post):
         """Cameras are returned sorted alphabetically."""
         mock_get.side_effect = _mock_get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
 
         cameras = _fetch_cameras_from_protect()
 
@@ -98,6 +114,7 @@ class FetchCamerasFromProtectTests(TestCase):
     def test_returns_rtsps_urls(self, mock_get, mock_post):
         """RTSPS URLs are returned from the API."""
         mock_get.side_effect = _mock_get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
 
         cameras = _fetch_cameras_from_protect()
 
@@ -116,17 +133,21 @@ class FetchCamerasFromProtectTests(TestCase):
             # GET rtsps-stream returns all nulls
             return _make_mock_response(MOCK_RTSPS_EMPTY)
 
+        def post_side_effect(url, **kwargs):
+            if '/ptz/' in url:
+                return _make_ptz_not_supported_response()
+            return _make_mock_response({
+                'high': 'rtsps://192.168.10.1:7441/newstream',
+                'medium': None, 'low': None,
+            })
+
         mock_get.side_effect = get_side_effect
-        mock_post.return_value = _make_mock_response({
-            'high': 'rtsps://192.168.10.1:7441/newstream',
-            'medium': None, 'low': None,
-        })
+        mock_post.side_effect = post_side_effect
 
         cameras = _fetch_cameras_from_protect()
 
         self.assertEqual(len(cameras), 1)
         self.assertEqual(cameras[0]['rtsp_url'], 'rtsps://192.168.10.1:7441/newstream')
-        mock_post.assert_called_once()
 
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
@@ -170,6 +191,7 @@ class FetchCamerasFromProtectTests(TestCase):
     def test_generates_stream_name(self, mock_get, mock_post):
         """Stream names are generated from camera names."""
         mock_get.side_effect = _mock_get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
 
         cameras = _fetch_cameras_from_protect()
 
@@ -191,6 +213,7 @@ class FetchCamerasFromProtectTests(TestCase):
             })
 
         mock_get.side_effect = get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
 
         cameras = _fetch_cameras_from_protect()
 
@@ -226,6 +249,7 @@ class FetchCamerasFromProtectTests(TestCase):
             })
 
         mock_get.side_effect = get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
 
         cameras = _fetch_cameras_from_protect()
 
@@ -536,3 +560,346 @@ class RegisterStreamsTests(TestCase):
 
         # Should not raise
         _register_streams_with_go2rtc('http://localhost:1984', cameras)
+
+
+# --- PTZ API tests ---
+
+@override_settings(
+    UNIFI_PROTECT_HOST='192.168.10.1',
+    UNIFI_PROTECT_API_KEY='test_api_key',
+)
+class PtzDetectionTests(TestCase):
+    """Tests for PTZ camera detection via probing."""
+
+    @patch('cameras.protect_api.requests.post')
+    def test_detects_ptz_camera(self, mock_post):
+        """Returns True when camera responds 204 to goto."""
+        mock_post.return_value = _make_mock_response({}, status_code=204)
+
+        result = _is_ptz_camera('192.168.10.1', 'key', 'cam_ptz')
+
+        self.assertTrue(result)
+        self.assertIn('/ptz/goto/0', mock_post.call_args.args[0])
+
+    @patch('cameras.protect_api.requests.post')
+    def test_detects_non_ptz_camera(self, mock_post):
+        """Returns False when camera responds 400."""
+        mock_post.return_value = _make_ptz_not_supported_response()
+
+        result = _is_ptz_camera('192.168.10.1', 'key', 'cam_fixed')
+
+        self.assertFalse(result)
+
+    @patch('cameras.protect_api.requests.post')
+    def test_returns_false_on_network_error(self, mock_post):
+        """Returns False when request fails."""
+        import requests
+        mock_post.side_effect = requests.RequestException("Timeout")
+
+        result = _is_ptz_camera('192.168.10.1', 'key', 'cam1')
+
+        self.assertFalse(result)
+
+
+@override_settings(
+    UNIFI_PROTECT_HOST='192.168.10.1',
+    UNIFI_PROTECT_API_KEY='test_api_key',
+)
+class PtzPresetCountTests(TestCase):
+    """Tests for PTZ preset discovery."""
+
+    @patch('cameras.protect_api.requests.post')
+    def test_counts_valid_presets(self, mock_post):
+        """Counts presets until 404 is returned."""
+        def side_effect(url, **kwargs):
+            # Slots 0-3 exist, slot 4 does not
+            slot = int(url.rstrip('/').split('/')[-1])
+            if slot < 4:
+                return _make_mock_response({}, status_code=204)
+            return _make_mock_response(
+                {'error': "Entity 'preset' not found"}, status_code=404,
+            )
+
+        mock_post.side_effect = side_effect
+
+        count = _get_ptz_preset_count('192.168.10.1', 'key', 'cam_ptz')
+
+        self.assertEqual(count, 4)
+
+    @patch('cameras.protect_api.requests.post')
+    def test_returns_zero_when_no_presets(self, mock_post):
+        """Returns 0 when even slot 0 fails."""
+        mock_post.return_value = _make_mock_response(
+            {'error': "Entity 'preset' not found"}, status_code=404,
+        )
+
+        count = _get_ptz_preset_count('192.168.10.1', 'key', 'cam_ptz')
+
+        self.assertEqual(count, 0)
+
+    @patch('cameras.protect_api.requests.post')
+    def test_handles_network_error(self, mock_post):
+        """Returns 0 on network error."""
+        import requests
+        mock_post.side_effect = requests.RequestException("Timeout")
+
+        count = _get_ptz_preset_count('192.168.10.1', 'key', 'cam_ptz')
+
+        self.assertEqual(count, 0)
+
+
+@override_settings(
+    UNIFI_PROTECT_HOST='192.168.10.1',
+    UNIFI_PROTECT_API_KEY='test_api_key',
+)
+class PtzGotoPresetTests(TestCase):
+    """Tests for ptz_goto_preset."""
+
+    @patch('cameras.protect_api.requests.post')
+    def test_returns_true_on_success(self, mock_post):
+        """Returns True when goto returns 204."""
+        mock_post.return_value = _make_mock_response({}, status_code=204)
+
+        result = ptz_goto_preset('cam_ptz', 2)
+
+        self.assertTrue(result)
+
+    @patch('cameras.protect_api.requests.post')
+    def test_returns_false_on_failure(self, mock_post):
+        """Returns False when goto returns non-204."""
+        mock_post.return_value = _make_ptz_not_supported_response()
+
+        result = ptz_goto_preset('cam_fixed', 0)
+
+        self.assertFalse(result)
+
+    @patch('cameras.protect_api.requests.post')
+    def test_returns_false_on_network_error(self, mock_post):
+        """Returns False on network error."""
+        import requests
+        mock_post.side_effect = requests.RequestException("Timeout")
+
+        result = ptz_goto_preset('cam1', 0)
+
+        self.assertFalse(result)
+
+    @override_settings(UNIFI_PROTECT_HOST='', UNIFI_PROTECT_API_KEY='')
+    def test_returns_false_when_not_configured(self):
+        """Returns False when Protect credentials are not set."""
+        result = ptz_goto_preset('cam1', 0)
+
+        self.assertFalse(result)
+
+
+@override_settings(
+    UNIFI_PROTECT_HOST='192.168.10.1',
+    UNIFI_PROTECT_API_KEY='test_api_key',
+)
+class FetchCamerasWithPtzTests(TestCase):
+    """Tests for PTZ info in _fetch_cameras_from_protect results."""
+
+    def setUp(self):
+        clear_cache()
+
+    @patch('cameras.protect_api.requests.post')
+    @patch('cameras.protect_api.requests.get')
+    def test_non_ptz_cameras_have_is_ptz_false(self, mock_get, mock_post):
+        """Non-PTZ cameras have is_ptz=False and ptz_presets=0."""
+        mock_get.side_effect = _mock_get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
+
+        cameras = _fetch_cameras_from_protect()
+
+        for cam in cameras:
+            self.assertFalse(cam['is_ptz'])
+            self.assertEqual(cam['ptz_presets'], 0)
+
+    @patch('cameras.protect_api.requests.post')
+    @patch('cameras.protect_api.requests.get')
+    def test_ptz_camera_detected_with_presets(self, mock_get, mock_post):
+        """PTZ camera is detected and preset count is correct."""
+        def get_side_effect(url, **kwargs):
+            if url.endswith('/cameras'):
+                return _make_mock_response([
+                    {'id': 'cam_ptz', 'name': 'Hot Tub', 'state': 'CONNECTED'},
+                ])
+            return _make_mock_response({
+                'high': 'rtsps://192.168.10.1:7441/hottub',
+                'medium': None, 'low': None,
+            })
+
+        def post_side_effect(url, **kwargs):
+            if '/ptz/' not in url:
+                return _make_ptz_not_supported_response()
+            # PTZ probe: slots 0-2 exist, slot 3 does not
+            slot_str = url.rstrip('/').split('/')[-1]
+            try:
+                slot = int(slot_str)
+            except ValueError:
+                return _make_mock_response({}, status_code=204)
+            if slot < 3:
+                return _make_mock_response({}, status_code=204)
+            return _make_mock_response({}, status_code=404)
+
+        mock_get.side_effect = get_side_effect
+        mock_post.side_effect = post_side_effect
+
+        cameras = _fetch_cameras_from_protect()
+
+        self.assertEqual(len(cameras), 1)
+        self.assertTrue(cameras[0]['is_ptz'])
+        self.assertEqual(cameras[0]['ptz_presets'], 3)
+        self.assertEqual(cameras[0]['camera_id'], 'cam_ptz')
+
+    @patch('cameras.protect_api.requests.post')
+    @patch('cameras.protect_api.requests.get')
+    def test_cameras_include_camera_id(self, mock_get, mock_post):
+        """Cameras include their Protect camera_id."""
+        mock_get.side_effect = _mock_get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
+
+        cameras = _fetch_cameras_from_protect()
+
+        self.assertEqual(cameras[0]['camera_id'], 'cam_back')
+        self.assertEqual(cameras[1]['camera_id'], 'cam_front')
+
+
+# --- PTZ View tests ---
+
+@override_settings(
+    GO2RTC_URL='http://localhost:1984',
+    UNIFI_PROTECT_HOST='192.168.10.1',
+    UNIFI_PROTECT_API_KEY='test_api_key',
+)
+class PtzGotoViewTests(TestCase):
+    """Tests for the ptz_goto view endpoint."""
+
+    def setUp(self):
+        self.client = Client()
+
+    @patch('cameras.views.ptz_goto_preset')
+    def test_successful_goto(self, mock_goto):
+        """Returns success JSON on valid request."""
+        mock_goto.return_value = True
+
+        response = self.client.post(
+            '/cameras/ptz/goto/',
+            data=json.dumps({'camera_id': 'cam_ptz', 'slot': 2}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        mock_goto.assert_called_once_with('cam_ptz', 2)
+
+    @patch('cameras.views.ptz_goto_preset')
+    def test_failed_goto(self, mock_goto):
+        """Returns success=false when goto fails."""
+        mock_goto.return_value = False
+
+        response = self.client.post(
+            '/cameras/ptz/goto/',
+            data=json.dumps({'camera_id': 'cam_fixed', 'slot': 0}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['success'])
+
+    def test_rejects_get(self):
+        """GET requests are rejected (POST only)."""
+        response = self.client.get('/cameras/ptz/goto/')
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_rejects_missing_fields(self):
+        """Missing camera_id or slot returns 400."""
+        response = self.client.post(
+            '/cameras/ptz/goto/',
+            data=json.dumps({'camera_id': 'cam1'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_rejects_invalid_json(self):
+        """Invalid JSON returns 400."""
+        response = self.client.post(
+            '/cameras/ptz/goto/',
+            data='not json',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+
+# --- PTZ template tests ---
+
+@override_settings(
+    GO2RTC_URL='http://localhost:1984',
+    UNIFI_PROTECT_HOST='192.168.10.1',
+    UNIFI_PROTECT_API_KEY='test_api_key',
+)
+class PtzTemplateTests(TestCase):
+    """Tests for PTZ controls in the camera template."""
+
+    def setUp(self):
+        self.client = Client()
+        clear_cache()
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_ptz_buttons_shown_for_ptz_camera(self, mock_cameras, mock_register):
+        """PTZ preset buttons appear for PTZ cameras."""
+        mock_cameras.return_value = [
+            {
+                'name': 'Hot Tub', 'stream_name': 'hot_tub',
+                'rtsp_url': 'rtsps://x', 'camera_id': 'cam_ptz',
+                'is_ptz': True, 'ptz_presets': 4,
+            },
+        ]
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertIn('class="ptz-controls"', content)
+        self.assertIn('class="ptz-btn"', content)
+        # 4 preset buttons labeled 1-4
+        self.assertEqual(content.count('class="ptz-btn"'), 4)
+        self.assertIn('data-camera-id="cam_ptz"', content)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_no_ptz_buttons_for_non_ptz_camera(self, mock_cameras, mock_register):
+        """Non-PTZ cameras do not get PTZ buttons."""
+        mock_cameras.return_value = [
+            {
+                'name': 'Front Door', 'stream_name': 'front_door',
+                'rtsp_url': 'rtsps://x', 'camera_id': 'cam_front',
+                'is_ptz': False, 'ptz_presets': 0,
+            },
+        ]
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertNotIn('class="ptz-controls"', content)
+        self.assertNotIn('class="ptz-btn"', content)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_ptz_js_sends_to_correct_endpoint(self, mock_cameras, mock_register):
+        """PTZ JavaScript posts to the ptz_goto URL."""
+        mock_cameras.return_value = [
+            {
+                'name': 'Hot Tub', 'stream_name': 'hot_tub',
+                'rtsp_url': 'rtsps://x', 'camera_id': 'cam_ptz',
+                'is_ptz': True, 'ptz_presets': 2,
+            },
+        ]
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertIn('/cameras/ptz/goto/', content)
+        self.assertIn('X-CSRFToken', content)

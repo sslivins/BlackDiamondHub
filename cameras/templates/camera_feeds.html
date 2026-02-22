@@ -90,6 +90,64 @@
         cursor: pointer;
     }
 
+    .ptz-controls {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+    }
+
+    .cam-card:hover .ptz-controls,
+    .cam-card:fullscreen .ptz-controls {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .ptz-btn {
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 700;
+        cursor: pointer;
+        backdrop-filter: blur(4px);
+        transition: background 0.15s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .ptz-btn:hover {
+        background: rgba(255, 255, 255, 0.45);
+    }
+
+    .ptz-btn.active {
+        background: rgba(76, 175, 80, 0.7);
+        box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+    }
+
+    /* Larger PTZ buttons in fullscreen */
+    .cam-card:fullscreen .ptz-controls {
+        bottom: 60px;
+        gap: 8px;
+    }
+
+    .cam-card:fullscreen .ptz-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 0.9rem;
+    }
+
     .no-cameras {
         text-align: center;
         padding: 80px 20px;
@@ -170,6 +228,13 @@
             data-mode="webrtc,mse,mp4">
         </video-stream>
         <div class="cam-touch-overlay"></div>
+        {% if stream.is_ptz and stream.ptz_presets > 0 %}
+        <div class="ptz-controls">
+            {% for i in stream.preset_range %}
+            <button class="ptz-btn" data-camera-id="{{ stream.camera_id }}" data-slot="{{ i }}">{{ i|add:1 }}</button>
+            {% endfor %}
+        </div>
+        {% endif %}
         <div class="cam-status"></div>
         <div class="cam-label">{{ stream.display_name }}</div>
     </div>
@@ -183,6 +248,7 @@
 </div>
 
 <script type="module" src="{{ go2rtc_url }}/video-stream.js"></script>
+{% load static %}
 <script type="module">
     // video-stream requires src/mode/background set as JS properties, not HTML attributes
     document.querySelectorAll('video-stream').forEach(el => {
@@ -200,6 +266,28 @@
             } else {
                 document.exitFullscreen();
             }
+        });
+    });
+
+    // PTZ preset buttons
+    document.querySelectorAll('.ptz-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const cameraId = btn.dataset.cameraId;
+            const slot = parseInt(btn.dataset.slot);
+
+            // Visual feedback - highlight active preset
+            btn.closest('.ptz-controls').querySelectorAll('.ptz-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            fetch('{% url "ptz_goto" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({camera_id: cameraId, slot: slot}),
+            }).catch(() => {});
         });
     });
 </script>
