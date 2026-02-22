@@ -22,8 +22,36 @@ BlackDiamondHub is a Django-based home automation and management hub for a vacat
 - **Frontend**: Bootstrap 5 (crispy-bootstrap5), Font Awesome icons
 - **Auth**: Django auth + social-auth-app-django (Spotify OAuth)
 - **Home Assistant**: REST API at `192.168.10.212:8123`, token stored in `.env` as `HA_TOKEN`
-- **Containerization**: Docker + docker-compose available
+- **Containerization**: Docker + docker-compose (see Deployment section)
 - **Environment**: `.env` file for secrets (not committed)
+
+## Deployment & Infrastructure
+
+### Production Host
+- **Server**: Ubuntu host `homehub` at `~/bdl/BlackDiamondHub`
+- **Network**: Dual-subnet — Sun Peaks (`192.168.10.x`) and Mercer Island (`192.168.1.x`)
+- **Docker Compose V2** (`docker compose`, not the old `docker-compose` v1)
+
+### CI/CD Pipeline
+1. **Code changes** go through feature branches → PRs → merge to `main`
+2. **GitHub Actions** (`docker-publish.yml`) triggers on push to `main`:
+   - Builds the Docker image from the Dockerfile
+   - Pushes to GHCR: `ghcr.io/sslivins/blackdiamondhub/blackdiamondhub:latest`
+3. **Watchtower** on production polls GHCR every 300s, pulls new images, and recreates the `BlackDiamondHub` container automatically
+   - Watchtower only watches the `BlackDiamondHub` container (not go2rtc)
+
+### What auto-deploys vs. what doesn't
+- **Auto-deploys** (via Watchtower): Any code change inside the Docker image — Django code, templates, static files, Python dependencies
+- **Does NOT auto-deploy**: Changes to `docker-compose.yml`, `.env`, or `go2rtc/go2rtc.yaml` on the server — these require manual SSH + `git pull` + `docker compose up -d --force-recreate`
+
+### Docker Services (docker-compose.yml)
+- **djangoapp** (`BlackDiamondHub`) — Django app on port 8000, image from GHCR
+- **go2rtc** (`alexxit/go2rtc`) — RTSPS-to-WebRTC proxy on port 1984 (API/WebUI) and 8555 (WebRTC)
+- **watchtower** (`containrrr/watchtower`) — Auto-updates the Django container from GHCR
+
+### go2rtc Browser URL Strategy
+- The Django container talks to go2rtc internally via Docker network (`GO2RTC_URL=http://go2rtc:1984`)
+- The **browser** needs to reach go2rtc directly — the template uses `window.location.hostname` + port 1984 so it works from any subnet without hardcoding an IP
 
 ## UniFi Protect Integration API
 
@@ -40,10 +68,13 @@ BlackDiamondHub is a Django-based home automation and management hub for a vacat
 
 ## CI/CD
 
-- **GitHub Actions** workflow in `.github/workflows/tests.yml`
-- Two jobs: `unit-tests` (excludes selenium tag) and `selenium-tests` (selenium tag only, with retry via nick-fields/retry)
-- Both jobs run on `ubuntu-22.04` with PostgreSQL 13 service container
-- Selenium tests use headless Chrome with shared helpers in `tests/selenium_helpers.py`
+- **Test workflow** (`tests.yml`): Runs on every push/PR
+  - Two jobs: `unit-tests` (excludes selenium tag) and `selenium-tests` (selenium tag only, with retry via nick-fields/retry)
+  - Both jobs run on `ubuntu-22.04` with PostgreSQL 13 service container
+  - Selenium tests use headless Chrome with shared helpers in `tests/selenium_helpers.py`
+- **Docker publish workflow** (`docker-publish.yml`): Runs on push to `main`
+  - Builds Docker image and pushes to GHCR (`ghcr.io/sslivins/blackdiamondhub/blackdiamondhub:latest`)
+  - Watchtower on production auto-pulls the new image (see Deployment section)
 
 ## Branch & Git Workflow
 
