@@ -397,35 +397,31 @@
             // Entering fullscreen — switch this stream to high-res, stop others
             const fsCard = document.fullscreenElement;
             const fsStream = fsCard.querySelector('video-stream');
+
+            // Stop ALL streams first (closes their WebSocket connections)
+            stopStreams(activePanel);
+
+            // Start the fullscreen stream at high quality after a tick.
+            // go2rtc's VideoRTC.onclose() handler fires asynchronously when
+            // a WebSocket closes.  If we create a new connection in the same
+            // synchronous block, onclose() sees wsState=CONNECTING (not CLOSED)
+            // and triggers a spurious reconnect — orphaning the new WS and
+            // leaving a dangling PeerConnection ("pending" RTC).  Deferring
+            // the new connection lets the close event fire while wsState is
+            // still CLOSED, so onclose() exits harmlessly.
             if (fsStream) {
-                const streamName = fsStream.dataset.streamName;
-                // Disconnect current stream before switching to high quality
-                fsStream.ondisconnect();
-                if (fsStream.video) fsStream.video.muted = true;
-                fsStream.src = `${GO2RTC_BASE}/api/ws?src=${streamName}`;
+                setTimeout(() => {
+                    const streamName = fsStream.dataset.streamName;
+                    if (fsStream.video) fsStream.video.muted = true;
+                    fsStream.src = `${GO2RTC_BASE}/api/ws?src=${streamName}`;
+                    fsStream.dataset.active = 'true';
+                }, 0);
             }
-
-            // Stop all other streams to save bandwidth
-            activePanel.querySelectorAll('video-stream').forEach(el => {
-                if (el !== fsStream && el.dataset.active) {
-                    el.ondisconnect();
-                    delete el.dataset.active;
-                }
-            });
         } else {
-            // Exiting fullscreen — the fullscreen stream is on high quality
-            // and all others were stopped. Restart everything at low quality.
-
-            // First, disconnect the previously-fullscreen stream (it's on high-res)
-            activePanel.querySelectorAll('video-stream').forEach(el => {
-                if (el.dataset.active) {
-                    el.ondisconnect();
-                    delete el.dataset.active;
-                }
-            });
-
-            // Now start all streams fresh at low quality
-            initStreams(activePanel);
+            // Exiting fullscreen — restart everything at low quality.
+            // Same race-avoidance pattern: stop first, restart after a tick.
+            stopStreams(activePanel);
+            setTimeout(() => initStreams(activePanel), 0);
         }
     });
 
