@@ -34,9 +34,11 @@
         
         .weather-container {
             background-color: #ffffff;
-            width: 100%;  /* Use 100% to prevent horizontal overflow */
+            width: calc(100% - 40px);
+            margin: 10px auto 0;
             padding: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
