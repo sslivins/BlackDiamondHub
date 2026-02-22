@@ -77,7 +77,6 @@ def camera_feed_view(request):
     no Protect sites are configured.
     """
     go2rtc_url = getattr(settings, 'GO2RTC_URL', 'http://localhost:1984')
-    go2rtc_public_url = getattr(settings, 'GO2RTC_PUBLIC_URL', go2rtc_url)
     protect_sites = getattr(settings, 'UNIFI_PROTECT_SITES', [])
 
     if protect_sites:
@@ -107,9 +106,14 @@ def camera_feed_view(request):
         streams = get_go2rtc_streams(go2rtc_url)
         sites = [{'name': 'Cameras', 'streams': streams}]
 
+    # Extract port from GO2RTC_URL for browser-side URL construction
+    from urllib.parse import urlparse
+    go2rtc_port = urlparse(go2rtc_url).port or 1984
+
     return render(request, 'camera_feeds.html', {
         'sites': sites,
-        'go2rtc_url': go2rtc_public_url,
+        'go2rtc_url': go2rtc_url,
+        'go2rtc_port': go2rtc_port,
     })
 
 

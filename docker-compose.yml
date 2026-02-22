@@ -37,8 +37,6 @@ services:
 
       # go2rtc URL (internal Docker network, for server-side API calls)
       GO2RTC_URL: ${GO2RTC_URL}
-      # go2rtc public URL (browser-accessible, for video streams)
-      GO2RTC_PUBLIC_URL: ${GO2RTC_PUBLIC_URL}
 
       # UniFi Protect API (for camera discovery)
       UNIFI_PROTECT_HOST_1: ${UNIFI_PROTECT_HOST_1}

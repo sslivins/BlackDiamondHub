@@ -464,14 +464,14 @@ class CameraFeedViewWithProtectTests(TestCase):
         # Uses the correct video-stream custom element (not video-rtc)
         self.assertIn("<video-stream", content)
         self.assertNotIn("<video-rtc", content)
-        # Stream URLs stored as data attributes for JS property assignment
-        self.assertIn('data-url="http://localhost:1984/api/ws?src=front_door"', content)
-        self.assertIn('data-url="http://localhost:1984/api/ws?src=backyard"', content)
-        # Properties set via JS, not HTML attributes
-        self.assertIn('el.src = el.dataset.url', content)
+        # Stream names stored as data attributes for dynamic URL construction
+        self.assertIn('data-stream-name="front_door"', content)
+        self.assertIn('data-stream-name="backyard"', content)
+        # Properties set via JS using dynamic go2rtc base URL
+        self.assertIn('el.dataset.streamName', content)
         # Loads the correct JS module (video-stream.js, not video-rtc.js)
-        self.assertIn('video-stream.js"', content)
-        self.assertNotIn('video-rtc.js"', content)
+        self.assertIn('video-stream.js', content)
+        self.assertNotIn('video-rtc.js', content)
         # Each camera card has a touch overlay div for fullscreen
         self.assertEqual(content.count('class="cam-touch-overlay"'), 2)
 
