@@ -67,6 +67,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      go2rtc:
+        image: alexxit/go2rtc
+        ports:
+          - 1984:1984
+          - 8555:8555
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -75,6 +81,17 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+
+    - name: Wait for go2rtc
+      run: |
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:1984/api/streams > /dev/null 2>&1; then
+            echo "go2rtc is ready"
+            break
+          fi
+          echo "Waiting for go2rtc... ($i)"
+          sleep 1
+        done
 
     - name: Install Chrome and ChromeDriver
       run: |
@@ -117,6 +134,7 @@ jobs:
         DB_HOST: localhost
         DB_USER: postgres
         DB_PASSWORD: postgres
+        GO2RTC_URL: http://localhost:1984
 
     - name: Upload screenshot on failure
       if: failure()
