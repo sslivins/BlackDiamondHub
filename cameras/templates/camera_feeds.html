@@ -47,7 +47,7 @@
         transform: scale(1.01);
     }
 
-    .cam-card video-rtc,
+    .cam-card video-stream,
     .cam-card video {
         display: block;
         width: 100%;
@@ -114,7 +114,7 @@
         justify-content: center;
     }
 
-    .cam-card:fullscreen video-rtc,
+    .cam-card:fullscreen video-stream,
     .cam-card:fullscreen video {
         width: 100%;
         height: 100%;
@@ -149,11 +149,11 @@
 <div class="camera-grid">
     {% for stream in streams %}
     <div class="cam-card" onclick="toggleFullscreen(this)" title="Click for fullscreen">
-        <video-rtc
+        <video-stream
             src="{{ go2rtc_url }}/api/ws?src={{ stream.name }}"
             mode="webrtc,mse,mp4"
             background>
-        </video-rtc>
+        </video-stream>
         <div class="cam-status"></div>
         <div class="cam-label">{{ stream.display_name }}</div>
     </div>
@@ -166,7 +166,7 @@
     {% endfor %}
 </div>
 
-<script src="{{ go2rtc_url }}/video-rtc.js"></script>
+<script type="module" src="{{ go2rtc_url }}/video-stream.js"></script>
 <script>
     function toggleFullscreen(card) {
         if (!document.fullscreenElement) {
