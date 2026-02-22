@@ -251,6 +251,8 @@ HOMEASSISTANT_ACCESS_TOKEN_2 = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN_2')
 ### go2rtc Camera Settings ###
 ###########################
 GO2RTC_URL = os.environ.get('GO2RTC_URL', 'http://localhost:1984')
+# Public URL for browser access (defaults to GO2RTC_URL for non-Docker setups)
+GO2RTC_PUBLIC_URL = os.environ.get('GO2RTC_PUBLIC_URL', GO2RTC_URL)
 
 #################################
 ### UniFi Protect Settings ###
