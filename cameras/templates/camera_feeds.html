@@ -82,6 +82,34 @@
         pointer-events: none;
     }
 
+    .cam-fullscreen {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 30px;
+        height: 30px;
+        border: none;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 2;
+    }
+
+    .cam-card:hover .cam-fullscreen {
+        opacity: 1;
+    }
+
+    .cam-fullscreen:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
     .no-cameras {
         text-align: center;
         padding: 80px 20px;
@@ -148,11 +176,14 @@
 
 <div class="camera-grid">
     {% for stream in streams %}
-    <div class="cam-card" onclick="toggleFullscreen(this)" title="Click for fullscreen">
+    <div class="cam-card">
         <video-stream
             data-url="{{ go2rtc_url }}/api/ws?src={{ stream.name }}"
             data-mode="webrtc,mse,mp4">
         </video-stream>
+        <button class="cam-fullscreen" onclick="toggleFullscreen(this.parentElement)" title="Fullscreen">
+            <i class="fas fa-expand"></i>
+        </button>
         <div class="cam-status"></div>
         <div class="cam-label">{{ stream.display_name }}</div>
     </div>
@@ -181,5 +212,22 @@
             document.exitFullscreen();
         }
     };
+
+    // Prevent click-to-pause on the video elements
+    document.querySelectorAll('video-stream').forEach(el => {
+        el.addEventListener('click', e => e.stopPropagation());
+        // Also intercept the internal video element once it's created
+        const observer = new MutationObserver(() => {
+            const video = el.querySelector('video');
+            if (video) {
+                video.addEventListener('click', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                observer.disconnect();
+            }
+        });
+        observer.observe(el, { childList: true, subtree: true });
+    });
 </script>
 {% endblock %}
