@@ -1295,7 +1295,7 @@ class CameraStreamSeleniumTests(StaticLiveServerTestCase):
 
         The test clicks the fullscreen overlay, waits for the fullscreen API
         to engage, then verifies a new WebSocket reaches OPEN state within
-        8 seconds.  We check WebSocket state rather than video.readyState
+        5 seconds.  We check WebSocket state rather than video.readyState
         because Chrome headless may not render video in fullscreen mode, but
         the WS connection — which is what safeDisconnect protects — is
         fully testable.  If the race condition regresses, the WS gets killed
@@ -1344,11 +1344,11 @@ class CameraStreamSeleniumTests(StaticLiveServerTestCase):
             self.skipTest("Browser did not enter fullscreen")
 
         # The critical assertion: the fullscreen stream's WebSocket must
-        # reach OPEN within 8 seconds.  The old bug caused the new WS to
+        # reach OPEN within 5 seconds.  The old bug caused the new WS to
         # be killed by the stale onclose/video-error handlers, leaving ws
         # null until RECONNECT_TIMEOUT (15s) fired.
         start = time.time()
-        ws_open = WebDriverWait(self.driver, 8).until(
+        ws_open = WebDriverWait(self.driver, 5).until(
             lambda d: d.execute_script("""
                 const fs = document.fullscreenElement;
                 if (!fs) return false;
@@ -1360,7 +1360,7 @@ class CameraStreamSeleniumTests(StaticLiveServerTestCase):
         elapsed = time.time() - start
         self.assertTrue(
             ws_open,
-            f"Fullscreen stream WebSocket did not open within 8s "
+            f"Fullscreen stream WebSocket did not open within 5s "
             f"(took {elapsed:.1f}s) — safeDisconnect may be broken"
         )
 
@@ -1412,7 +1412,7 @@ class CameraStreamSeleniumTests(StaticLiveServerTestCase):
             self.skipTest("Browser did not enter fullscreen")
 
         # Wait for fullscreen stream's WebSocket to open
-        WebDriverWait(self.driver, 8).until(
+        WebDriverWait(self.driver, 5).until(
             lambda d: d.execute_script("""
                 const fs = document.fullscreenElement;
                 if (!fs) return false;
@@ -1525,7 +1525,7 @@ class CameraStreamSeleniumTests(StaticLiveServerTestCase):
             self.skipTest("Browser did not enter fullscreen")
 
         # Wait for fullscreen stream's WebSocket to open
-        WebDriverWait(self.driver, 8).until(
+        WebDriverWait(self.driver, 5).until(
             lambda d: d.execute_script("""
                 const fs = document.fullscreenElement;
                 if (!fs) return false;
