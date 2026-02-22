@@ -321,6 +321,67 @@
     });
 </script>
 <script type="module">
+    /**
+     * Close a video-stream element's WebSocket and PeerConnection without
+     * clearing video.src.
+     *
+     * go2rtc's built-in ondisconnect() sets video.src = '' which triggers
+     * MEDIA_ERR_SRC_NOT_SUPPORTED asynchronously.  The video error handler
+     * in go2rtc's VideoRTC class then calls this.ws.close() — if a NEW
+     * WebSocket has been created in the meantime (e.g. for a fullscreen
+     * high-res stream), the error handler kills it, causing a failed
+     * connection + 15-second RECONNECT_TIMEOUT delay.
+     *
+     * Additionally, go2rtc's onclose() handler fires asynchronously when a
+     * WebSocket is closed.  If onconnect() has already created a new WS by
+     * then, onclose() sees wsState=CONNECTING (not CLOSED), passes its guard,
+     * and sets this.ws = null — killing the new WebSocket.  The subsequent
+     * onopen() then crashes with "Cannot read properties of null".
+     *
+     * safeDisconnect avoids both issues:
+     *  1. Does NOT set video.src = '' (prevents the video error cascade)
+     *  2. Installs a one-shot onclose override that absorbs the stale close
+     *     event from the old WebSocket before it can null-out the new one
+     */
+    function safeDisconnect(el) {
+        // Cancel any pending reconnect/disconnect timers from go2rtc
+        if (el.reconnectTID) {
+            clearTimeout(el.reconnectTID);
+            el.reconnectTID = 0;
+        }
+        if (el.disconnectTID) {
+            clearTimeout(el.disconnectTID);
+            el.disconnectTID = 0;
+        }
+
+        el.wsState = WebSocket.CLOSED;
+        if (el.ws) {
+            // Override onclose to absorb the stale close event from the OLD
+            // WebSocket.  Without this, the async close fires after onconnect()
+            // has created a new WS, and onclose() nulls this.ws — crashing
+            // the subsequent onopen().  Restore the original after one call.
+            const origOnclose = el.onclose;
+            el.onclose = function() {
+                el.onclose = origOnclose;
+                return false;
+            };
+            el.ws.close();
+            el.ws = null;
+        }
+
+        el.pcState = WebSocket.CLOSED;
+        if (el.pc) {
+            el.pc.getSenders().forEach(sender => {
+                if (sender.track) sender.track.stop();
+            });
+            el.pc.close();
+            el.pc = null;
+        }
+
+        // Intentionally NOT setting video.src = '' or video.srcObject = null
+        // to prevent the video error handler from closing new WebSockets.
+    }
+
     // Initialize video-stream elements for a panel (low quality for grid)
     function initStreams(panel) {
         panel.querySelectorAll('video-stream').forEach(el => {
@@ -341,7 +402,7 @@
     function stopStreams(panel) {
         panel.querySelectorAll('video-stream').forEach(el => {
             if (el.dataset.active) {
-                el.ondisconnect();
+                safeDisconnect(el);
                 delete el.dataset.active;
             }
         });
