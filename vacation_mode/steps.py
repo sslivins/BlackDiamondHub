@@ -228,6 +228,19 @@ VACATION_STEPS = [
         ],
     },
     {
+        "alias": "Turn Off Patio Heaters",
+        "icon": "fas fa-fire-flame-curved",
+        "actions": [
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.patio_deck_heaters",
+                },
+                "description": "Turning off patio deck heaters",
+            },
+        ],
+    },
+    {
         "alias": "Enable Home Away Mode",
         "icon": "fas fa-plane-departure",
         "actions": [
