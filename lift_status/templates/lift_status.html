@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+
+{% block title %}Lift &amp; Trail Status{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #f5f5f5 !important;
+    }
+
+    .lift-status-container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 10px 15px;
+    }
+
+    .lift-status-container h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 10px;
+        color: #333;
+    }
+
+    /* Tabs */
+    .zone-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 12px;
+    }
+
+    .zone-tab {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #dee2e6;
+        color: #555;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+        min-height: 48px;
+        min-width: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .zone-tab:hover {
+        background: #c8cdd2;
+        color: #333;
+    }
+
+    .zone-tab.active {
+        background: #3C6090;
+        color: #fff;
+    }
+
+    /* Zone panels */
+    .zone-panel {
+        display: none;
+    }
+
+    .zone-panel.active {
+        display: block;
+    }
+
+    /* Lift table */
+    .status-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    .status-table th {
+        background: #3C6090;
+        color: #fff;
+        padding: 10px 12px;
+        text-align: left;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .status-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #eee;
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+
+    .status-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .status-table tr:hover {
+        background: #f8f9fa;
+    }
+
+    /* Status badges */
+    .badge-open {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        background: #28a745;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .badge-closed {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        background: #dc3545;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .badge-unknown {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        background: #6c757d;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    /* Grooming badges */
+    .badge-groomed {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        background: #17a2b8;
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-groomed-fresh {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        background: #0d6efd;
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-not-groomed {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        background: #e9ecef;
+        color: #666;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Difficulty group headers */
+    .difficulty-header {
+        font-size: 0.95rem;
+        font-weight: 700;
+        margin: 16px 0 6px;
+        padding: 6px 12px;
+        background: #e9ecef;
+        border-radius: 6px;
+        color: #333;
+    }
+
+    .difficulty-header i {
+        margin-right: 6px;
+    }
+
+    /* Trail count badge on tabs */
+    .trail-count {
+        font-size: 0.7rem;
+        background: rgba(255,255,255,0.3);
+        padding: 1px 6px;
+        border-radius: 8px;
+        margin-left: 6px;
+    }
+
+    .zone-tab.active .trail-count {
+        background: rgba(255,255,255,0.25);
+    }
+
+    /* Lift status summary */
+    .lift-summary {
+        text-align: center;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+        color: #555;
+    }
+
+    .lift-summary strong {
+        color: #28a745;
+    }
+
+    /* Notes (hours) */
+    .lift-notes {
+        color: #777;
+        font-size: 0.8rem;
+    }
+</style>
+
+<div class="lift-status-container">
+    <h1><i class="fas fa-skiing"></i> Lift &amp; Trail Status</h1>
+
+    <!-- Tabs -->
+    <div class="zone-tabs" role="tablist">
+        <button class="zone-tab active" data-zone="lifts" role="tab" aria-selected="true">
+            <i class="fas fa-caret-up"></i>&nbsp;Lifts
+        </button>
+        {% for zone in zones %}
+        <button class="zone-tab" data-zone="{{ zone.key }}" role="tab" aria-selected="false">
+            {{ zone.label }}<span class="trail-count">{{ zone.trail_count }}</span>
+        </button>
+        {% endfor %}
+    </div>
+
+    <!-- Lift Panel -->
+    <div class="zone-panel active" id="panel-lifts">
+        {% if lifts %}
+        <div class="lift-summary">
+            <strong>{{ lifts|length }}</strong> lift{{ lifts|length|pluralize }} reported
+        </div>
+        <table class="status-table">
+            <thead>
+                <tr>
+                    <th>Lift</th>
+                    <th>Status</th>
+                    <th>Hours</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lift in lifts %}
+                <tr>
+                    <td>{{ lift.name }}</td>
+                    <td>
+                        {% if lift.status == "open" %}
+                            <span class="badge-open">Open</span>
+                        {% elif lift.status == "closed" %}
+                            <span class="badge-closed">Closed</span>
+                        {% else %}
+                            <span class="badge-unknown">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td class="lift-notes">{{ lift.notes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center text-muted">No lift data available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Zone Panels (Trails) -->
+    {% for zone in zones %}
+    <div class="zone-panel" id="panel-{{ zone.key }}">
+        {% for group in zone.trails_by_difficulty %}
+        <div class="difficulty-header">
+            <i class="fas {{ group.difficulty_icon }}"></i> {{ group.difficulty_label }}
+            <span class="trail-count">{{ group.trails|length }}</span>
+        </div>
+        <table class="status-table">
+            <thead>
+                <tr>
+                    <th>Trail</th>
+                    <th>Grooming</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trail in group.trails %}
+                <tr>
+                    <td>
+                        <i class="fas {{ trail.difficulty_icon }}" style="font-size: 0.7rem;"></i>
+                        {{ trail.name }}
+                    </td>
+                    <td>
+                        {% if trail.grooming == "groomed-with-fresh" %}
+                            <span class="badge-groomed-fresh"><i class="fas fa-snowflake"></i> Groomed + Fresh</span>
+                        {% elif trail.grooming == "groomed" %}
+                            <span class="badge-groomed"><i class="fas fa-check"></i> Groomed</span>
+                        {% else %}
+                            <span class="badge-not-groomed">Not Groomed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% empty %}
+        <p class="text-center text-muted">No trail data available for this zone.</p>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('.zone-tab');
+        const panels = document.querySelectorAll('.zone-panel');
+
+        tabs.forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                const zone = this.getAttribute('data-zone');
+
+                tabs.forEach(function(t) {
+                    t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                this.classList.add('active');
+                this.setAttribute('aria-selected', 'true');
+
+                panels.forEach(function(p) {
+                    p.classList.remove('active');
+                });
+                document.getElementById('panel-' + zone).classList.add('active');
+            });
+        });
+    });
+</script>
+{% endblock %}
