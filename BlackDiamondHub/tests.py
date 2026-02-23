@@ -54,6 +54,63 @@ class LandingPageLiveTests(TestCase):
                     self.fail(f"Temperature value is not a valid number: {temp}")
 
 @tag('selenium')
+class LandingPageNoScrollTest(StaticLiveServerTestCase):
+    """Ensure the landing page fits within the viewport on a 1920×1080 display."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
+        # Use CDP to set exact viewport dimensions (1920×1080)
+        # set_window_size sets the outer window, not the viewport
+        cls.browser.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', {
+            'width': 1920,
+            'height': 1080,
+            'deviceScaleFactor': 1,
+            'mobile': False,
+        })
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.quit()
+        super().tearDownClass()
+
+    def test_no_vertical_scroll_on_1080p(self):
+        """The landing page should not scroll vertically on a 1920×1080 display."""
+        self.browser.get(self.live_server_url)
+
+        # Wait for the page to fully load
+        WebDriverWait(self.browser, 20).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "btn-container"))
+        )
+
+        # Wait for all icon images to finish loading
+        WebDriverWait(self.browser, 20).until(
+            lambda d: d.execute_script("""
+                var imgs = document.querySelectorAll('.btn-icon img');
+                return imgs.length > 0 && Array.from(imgs).every(
+                    function(img) { return img.complete && img.naturalHeight > 0; }
+                );
+            """)
+        )
+
+        # Check that body content does not exceed viewport height.
+        # Note: we check document.body.scrollHeight, NOT
+        # document.documentElement.scrollHeight — the landing page sets
+        # overflow-x:hidden on body which (per CSS spec) computes
+        # overflow-y to 'auto', making body the scroll container.
+        body_scroll_height = self.browser.execute_script("return document.body.scrollHeight")
+        viewport_height = self.browser.execute_script("return window.innerHeight")
+
+        self.assertLessEqual(
+            body_scroll_height, viewport_height,
+            f"Page scrolls vertically: body scrollHeight ({body_scroll_height}px) > "
+            f"viewport height ({viewport_height}px). "
+            f"Content overflows by {body_scroll_height - viewport_height}px."
+        )
+
+
+@tag('selenium')
 class WeatherUnitToggleTest(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
