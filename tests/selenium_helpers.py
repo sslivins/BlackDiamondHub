@@ -47,7 +47,7 @@ def login_via_browser(driver, live_server_url, username="testuser", password="te
     username_input.send_keys(username)
     password_input.send_keys(password)
 
-    login_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+    login_button = driver.find_element(By.ID, 'login-submit')
     login_button.click()
 
 
@@ -57,6 +57,8 @@ def login_from_page(driver, live_server_url, username="testuser", password="test
 
     Used when navigating to a page that has a login-button element that
     redirects to the login form, then back to the original page.
+    If already on the login page (e.g. after a redirect), skips clicking
+    the login button and fills in credentials directly.
 
     Args:
         driver: Selenium WebDriver instance.
@@ -64,10 +66,13 @@ def login_from_page(driver, live_server_url, username="testuser", password="test
         username: Username to log in with (default: "testuser").
         password: Password to log in with (default: "testpassword").
     """
-    login_button = WebDriverWait(driver, 20).until(
-        EC.element_to_be_clickable((By.ID, 'login-button'))
-    )
-    login_button.click()
+    # If we're already on the login page (e.g. redirected by @login_required),
+    # skip clicking the navbar login button — just fill in credentials directly.
+    if '/accounts/login/' not in driver.current_url:
+        login_button = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable((By.ID, 'login-button'))
+        )
+        login_button.click()
 
     # Wait for login page to load
     username_input = WebDriverWait(driver, 20).until(
@@ -78,8 +83,16 @@ def login_from_page(driver, live_server_url, username="testuser", password="test
     username_input.send_keys(username)
     password_input.send_keys(password)
 
-    login_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+    # Wait for submit button to be clickable before clicking
+    login_button = WebDriverWait(driver, 20).until(
+        EC.element_to_be_clickable((By.ID, 'login-submit'))
+    )
     login_button.click()
+
+    # Wait for navigation away from the login page
+    WebDriverWait(driver, 20).until(
+        lambda d: '/accounts/login/' not in d.current_url
+    )
 
 
 def wait_for_network_idle(driver, timeout=10):
