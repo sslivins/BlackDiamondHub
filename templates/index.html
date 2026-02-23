@@ -29,7 +29,16 @@
             display: flex;
             flex-direction: column;
             font-family: Arial, sans-serif;
-            min-height: calc(100vh - 62px); /* fill viewport below navbar */
+        }
+
+        /* Content wrapper fills the viewport below the fixed navbar
+           and uses flex layout so children share the space without
+           overflowing. */
+        .content-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 62px); /* viewport minus navbar */
+            overflow: hidden;
         }
         
         .weather-container {
@@ -42,6 +51,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0; /* weather bar keeps its natural size */
         }
         
         .weather-grid {
@@ -84,7 +94,7 @@
         
 
         
-        /* Ensure the main container takes up full height minus the weather container */
+        /* Ensure the main container fills remaining space via flex */
         .main-container {
             flex: 1;
             display: flex;
@@ -93,11 +103,12 @@
             text-align: center;
             background-color: #000000;
             position: relative;
+            min-height: 0; /* allow flex shrinking below content size */
         }
 
         .btn-container {
             background-color: #ffffff;
-            padding: 30px 40px;
+            padding: 20px 30px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
             display: inline-block;
@@ -155,8 +166,8 @@
         }
         
         .btn-icon img {
-            width: 200px;
-            height: 200px;
+            width: 150px;
+            height: 150px;
             border-radius: 20px;  /* Adjust this value for more or less rounding */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
