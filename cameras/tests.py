@@ -4,6 +4,7 @@ import urllib.request
 import urllib.parse
 from django.test import TestCase, Client, override_settings, tag
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.contrib.auth.models import User
 from unittest.mock import patch, MagicMock, call
 from .views import get_go2rtc_streams, _register_streams_with_go2rtc
 from .protect_api import (
@@ -557,6 +558,122 @@ class CameraFeedViewWithProtectTests(TestCase):
         self.assertIn('stopStreams', content)
 
 
+MULTI_SITE_CAMERAS = [
+    {
+        'name': 'Sun Peaks', 'host': '192.168.10.1',
+        'cameras': [
+            {'name': 'Front Door', 'stream_name': 'sp_front_door',
+             'rtsp_url': 'rtsps://x', 'rtsp_url_low': 'rtsps://x_low',
+             'camera_id': 'cam1', 'is_ptz': False, 'ptz_presets': 0},
+        ],
+    },
+    {
+        'name': 'Mercer Island', 'host': '192.168.1.26',
+        'cameras': [
+            {'name': 'Driveway', 'stream_name': 'mi_driveway',
+             'rtsp_url': 'rtsps://y', 'rtsp_url_low': 'rtsps://y_low',
+             'camera_id': 'cam2', 'is_ptz': False, 'ptz_presets': 0},
+        ],
+    },
+]
+
+
+@override_settings(
+    GO2RTC_URL='http://localhost:1984',
+    UNIFI_PROTECT_SITES=[
+        {'host': '192.168.10.1', 'api_key': 'key1', 'name': 'Sun Peaks'},
+        {'host': '192.168.1.26', 'api_key': 'key2', 'name': 'Mercer Island'},
+    ],
+)
+class CameraFeedViewAuthFilterTests(TestCase):
+    """Only the primary site is visible to unauthenticated users."""
+
+    def setUp(self):
+        self.client = Client()
+        clear_cache()
+        self.user = User.objects.create_user(
+            username='testuser', password='testpass',
+        )
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_anonymous_sees_only_first_site(self, mock_cameras, mock_register):
+        """Unauthenticated users only see the primary (first) site."""
+        mock_cameras.return_value = MULTI_SITE_CAMERAS
+
+        response = self.client.get("/cameras/")
+
+        sites = response.context['sites']
+        self.assertEqual(len(sites), 1)
+        self.assertEqual(sites[0]['name'], 'Sun Peaks')
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_anonymous_does_not_see_second_site(self, mock_cameras, mock_register):
+        """Unauthenticated users do not see secondary site cameras."""
+        mock_cameras.return_value = MULTI_SITE_CAMERAS
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertNotContains(response, 'Mercer Island')
+        self.assertNotIn('mi_driveway', content)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_anonymous_no_site_tabs(self, mock_cameras, mock_register):
+        """With only one visible site, no tab bar is shown."""
+        mock_cameras.return_value = MULTI_SITE_CAMERAS
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertNotIn('class="site-tabs"', content)
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_authenticated_sees_all_sites(self, mock_cameras, mock_register):
+        """Logged-in users see all configured sites."""
+        mock_cameras.return_value = MULTI_SITE_CAMERAS
+        self.client.login(username='testuser', password='testpass')
+
+        response = self.client.get("/cameras/")
+
+        sites = response.context['sites']
+        self.assertEqual(len(sites), 2)
+        self.assertEqual(sites[0]['name'], 'Sun Peaks')
+        self.assertEqual(sites[1]['name'], 'Mercer Island')
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_authenticated_sees_site_tabs(self, mock_cameras, mock_register):
+        """Logged-in users see the site tab bar with both sites."""
+        mock_cameras.return_value = MULTI_SITE_CAMERAS
+        self.client.login(username='testuser', password='testpass')
+
+        response = self.client.get("/cameras/")
+        content = response.content.decode()
+
+        self.assertIn('class="site-tabs"', content)
+        self.assertContains(response, 'Sun Peaks')
+        self.assertContains(response, 'Mercer Island')
+
+    @patch("cameras.views._register_streams_with_go2rtc")
+    @patch("cameras.views.get_protect_cameras")
+    def test_authenticated_only_registers_visible_streams(self, mock_cameras, mock_register):
+        """Only streams for visible sites are registered with go2rtc."""
+        mock_cameras.return_value = MULTI_SITE_CAMERAS
+
+        # Anonymous: only first site's streams registered
+        self.client.get("/cameras/")
+
+        self.assertEqual(mock_register.call_count, 1)
+        registered_cameras = mock_register.call_args[0][1]
+        stream_names = [c['stream_name'] for c in registered_cameras]
+        self.assertIn('sp_front_door', stream_names)
+        self.assertNotIn('mi_driveway', stream_names)
+
+
 @override_settings(
     GO2RTC_URL='http://localhost:1984',
     UNIFI_PROTECT_SITES=[],
@@ -1016,11 +1133,19 @@ class PtzTemplateTests(TestCase):
     ],
 )
 class MultiSiteTabTests(TestCase):
-    """Tests for tabbed multi-site camera display."""
+    """Tests for tabbed multi-site camera display.
+
+    All tests use an authenticated user since only authenticated users
+    can see multiple sites (anonymous users see only the first site).
+    """
 
     def setUp(self):
         self.client = Client()
         clear_cache()
+        self.user = User.objects.create_user(
+            username='testuser', password='testpass',
+        )
+        self.client.login(username='testuser', password='testpass')
 
     @patch("cameras.views._register_streams_with_go2rtc")
     @patch("cameras.views.get_protect_cameras")
