@@ -83,8 +83,16 @@ def login_from_page(driver, live_server_url, username="testuser", password="test
     username_input.send_keys(username)
     password_input.send_keys(password)
 
-    login_button = driver.find_element(By.ID, 'login-submit')
+    # Wait for submit button to be clickable before clicking
+    login_button = WebDriverWait(driver, 20).until(
+        EC.element_to_be_clickable((By.ID, 'login-submit'))
+    )
     login_button.click()
+
+    # Wait for navigation away from the login page
+    WebDriverWait(driver, 20).until(
+        lambda d: '/accounts/login/' not in d.current_url
+    )
 
 
 def wait_for_network_idle(driver, timeout=10):
