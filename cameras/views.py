@@ -106,6 +106,11 @@ def camera_feed_view(request):
     if protect_sites:
         # Multi-site discovery via Protect API
         site_data = get_protect_cameras()
+
+        # Only show the first (primary) site to unauthenticated users
+        if not request.user.is_authenticated:
+            site_data = site_data[:1]
+
         sites = []
         for site in site_data:
             all_cameras = site.get('cameras', [])
