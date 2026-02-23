@@ -4,14 +4,18 @@
 
 {% block content %}
 <style>
-    body {
-        background-color: #f5f5f5 !important;
+    html, body {
+        height: 100%;
+        margin: 0;
+        background-color: #222;
+        color: #fff;
+        font-family: Arial, sans-serif;
     }
 
     .lift-status-container {
-        max-width: 960px;
+        max-width: 1920px;
         margin: 0 auto;
-        padding: 10px 15px;
+        padding: 10px 20px 40px;
     }
 
     .lift-status-container h1 {
@@ -19,7 +23,7 @@
         font-weight: 700;
         text-align: center;
         margin-bottom: 10px;
-        color: #333;
+        color: #FFD700;
     }
 
     /* Tabs */
@@ -27,17 +31,17 @@
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 4px;
-        margin-bottom: 12px;
+        gap: 6px;
+        margin-bottom: 14px;
     }
 
     .zone-tab {
-        padding: 8px 16px;
+        padding: 8px 18px;
         border: none;
         border-radius: 6px;
-        background: #dee2e6;
-        color: #555;
-        font-size: 0.85rem;
+        background: #444;
+        color: #aaa;
+        font-size: 0.9rem;
         font-weight: 600;
         cursor: pointer;
         transition: background 0.15s ease, color 0.15s ease;
@@ -49,8 +53,8 @@
     }
 
     .zone-tab:hover {
-        background: #c8cdd2;
-        color: #333;
+        background: #555;
+        color: #ddd;
     }
 
     .zone-tab.active {
@@ -72,26 +76,27 @@
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 16px;
-        background: #fff;
+        background: #333;
         border-radius: 8px;
         overflow: hidden;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
 
     .status-table th {
         background: #3C6090;
         color: #fff;
-        padding: 10px 12px;
+        padding: 10px 14px;
         text-align: left;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         font-weight: 600;
     }
 
     .status-table td {
-        padding: 8px 12px;
-        border-bottom: 1px solid #eee;
-        font-size: 0.85rem;
+        padding: 8px 14px;
+        border-bottom: 1px solid #444;
+        font-size: 0.9rem;
         vertical-align: middle;
+        color: #ddd;
     }
 
     .status-table tr:last-child td {
@@ -99,7 +104,7 @@
     }
 
     .status-table tr:hover {
-        background: #f8f9fa;
+        background: #3a3a3a;
     }
 
     /* Status badges */
@@ -140,7 +145,7 @@
         border-radius: 12px;
         background: #17a2b8;
         color: #fff;
-        font-size: 0.75rem;
+        font-size: 0.78rem;
         font-weight: 600;
     }
 
@@ -150,7 +155,7 @@
         border-radius: 12px;
         background: #0d6efd;
         color: #fff;
-        font-size: 0.75rem;
+        font-size: 0.78rem;
         font-weight: 600;
     }
 
@@ -158,9 +163,9 @@
         display: inline-block;
         padding: 3px 10px;
         border-radius: 12px;
-        background: #e9ecef;
-        color: #666;
-        font-size: 0.75rem;
+        background: #555;
+        color: #999;
+        font-size: 0.78rem;
         font-weight: 600;
     }
 
@@ -169,10 +174,10 @@
         font-size: 0.95rem;
         font-weight: 700;
         margin: 16px 0 6px;
-        padding: 6px 12px;
-        background: #e9ecef;
+        padding: 8px 14px;
+        background: #444;
         border-radius: 6px;
-        color: #333;
+        color: #FFD700;
     }
 
     .difficulty-header i {
@@ -182,7 +187,7 @@
     /* Trail count badge on tabs */
     .trail-count {
         font-size: 0.7rem;
-        background: rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.15);
         padding: 1px 6px;
         border-radius: 8px;
         margin-left: 6px;
@@ -196,8 +201,8 @@
     .lift-summary {
         text-align: center;
         margin-bottom: 8px;
-        font-size: 0.85rem;
-        color: #555;
+        font-size: 0.9rem;
+        color: #aaa;
     }
 
     .lift-summary strong {
@@ -206,8 +211,47 @@
 
     /* Notes (hours) */
     .lift-notes {
-        color: #777;
-        font-size: 0.8rem;
+        color: #999;
+        font-size: 0.85rem;
+    }
+
+    /* No data message */
+    .no-data {
+        text-align: center;
+        color: #888;
+        padding: 20px;
+    }
+
+    /* Scroll hint: fade gradient + bouncing chevron */
+    .scroll-hint {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 80px;
+        background: linear-gradient(transparent, #222);
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        padding-bottom: 10px;
+        pointer-events: none;
+        z-index: 10;
+        transition: opacity 0.4s ease;
+    }
+
+    .scroll-hint.hidden {
+        opacity: 0;
+    }
+
+    .scroll-hint i {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 24px;
+        animation: bounce 1.5s infinite;
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
     }
 </style>
 
@@ -259,7 +303,7 @@
             </tbody>
         </table>
         {% else %}
-        <p class="text-center text-muted">No lift data available.</p>
+        <p class="no-data">No lift data available.</p>
         {% endif %}
     </div>
 
@@ -299,13 +343,20 @@
             </tbody>
         </table>
         {% empty %}
-        <p class="text-center text-muted">No trail data available for this zone.</p>
+        <p class="no-data">No trail data available for this zone.</p>
         {% endfor %}
     </div>
     {% endfor %}
+
+    <div id="scroll-sentinel" style="height: 1px;"></div>
+</div>
+
+<div class="scroll-hint" id="scroll-hint">
+    <i class="fas fa-chevron-down"></i>
 </div>
 
 <script>
+    // Tab switching
     document.addEventListener('DOMContentLoaded', function() {
         const tabs = document.querySelectorAll('.zone-tab');
         const panels = document.querySelectorAll('.zone-panel');
@@ -325,8 +376,27 @@
                     p.classList.remove('active');
                 });
                 document.getElementById('panel-' + zone).classList.add('active');
+
+                // Re-check scroll hint when switching tabs
+                observer.disconnect();
+                var newSentinel = document.getElementById('scroll-sentinel');
+                if (newSentinel) observer.observe(newSentinel);
             });
         });
     });
+
+    // Hide scroll hint when the bottom of the content is visible
+    const scrollHint = document.getElementById('scroll-hint');
+    const sentinel = document.getElementById('scroll-sentinel');
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                scrollHint.classList.add('hidden');
+            } else {
+                scrollHint.classList.remove('hidden');
+            }
+        });
+    }, { threshold: 0 });
+    observer.observe(sentinel);
 </script>
 {% endblock %}
