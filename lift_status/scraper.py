@@ -134,7 +134,7 @@ def _parse_trails_by_zone(soup):
                 difficulty = diff_key
                 break
 
-        # Grooming status from icon-tick span
+        # Grooming status from icon-tick span or cat-groomed class
         grooming = "none"
         status_cell = article.find("div", class_="row-cell status")
         if status_cell:
@@ -145,6 +145,17 @@ def _parse_trails_by_zone(soup):
                     grooming = "groomed-with-fresh"
                 elif "groomed" in tick_classes:
                     grooming = "groomed"
+        # Fallback: check article-level cat-groomed class
+        if grooming == "none" and "cat-groomed" in classes:
+            grooming = "groomed"
+
+        # Trail open/closed status
+        status = "open"  # default — most trails are open
+        if status_cell:
+            if status_cell.find("span", class_="icon-close"):
+                status = "closed"
+            elif status_cell.find("span", class_="icon-open"):
+                status = "open"
 
         trails_by_zone[zone].append({
             "name": name,
@@ -152,6 +163,7 @@ def _parse_trails_by_zone(soup):
             "difficulty_label": DIFFICULTY_LABELS.get(difficulty, difficulty),
             "difficulty_icon": DIFFICULTY_ICONS.get(difficulty, ""),
             "grooming": grooming,
+            "status": status,
         })
 
     # Build ordered zone list with trails grouped by difficulty
