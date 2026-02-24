@@ -417,7 +417,7 @@
         <div class="map-column">
             <div class="map-zoom-container" id="map-zoom-container">
                 <img id="trail-map" src="{% static 'lift_status/img/sunpeaks_alpine.png' %}" alt="Sun Peaks Trail Map">
-                <div class="map-zoom-hint" id="map-zoom-hint">Pinch to zoom</div>
+                <div class="map-zoom-hint" id="map-zoom-hint">Pinch or Ctrl+scroll to zoom</div>
             </div>
             <div class="map-selector" id="map-selector" style="display: none;">
                 <button class="map-btn active" data-map="{% static 'lift_status/img/sunpeaks_alpine.png' %}" data-label="Alpine">Alpine</button>
@@ -702,14 +702,65 @@
             }
         });
 
+        // Ctrl+scroll wheel to zoom on desktop
+        container.addEventListener('wheel', function(e) {
+            if (!e.ctrlKey) return;
+            e.preventDefault();
+            var rect = container.getBoundingClientRect();
+            var mouseX = e.clientX - rect.left;
+            var mouseY = e.clientY - rect.top;
+            var prevScale = scale;
+            var delta = e.deltaY > 0 ? -0.15 : 0.15;
+            scale = Math.min(5, Math.max(1, scale + delta));
+            // Zoom towards cursor position
+            posX = mouseX - (mouseX - posX) * (scale / prevScale);
+            posY = mouseY - (mouseY - posY) * (scale / prevScale);
+            clampPos();
+            applyTransform();
+            if (hint) hint.style.opacity = '0';
+            if (scale <= 1) resetZoom();
+        }, { passive: false });
+
+        // Click-and-drag to pan on desktop when zoomed
+        var isDragging = false, dragStartX = 0, dragStartY = 0, dragPosX = 0, dragPosY = 0;
+        container.addEventListener('mousedown', function(e) {
+            if (scale > 1) {
+                isDragging = true;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                dragPosX = posX;
+                dragPosY = posY;
+                container.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                posX = dragPosX + (e.clientX - dragStartX);
+                posY = dragPosY + (e.clientY - dragStartY);
+                clampPos();
+                applyTransform();
+            }
+        });
+        window.addEventListener('mouseup', function() {
+            isDragging = false;
+            container.style.cursor = scale > 1 ? 'grab' : '';
+        });
+
+        // Double-click to reset zoom on desktop
+        container.addEventListener('dblclick', function() {
+            resetZoom();
+            container.style.cursor = '';
+        });
+
         // Reset zoom when map image changes
         document.querySelectorAll('.map-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() { resetZoom(); });
+            btn.addEventListener('click', function() { resetZoom(); container.style.cursor = ''; });
         });
 
         // Reset zoom on tab switch
         document.querySelectorAll('.zone-tab').forEach(function(tab) {
-            tab.addEventListener('click', function() { resetZoom(); });
+            tab.addEventListener('click', function() { resetZoom(); container.style.cursor = ''; });
         });
     })();
 </script>
