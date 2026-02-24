@@ -398,5 +398,8 @@
         });
     }, { threshold: 0 });
     observer.observe(sentinel);
+
+    // Auto-refresh every 15 minutes
+    setTimeout(function() { location.reload(); }, 15 * 60 * 1000);
 </script>
 {% endblock %}
