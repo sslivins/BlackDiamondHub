@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'scenes',
     'cameras',
     'vacation_mode',
+    'lift_status',
 ]
 
 CHANNEL_LAYERS = {
