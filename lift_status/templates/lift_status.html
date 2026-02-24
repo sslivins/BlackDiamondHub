@@ -13,18 +13,36 @@
         font-family: Arial, sans-serif;
     }
 
+    /* Fixed header: title + tabs */
+    .lift-header {
+        position: fixed;
+        top: 56px; /* below navbar */
+        left: 0;
+        right: 0;
+        z-index: 5;
+        background: #222;
+        padding: 10px 20px 0;
+    }
+
+    .lift-header-inner {
+        max-width: 1920px;
+        margin: 0 auto;
+    }
+
+    .lift-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 8px;
+        color: #FFD700;
+    }
+
     .lift-status-container {
         max-width: 1920px;
         margin: 0 auto;
         padding: 10px 20px 40px;
-    }
-
-    .lift-status-container h1 {
-        font-size: 1.3rem;
-        font-weight: 700;
-        text-align: center;
-        margin-bottom: 10px;
-        color: #FFD700;
+        /* Push below fixed header (navbar 56px + header ~100px) */
+        margin-top: 100px;
     }
 
     /* Two-column layout */
@@ -37,8 +55,8 @@
     .map-column {
         flex: 0 0 45%;
         position: sticky;
-        top: 72px; /* below fixed navbar */
-        max-height: calc(100vh - 82px);
+        top: 160px; /* below navbar + fixed header */
+        max-height: calc(100vh - 170px);
     }
 
     .map-column img {
@@ -60,11 +78,7 @@
         justify-content: center;
         gap: 6px;
         margin-bottom: 0;
-        position: sticky;
-        top: 56px; /* below fixed navbar */
-        z-index: 5;
-        background: #222;
-        padding: 10px 0 14px;
+        padding: 0 0 10px;
     }
 
     .zone-tab {
@@ -304,21 +318,25 @@
     }
 </style>
 
-<div class="lift-status-container">
-    <h1><i class="fas fa-skiing"></i> Lift &amp; Trail Status</h1>
+<div class="lift-header">
+    <div class="lift-header-inner">
+        <h1><i class="fas fa-skiing"></i> Lift &amp; Trail Status</h1>
 
-    <!-- Tabs above the two-column layout -->
-    <div class="zone-tabs" role="tablist">
-        <button class="zone-tab active" data-zone="lifts" role="tab" aria-selected="true">
-            <i class="fas fa-caret-up"></i>&nbsp;Lifts
-        </button>
-        {% for zone in zones %}
-        <button class="zone-tab" data-zone="{{ zone.key }}" role="tab" aria-selected="false">
-            {{ zone.label }}<span class="trail-count">{{ zone.trail_count }}</span>
-        </button>
-        {% endfor %}
+        <!-- Tabs -->
+        <div class="zone-tabs" role="tablist">
+            <button class="zone-tab active" data-zone="lifts" role="tab" aria-selected="true">
+                <i class="fas fa-caret-up"></i>&nbsp;Lifts
+            </button>
+            {% for zone in zones %}
+            <button class="zone-tab" data-zone="{{ zone.key }}" role="tab" aria-selected="false">
+                {{ zone.label }}<span class="trail-count">{{ zone.trail_count }}</span>
+            </button>
+            {% endfor %}
+        </div>
     </div>
+</div>
 
+<div class="lift-status-container">
     <div class="lift-layout">
         <!-- Left: Trail map -->
         <div class="map-column">
