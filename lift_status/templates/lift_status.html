@@ -69,6 +69,38 @@
         box-shadow: 0 2px 12px rgba(0,0,0,0.5);
     }
 
+    /* Map selector buttons */
+    .map-selector {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .map-btn {
+        padding: 6px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #444;
+        color: #aaa;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+        min-height: 48px;
+        min-width: 48px;
+    }
+
+    .map-btn:hover {
+        background: #555;
+        color: #ddd;
+    }
+
+    .map-btn.active {
+        background: #3C6090;
+        color: #fff;
+    }
+
     .data-column {
         margin-left: 45%;
         flex: 1;
@@ -348,7 +380,11 @@
     <div class="lift-layout">
         <!-- Left: Trail map -->
         <div class="map-column">
-            <img src="{% static 'lift_status/img/sunpeaks_alpine.png' %}" alt="Sun Peaks Trail Map">
+            <img id="trail-map" src="{% static 'lift_status/img/sunpeaks_alpine.png' %}" alt="Sun Peaks Trail Map">
+            <div class="map-selector" id="map-selector" style="display: none;">
+                <button class="map-btn active" data-map="{% static 'lift_status/img/sunpeaks_alpine.png' %}" data-label="Alpine">Alpine</button>
+                <button class="map-btn" data-map="{% static 'lift_status/img/west_bowl.png' %}" data-label="West Bowl">West Bowl</button>
+            </div>
         </div>
 
         <!-- Right: Data panels -->
@@ -466,6 +502,22 @@
                 observer.disconnect();
                 var newSentinel = document.getElementById('scroll-sentinel');
                 if (newSentinel) observer.observe(newSentinel);
+
+                // Show/hide map selector for Tod Mountain
+                var mapSelector = document.getElementById('map-selector');
+                if (zone === 'tod-mountain') {
+                    mapSelector.style.display = 'flex';
+                } else {
+                    mapSelector.style.display = 'none';
+                    // Reset to alpine map when leaving Tod Mountain
+                    var trailMap = document.getElementById('trail-map');
+                    var alpineBtn = mapSelector.querySelector('.map-btn[data-label="Alpine"]');
+                    if (alpineBtn) {
+                        trailMap.src = alpineBtn.getAttribute('data-map');
+                        mapSelector.querySelectorAll('.map-btn').forEach(function(b) { b.classList.remove('active'); });
+                        alpineBtn.classList.add('active');
+                    }
+                }
             });
         });
     });
@@ -473,6 +525,15 @@
     // Position scroll hint over the data column
     const scrollHint = document.getElementById('scroll-hint');
     const dataColumn = document.querySelector('.data-column');
+
+    // Map selector click handling
+    document.querySelectorAll('.map-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('trail-map').src = this.getAttribute('data-map');
+            document.querySelectorAll('.map-btn').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+        });
+    });
     function positionScrollHint() {
         if (dataColumn && scrollHint) {
             var rect = dataColumn.getBoundingClientRect();
