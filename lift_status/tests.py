@@ -268,26 +268,17 @@ class ParseLiftStatusSpecialCasesTests(TestCase):
 # ===========================================================================
 # View tests
 # ===========================================================================
-class LiftStatusViewTests(TestCase):
-    """Test the Django view with mocked scraper data."""
+class LiftStatusShellViewTests(TestCase):
+    """Test the shell view (renders instantly, no scraping)."""
 
-    @patch("lift_status.views.get_lift_status")
-    def test_view_returns_200(self, mock_get):
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+    def test_shell_returns_200(self):
+        """The shell should render without calling the scraper."""
         client = Client()
         response = client.get("/lift_status/")
         self.assertEqual(response.status_code, 200)
 
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_lift_name(self, mock_get):
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
-        client = Client()
-        response = client.get("/lift_status/")
-        self.assertContains(response, "Sunburst Express Chairlift")
-
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_zone_tabs(self, mock_get):
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+    def test_shell_contains_zone_tabs(self):
+        """Zone tabs should be present in the shell (hardcoded from ZONES)."""
         client = Client()
         response = client.get("/lift_status/")
         self.assertContains(response, "Tod Mountain")
@@ -295,50 +286,29 @@ class LiftStatusViewTests(TestCase):
         self.assertContains(response, "Sundance")
         self.assertContains(response, "Orient Ridge")
 
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_trail_name(self, mock_get):
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+    def test_shell_contains_loading_spinner(self):
+        """The shell should show a loading indicator."""
         client = Client()
         response = client.get("/lift_status/")
-        self.assertContains(response, "5 Mile Lower")
+        self.assertContains(response, 'id="data-loading"')
+        self.assertContains(response, "fa-spinner")
 
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_grooming_badge(self, mock_get):
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
-        client = Client()
-        response = client.get("/lift_status/")
-        self.assertContains(response, "Groomed + Fresh")
-
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_status_badges(self, mock_get):
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
-        client = Client()
-        response = client.get("/lift_status/")
-        self.assertContains(response, "badge-open")
-        self.assertContains(response, "badge-closed")
-
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_zoom_container(self, mock_get):
+    def test_shell_contains_zoom_container(self):
         """The trail map should be wrapped in a pinch-to-zoom container."""
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
         client = Client()
         response = client.get("/lift_status/")
         self.assertContains(response, 'id="map-zoom-container"')
         self.assertContains(response, 'touch-action: none')
 
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_zoom_hint(self, mock_get):
+    def test_shell_contains_zoom_hint(self):
         """The zoom hint label should be present."""
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
         client = Client()
         response = client.get("/lift_status/")
         self.assertContains(response, 'id="map-zoom-hint"')
         self.assertContains(response, "Pinch or scroll to zoom")
 
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_zoom_js(self, mock_get):
+    def test_shell_contains_zoom_js(self):
         """The zoom JavaScript (wheel handler and touch handler) should be present."""
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
         client = Client()
         response = client.get("/lift_status/")
         content = response.content.decode()
@@ -346,16 +316,127 @@ class LiftStatusViewTests(TestCase):
         self.assertIn("addEventListener('touchstart'", content)
         self.assertIn("addEventListener('touchmove'", content)
 
-    @patch("lift_status.views.get_lift_status")
-    def test_view_contains_map_selector(self, mock_get):
+    def test_shell_contains_map_selector(self):
         """The map selector buttons should be present for Tod Mountain."""
-        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
         client = Client()
         response = client.get("/lift_status/")
         self.assertContains(response, 'id="map-selector"')
         self.assertContains(response, 'class="map-btn active"')
         self.assertContains(response, "Alpine")
         self.assertContains(response, "West Bowl")
+
+    def test_shell_contains_async_fetch(self):
+        """The shell should have JS that fetches data asynchronously."""
+        client = Client()
+        response = client.get("/lift_status/")
+        content = response.content.decode()
+        self.assertIn("fetch(", content)
+        self.assertIn("/lift_status/data/", content)
+
+    def test_shell_does_not_call_scraper(self):
+        """The shell view should NOT call get_lift_status."""
+        with patch("lift_status.scraper.fetch_lift_status_html") as mock_fetch:
+            client = Client()
+            client.get("/lift_status/")
+            mock_fetch.assert_not_called()
+
+
+# ===========================================================================
+# Data endpoint tests — returns the HTML partial
+# ===========================================================================
+class LiftStatusDataViewTests(TestCase):
+    """Test the AJAX data endpoint that returns rendered data panels."""
+
+    @patch("lift_status.views.get_lift_status")
+    def test_data_returns_200(self, mock_get):
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/data/")
+        self.assertEqual(response.status_code, 200)
+
+    @patch("lift_status.views.get_lift_status")
+    def test_data_contains_lift_name(self, mock_get):
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/data/")
+        self.assertContains(response, "Sunburst Express Chairlift")
+
+    @patch("lift_status.views.get_lift_status")
+    def test_data_contains_trail_name(self, mock_get):
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/data/")
+        self.assertContains(response, "5 Mile Lower")
+
+    @patch("lift_status.views.get_lift_status")
+    def test_data_contains_grooming_badge(self, mock_get):
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/data/")
+        self.assertContains(response, "Groomed + Fresh")
+
+    @patch("lift_status.views.get_lift_status")
+    def test_data_contains_status_badges(self, mock_get):
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/data/")
+        self.assertContains(response, "badge-open")
+        self.assertContains(response, "badge-closed")
+
+    @patch("lift_status.views.get_lift_status")
+    def test_data_is_partial_html(self, mock_get):
+        """Data endpoint should return a partial — no <html> or base template tags."""
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/data/")
+        content = response.content.decode()
+        self.assertNotIn("<html", content)
+        self.assertNotIn("</html>", content)
+        # Should contain zone panels
+        self.assertIn('id="panel-lifts"', content)
+        self.assertIn('id="panel-tod-mountain"', content)
+
+
+# ===========================================================================
+# Cache tests
+# ===========================================================================
+class LiftStatusCacheTests(TestCase):
+    """Test that the scraper result is cached."""
+
+    @patch("lift_status.scraper.fetch_lift_status_html")
+    def test_get_lift_status_caches_result(self, mock_fetch):
+        """Second call should use cache, not re-fetch."""
+        from django.core.cache import cache
+        from lift_status.scraper import get_lift_status
+
+        cache.clear()
+        mock_fetch.return_value = SAMPLE_HTML.encode()
+
+        # First call — should fetch
+        get_lift_status()
+        self.assertEqual(mock_fetch.call_count, 1)
+
+        # Second call — should use cache
+        get_lift_status()
+        self.assertEqual(mock_fetch.call_count, 1)
+
+        cache.clear()
+
+    @patch("lift_status.scraper.fetch_lift_status_html")
+    def test_cache_returns_correct_data(self, mock_fetch):
+        """Cached data should match the parsed result."""
+        from django.core.cache import cache
+        from lift_status.scraper import get_lift_status
+
+        cache.clear()
+        mock_fetch.return_value = SAMPLE_HTML.encode()
+
+        data = get_lift_status()
+        self.assertIn("lifts", data)
+        self.assertIn("zones", data)
+        self.assertEqual(len(data["lifts"]), 3)
+
+        cache.clear()
 
 
 # ===========================================================================
@@ -435,6 +516,12 @@ class LiveLiftStatusTests(TestCase):
         response = client.get("/lift_status/")
         self.assertEqual(response.status_code, 200)
 
+    def test_data_endpoint_returns_200(self):
+        """Integration test — the data endpoint should render without error."""
+        client = Client()
+        response = client.get("/lift_status/data/")
+        self.assertEqual(response.status_code, 200)
+
 
 # ===========================================================================
 # Selenium tests — verify zoom JS works in a real browser
@@ -467,13 +554,18 @@ class LiftStatusZoomSeleniumTests(StaticLiveServerTestCase):
         self.driver.delete_all_cookies()
 
     def _load_page(self):
-        """Load the lift status page with mocked data isn't needed — just load the real page."""
+        """Load the lift status page and wait for async data to load."""
         self.driver.get(f'{self.live_server_url}/lift_status/')
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support.ui import WebDriverWait
         from selenium.webdriver.support import expected_conditions as EC
+        # Zoom container is in the shell (immediate)
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located((By.ID, 'map-zoom-container'))
+        )
+        # Wait for async data to load (loading spinner disappears)
+        WebDriverWait(self.driver, 15).until(
+            EC.presence_of_element_located((By.ID, 'panel-lifts'))
         )
 
     def test_zoom_container_exists(self):

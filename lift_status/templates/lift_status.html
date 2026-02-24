@@ -402,9 +402,9 @@
             <button class="zone-tab active" data-zone="lifts" role="tab" aria-selected="true">
                 <i class="fas fa-caret-up"></i>&nbsp;Lifts
             </button>
-            {% for zone in zones %}
+            {% for zone in zones_shell %}
             <button class="zone-tab" data-zone="{{ zone.key }}" role="tab" aria-selected="false">
-                {{ zone.label }}<span class="trail-count">{{ zone.trail_count }}</span>
+                {{ zone.label }}<span class="trail-count" id="count-{{ zone.key }}"></span>
             </button>
             {% endfor %}
         </div>
@@ -425,85 +425,12 @@
             </div>
         </div>
 
-        <!-- Right: Data panels -->
-        <div class="data-column">
-            <!-- Lift Panel -->
-            <div class="zone-panel active" id="panel-lifts">
-                {% if lifts %}
-                <div class="lift-summary">
-                    <strong>{{ lifts|length }}</strong> lift{{ lifts|length|pluralize }} reported
-                </div>
-                <table class="status-table">
-                    <thead>
-                        <tr>
-                            <th>Lift</th>
-                            <th>Status</th>
-                            <th>Hours</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for lift in lifts %}
-                        <tr>
-                            <td>{{ lift.name }}</td>
-                            <td>
-                                {% if lift.status == "open" %}
-                                    <span class="badge-open">Open</span>
-                                {% elif lift.status == "closed" %}
-                                    <span class="badge-closed">Closed</span>
-                                {% else %}
-                                    <span class="badge-unknown">Unknown</span>
-                                {% endif %}
-                            </td>
-                            <td class="lift-notes">{{ lift.notes }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                <p class="no-data">No lift data available.</p>
-                {% endif %}
+        <!-- Right: Data panels (loaded asynchronously) -->
+        <div class="data-column" id="data-column">
+            <div id="data-loading" style="text-align: center; padding: 60px 20px;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #FFD700;"></i>
+                <p style="margin-top: 12px; color: #aaa; font-size: 0.95rem;">Loading lift &amp; trail data&hellip;</p>
             </div>
-
-            <!-- Zone Panels (Trails) -->
-            {% for zone in zones %}
-            <div class="zone-panel" id="panel-{{ zone.key }}">
-                {% for group in zone.trails_by_difficulty %}
-                <div class="difficulty-header">
-                    <i class="fas {{ group.difficulty_icon }}"></i> {{ group.difficulty_label }}
-                    <span class="trail-count">{{ group.trails|length }}</span>
-                </div>
-                <table class="status-table">
-                    <thead>
-                        <tr>
-                            <th>Trail</th>
-                            <th class="text-end">Grooming</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for trail in group.trails %}
-                        <tr>
-                            <td>
-                                <i class="fas {{ trail.difficulty_icon }}" style="font-size: 0.7rem;"></i>
-                                {{ trail.name }}
-                            </td>
-                            <td class="text-end">
-                                {% if trail.grooming == "groomed-with-fresh" %}
-                                    <span class="badge-groomed-fresh"><i class="fas fa-snowflake"></i> Groomed + Fresh</span>
-                                {% elif trail.grooming == "groomed" %}
-                                    <span class="badge-groomed"><i class="fas fa-check"></i> Groomed</span>
-                                {% else %}
-                                    <span class="badge-not-groomed">Not Groomed</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% empty %}
-                <p class="no-data">No trail data available for this zone.</p>
-                {% endfor %}
-            </div>
-            {% endfor %}
 
             <div id="scroll-sentinel" style="height: 1px;"></div>
         </div>
@@ -515,10 +442,9 @@
 </div>
 
 <script>
-    // Tab switching
+    // Tab switching — works for both initial (loading) state and after data loads
     document.addEventListener('DOMContentLoaded', function() {
         const tabs = document.querySelectorAll('.zone-tab');
-        const panels = document.querySelectorAll('.zone-panel');
 
         tabs.forEach(function(tab) {
             tab.addEventListener('click', function() {
@@ -531,10 +457,11 @@
                 this.classList.add('active');
                 this.setAttribute('aria-selected', 'true');
 
-                panels.forEach(function(p) {
-                    p.classList.remove('active');
-                });
-                document.getElementById('panel-' + zone).classList.add('active');
+                // Switch panels (only exist after data loads)
+                var panels = document.querySelectorAll('.zone-panel');
+                panels.forEach(function(p) { p.classList.remove('active'); });
+                var target = document.getElementById('panel-' + zone);
+                if (target) target.classList.add('active');
 
                 // Re-check scroll hint when switching tabs
                 observer.disconnect();
@@ -562,7 +489,7 @@
 
     // Position scroll hint over the data column
     const scrollHint = document.getElementById('scroll-hint');
-    const dataColumn = document.querySelector('.data-column');
+    const dataColumn = document.getElementById('data-column');
 
     // Map selector click handling
     document.querySelectorAll('.map-btn').forEach(function(btn) {
@@ -596,6 +523,51 @@
     }, { threshold: 0 });
     observer.observe(sentinel);
 
+    // -------------------------------------------------------
+    // Async data loading — fetch lift/trail data after shell
+    // -------------------------------------------------------
+    (function() {
+        fetch('{% url "lift_status_data" %}')
+            .then(function(response) { return response.text(); })
+            .then(function(html) {
+                var loading = document.getElementById('data-loading');
+                if (loading) loading.remove();
+
+                // Insert data panels before the scroll sentinel
+                var sentinelEl = document.getElementById('scroll-sentinel');
+                sentinelEl.insertAdjacentHTML('beforebegin', html);
+
+                // Update trail count badges on tabs
+                document.querySelectorAll('.zone-panel[id^="panel-"]').forEach(function(panel) {
+                    var zoneKey = panel.id.replace('panel-', '');
+                    if (zoneKey === 'lifts') return;
+                    var count = panel.querySelectorAll('.status-table tbody tr').length;
+                    var badge = document.getElementById('count-' + zoneKey);
+                    if (badge) badge.textContent = count;
+                });
+
+                // Apply the currently active tab
+                var activeTab = document.querySelector('.zone-tab.active');
+                if (activeTab) {
+                    var zone = activeTab.getAttribute('data-zone');
+                    document.querySelectorAll('.zone-panel').forEach(function(p) { p.classList.remove('active'); });
+                    var target = document.getElementById('panel-' + zone);
+                    if (target) target.classList.add('active');
+                }
+
+                // Re-check scroll hint after content is injected
+                observer.disconnect();
+                if (sentinelEl) observer.observe(sentinelEl);
+                positionScrollHint();
+            })
+            .catch(function(err) {
+                var loading = document.getElementById('data-loading');
+                if (loading) {
+                    loading.innerHTML = '<p style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Failed to load data. <a href="" style="color: #FFD700;">Reload</a></p>';
+                }
+            });
+    })();
+
     // Auto-refresh every 15 minutes
     setTimeout(function() { location.reload(); }, 15 * 60 * 1000);
 
@@ -607,6 +579,7 @@
         var scale = 1, posX = 0, posY = 0;
         var startDist = 0, startScale = 1;
         var startX = 0, startY = 0, startPosX = 0, startPosY = 0;
+        var startMidContX = 0, startMidContY = 0; // container-relative pinch midpoint
         var isPinching = false, isPanning = false;
 
         function clampPos() {
@@ -653,7 +626,10 @@
                 startDist = getDist(e.touches);
                 startScale = scale;
                 var mid = getMid(e.touches);
+                var rect = container.getBoundingClientRect();
                 startX = mid.x; startY = mid.y;
+                startMidContX = mid.x - rect.left;
+                startMidContY = mid.y - rect.top;
                 startPosX = posX; startPosY = posY;
                 if (hint) hint.style.opacity = '0';
             } else if (e.touches.length === 1 && scale > 1) {
@@ -671,8 +647,13 @@
                 var dist = getDist(e.touches);
                 scale = Math.min(5, Math.max(1, startScale * (dist / startDist)));
                 var mid = getMid(e.touches);
-                posX = startPosX + (mid.x - startX);
-                posY = startPosY + (mid.y - startY);
+                var rect = container.getBoundingClientRect();
+                var midContX = mid.x - rect.left;
+                var midContY = mid.y - rect.top;
+                // Zoom toward pinch center: keep the image point under the
+                // initial midpoint locked to the current midpoint
+                posX = midContX - (startMidContX - startPosX) * (scale / startScale);
+                posY = midContY - (startMidContY - startPosY) * (scale / startScale);
                 clampPos();
                 applyTransform();
             } else if (isPanning && e.touches.length === 1 && scale > 1) {
