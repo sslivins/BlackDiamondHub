@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Lift &amp; Trail Status{% endblock %}
 
@@ -24,6 +25,32 @@
         text-align: center;
         margin-bottom: 10px;
         color: #FFD700;
+    }
+
+    /* Two-column layout */
+    .lift-layout {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .map-column {
+        flex: 0 0 45%;
+        position: sticky;
+        top: 72px; /* below fixed navbar */
+        max-height: calc(100vh - 82px);
+    }
+
+    .map-column img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+
+    .data-column {
+        flex: 1;
+        min-width: 0;
     }
 
     /* Tabs */
@@ -253,12 +280,25 @@
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-8px); }
     }
+
+    /* Stack vertically on smaller screens */
+    @media (max-width: 992px) {
+        .lift-layout {
+            flex-direction: column;
+        }
+        .map-column {
+            flex: none;
+            position: static;
+            max-height: none;
+            width: 100%;
+        }
+    }
 </style>
 
 <div class="lift-status-container">
     <h1><i class="fas fa-skiing"></i> Lift &amp; Trail Status</h1>
 
-    <!-- Tabs -->
+    <!-- Tabs above the two-column layout -->
     <div class="zone-tabs" role="tablist">
         <button class="zone-tab active" data-zone="lifts" role="tab" aria-selected="true">
             <i class="fas fa-caret-up"></i>&nbsp;Lifts
@@ -270,85 +310,95 @@
         {% endfor %}
     </div>
 
-    <!-- Lift Panel -->
-    <div class="zone-panel active" id="panel-lifts">
-        {% if lifts %}
-        <div class="lift-summary">
-            <strong>{{ lifts|length }}</strong> lift{{ lifts|length|pluralize }} reported
+    <div class="lift-layout">
+        <!-- Left: Trail map -->
+        <div class="map-column">
+            <img src="{% static 'lift_status/img/sunpeaks_alpine.png' %}" alt="Sun Peaks Trail Map">
         </div>
-        <table class="status-table">
-            <thead>
-                <tr>
-                    <th>Lift</th>
-                    <th>Status</th>
-                    <th>Hours</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for lift in lifts %}
-                <tr>
-                    <td>{{ lift.name }}</td>
-                    <td>
-                        {% if lift.status == "open" %}
-                            <span class="badge-open">Open</span>
-                        {% elif lift.status == "closed" %}
-                            <span class="badge-closed">Closed</span>
-                        {% else %}
-                            <span class="badge-unknown">Unknown</span>
-                        {% endif %}
-                    </td>
-                    <td class="lift-notes">{{ lift.notes }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="no-data">No lift data available.</p>
-        {% endif %}
-    </div>
 
-    <!-- Zone Panels (Trails) -->
-    {% for zone in zones %}
-    <div class="zone-panel" id="panel-{{ zone.key }}">
-        {% for group in zone.trails_by_difficulty %}
-        <div class="difficulty-header">
-            <i class="fas {{ group.difficulty_icon }}"></i> {{ group.difficulty_label }}
-            <span class="trail-count">{{ group.trails|length }}</span>
+        <!-- Right: Data panels -->
+        <div class="data-column">
+            <!-- Lift Panel -->
+            <div class="zone-panel active" id="panel-lifts">
+                {% if lifts %}
+                <div class="lift-summary">
+                    <strong>{{ lifts|length }}</strong> lift{{ lifts|length|pluralize }} reported
+                </div>
+                <table class="status-table">
+                    <thead>
+                        <tr>
+                            <th>Lift</th>
+                            <th>Status</th>
+                            <th>Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lift in lifts %}
+                        <tr>
+                            <td>{{ lift.name }}</td>
+                            <td>
+                                {% if lift.status == "open" %}
+                                    <span class="badge-open">Open</span>
+                                {% elif lift.status == "closed" %}
+                                    <span class="badge-closed">Closed</span>
+                                {% else %}
+                                    <span class="badge-unknown">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td class="lift-notes">{{ lift.notes }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No lift data available.</p>
+                {% endif %}
+            </div>
+
+            <!-- Zone Panels (Trails) -->
+            {% for zone in zones %}
+            <div class="zone-panel" id="panel-{{ zone.key }}">
+                {% for group in zone.trails_by_difficulty %}
+                <div class="difficulty-header">
+                    <i class="fas {{ group.difficulty_icon }}"></i> {{ group.difficulty_label }}
+                    <span class="trail-count">{{ group.trails|length }}</span>
+                </div>
+                <table class="status-table">
+                    <thead>
+                        <tr>
+                            <th>Trail</th>
+                            <th>Grooming</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trail in group.trails %}
+                        <tr>
+                            <td>
+                                <i class="fas {{ trail.difficulty_icon }}" style="font-size: 0.7rem;"></i>
+                                {{ trail.name }}
+                            </td>
+                            <td>
+                                {% if trail.grooming == "groomed-with-fresh" %}
+                                    <span class="badge-groomed-fresh"><i class="fas fa-snowflake"></i> Groomed + Fresh</span>
+                                {% elif trail.grooming == "groomed" %}
+                                    <span class="badge-groomed"><i class="fas fa-check"></i> Groomed</span>
+                                {% else %}
+                                    <span class="badge-not-groomed">Not Groomed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% empty %}
+                <p class="no-data">No trail data available for this zone.</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div id="scroll-sentinel" style="height: 1px;"></div>
         </div>
-        <table class="status-table">
-            <thead>
-                <tr>
-                    <th>Trail</th>
-                    <th>Grooming</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for trail in group.trails %}
-                <tr>
-                    <td>
-                        <i class="fas {{ trail.difficulty_icon }}" style="font-size: 0.7rem;"></i>
-                        {{ trail.name }}
-                    </td>
-                    <td>
-                        {% if trail.grooming == "groomed-with-fresh" %}
-                            <span class="badge-groomed-fresh"><i class="fas fa-snowflake"></i> Groomed + Fresh</span>
-                        {% elif trail.grooming == "groomed" %}
-                            <span class="badge-groomed"><i class="fas fa-check"></i> Groomed</span>
-                        {% else %}
-                            <span class="badge-not-groomed">Not Groomed</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% empty %}
-        <p class="no-data">No trail data available for this zone.</p>
-        {% endfor %}
     </div>
-    {% endfor %}
-
-    <div id="scroll-sentinel" style="height: 1px;"></div>
 </div>
 
 <div class="scroll-hint" id="scroll-hint">
