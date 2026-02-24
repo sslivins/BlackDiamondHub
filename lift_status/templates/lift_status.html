@@ -417,7 +417,7 @@
         <div class="map-column">
             <div class="map-zoom-container" id="map-zoom-container">
                 <img id="trail-map" src="{% static 'lift_status/img/sunpeaks_alpine.png' %}" alt="Sun Peaks Trail Map">
-                <div class="map-zoom-hint" id="map-zoom-hint">Pinch or Ctrl+scroll to zoom</div>
+                <div class="map-zoom-hint" id="map-zoom-hint">Pinch or scroll to zoom</div>
             </div>
             <div class="map-selector" id="map-selector" style="display: none;">
                 <button class="map-btn active" data-map="{% static 'lift_status/img/sunpeaks_alpine.png' %}" data-label="Alpine">Alpine</button>
@@ -702,9 +702,8 @@
             }
         });
 
-        // Ctrl+scroll wheel to zoom on desktop
+        // Scroll wheel to zoom on desktop
         container.addEventListener('wheel', function(e) {
-            if (!e.ctrlKey) return;
             e.preventDefault();
             var rect = container.getBoundingClientRect();
             var mouseX = e.clientX - rect.left;
