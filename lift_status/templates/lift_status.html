@@ -53,10 +53,13 @@
     }
 
     .map-column {
-        flex: 0 0 45%;
-        position: sticky;
+        position: fixed;
         top: 160px; /* below navbar + fixed header */
+        left: 20px;
+        width: calc(45% - 30px);
+        max-width: 860px;
         max-height: calc(100vh - 170px);
+        z-index: 1;
     }
 
     .map-column img {
@@ -67,6 +70,7 @@
     }
 
     .data-column {
+        margin-left: 45%;
         flex: 1;
         min-width: 0;
     }
@@ -310,10 +314,14 @@
             flex-direction: column;
         }
         .map-column {
-            flex: none;
             position: static;
-            max-height: none;
             width: 100%;
+            max-width: none;
+            max-height: none;
+            left: auto;
+        }
+        .data-column {
+            margin-left: 0;
         }
     }
 </style>
