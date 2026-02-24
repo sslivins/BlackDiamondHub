@@ -292,14 +292,6 @@ HOME_STEPS = [
         "icon": "fas fa-temperature-arrow-up",
         "actions": [
             {
-                "action": "switch/turn_on",
-                "data": {
-                    "entity_id": "switch.aeco_1988_hot_tank_outdoor_reset",
-                },
-                "description": "Enabling outdoor reset",
-                "delay_after": 2,
-            },
-            {
                 "action": "number/set_value",
                 "data": {
                     "entity_id": "number.aeco_1988_hot_tank_min_temperature",
@@ -325,6 +317,14 @@ HOME_STEPS = [
                 },
                 "description": "Setting outdoor reset to -20°C",
                 "verify_delay": 10,
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.aeco_1988_hot_tank_outdoor_reset",
+                },
+                "description": "Enabling outdoor reset",
+                "delay_after": 2,
             },
         ],
     },
