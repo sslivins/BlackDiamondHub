@@ -317,6 +317,46 @@ class LiftStatusViewTests(TestCase):
         self.assertContains(response, "badge-open")
         self.assertContains(response, "badge-closed")
 
+    @patch("lift_status.views.get_lift_status")
+    def test_view_contains_zoom_container(self, mock_get):
+        """The trail map should be wrapped in a pinch-to-zoom container."""
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/")
+        self.assertContains(response, 'id="map-zoom-container"')
+        self.assertContains(response, 'touch-action: none')
+
+    @patch("lift_status.views.get_lift_status")
+    def test_view_contains_zoom_hint(self, mock_get):
+        """The zoom hint label should be present."""
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/")
+        self.assertContains(response, 'id="map-zoom-hint"')
+        self.assertContains(response, "Pinch or scroll to zoom")
+
+    @patch("lift_status.views.get_lift_status")
+    def test_view_contains_zoom_js(self, mock_get):
+        """The zoom JavaScript (wheel handler and touch handler) should be present."""
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/")
+        content = response.content.decode()
+        self.assertIn("addEventListener('wheel'", content)
+        self.assertIn("addEventListener('touchstart'", content)
+        self.assertIn("addEventListener('touchmove'", content)
+
+    @patch("lift_status.views.get_lift_status")
+    def test_view_contains_map_selector(self, mock_get):
+        """The map selector buttons should be present for Tod Mountain."""
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/")
+        self.assertContains(response, 'id="map-selector"')
+        self.assertContains(response, 'class="map-btn active"')
+        self.assertContains(response, "Alpine")
+        self.assertContains(response, "West Bowl")
+
 
 # ===========================================================================
 # Live tests — hit the real Sun Peaks website
@@ -394,3 +434,126 @@ class LiveLiftStatusTests(TestCase):
         client = Client()
         response = client.get("/lift_status/")
         self.assertEqual(response.status_code, 200)
+
+
+# ===========================================================================
+# Selenium tests — verify zoom JS works in a real browser
+# ===========================================================================
+from django.test import tag, override_settings
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+
+
+@tag("selenium")
+@override_settings(STATICFILES_STORAGE="django.contrib.staticfiles.storage.StaticFilesStorage")
+class LiftStatusZoomSeleniumTests(StaticLiveServerTestCase):
+    """Selenium tests for the pinch/scroll-to-zoom feature on the trail map."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        from selenium import webdriver
+        from tests.selenium_helpers import get_chrome_options
+        cls.driver = webdriver.Chrome(options=get_chrome_options())
+        cls.driver.implicitly_wait(5)
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, 'driver'):
+            cls.driver.quit()
+        super().tearDownClass()
+
+    def setUp(self):
+        self.driver.get('about:blank')
+        self.driver.delete_all_cookies()
+
+    def _load_page(self):
+        """Load the lift status page with mocked data isn't needed — just load the real page."""
+        self.driver.get(f'{self.live_server_url}/lift_status/')
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.ID, 'map-zoom-container'))
+        )
+
+    def test_zoom_container_exists(self):
+        """The zoom container and trail map image should be in the DOM."""
+        self._load_page()
+        from selenium.webdriver.common.by import By
+        container = self.driver.find_element(By.ID, 'map-zoom-container')
+        img = self.driver.find_element(By.ID, 'trail-map')
+        self.assertIsNotNone(container)
+        self.assertIsNotNone(img)
+
+    def test_zoom_hint_visible(self):
+        """The zoom hint should be visible on initial load."""
+        self._load_page()
+        from selenium.webdriver.common.by import By
+        hint = self.driver.find_element(By.ID, 'map-zoom-hint')
+        self.assertTrue(hint.is_displayed())
+        self.assertIn("zoom", hint.text.lower())
+
+    def test_scroll_wheel_zooms_image(self):
+        """Scrolling the mouse wheel over the map should change the image transform."""
+        self._load_page()
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.common.action_chains import ActionChains
+        img = self.driver.find_element(By.ID, 'trail-map')
+        container = self.driver.find_element(By.ID, 'map-zoom-container')
+
+        # Initial transform should be default (none or identity)
+        initial_transform = img.value_of_css_property('transform')
+
+        # Scroll up (zoom in) on the container using JS wheel event
+        self.driver.execute_script("""
+            var container = document.getElementById('map-zoom-container');
+            var event = new WheelEvent('wheel', {
+                deltaY: -100,
+                clientX: container.getBoundingClientRect().left + 50,
+                clientY: container.getBoundingClientRect().top + 50,
+                bubbles: true, cancelable: true
+            });
+            container.dispatchEvent(event);
+        """)
+
+        import time
+        time.sleep(0.2)  # let transform apply
+
+        new_transform = img.value_of_css_property('transform')
+        self.assertNotEqual(initial_transform, new_transform,
+                            "Image transform should change after wheel zoom")
+
+    def test_double_click_resets_zoom(self):
+        """Double-clicking the map should reset zoom to 1x."""
+        self._load_page()
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.common.action_chains import ActionChains
+        import time
+
+        img = self.driver.find_element(By.ID, 'trail-map')
+        container = self.driver.find_element(By.ID, 'map-zoom-container')
+
+        # Zoom in first
+        self.driver.execute_script("""
+            var container = document.getElementById('map-zoom-container');
+            for (var i = 0; i < 5; i++) {
+                var event = new WheelEvent('wheel', {
+                    deltaY: -100,
+                    clientX: container.getBoundingClientRect().left + 50,
+                    clientY: container.getBoundingClientRect().top + 50,
+                    bubbles: true, cancelable: true
+                });
+                container.dispatchEvent(event);
+            }
+        """)
+        time.sleep(0.2)
+
+        zoomed_transform = img.value_of_css_property('transform')
+
+        # Double-click to reset
+        ActionChains(self.driver).double_click(container).perform()
+        time.sleep(0.2)
+
+        reset_transform = img.value_of_css_property('transform')
+        self.assertNotEqual(zoomed_transform, reset_transform,
+                            "Transform should change after double-click reset")
