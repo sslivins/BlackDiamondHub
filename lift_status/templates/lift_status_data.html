@@ -47,7 +47,7 @@
         <thead>
             <tr>
                 <th>Trail</th>
-                <th class="text-end">Grooming</th>
+                <th class="text-end">Status</th>
             </tr>
         </thead>
         <tbody>
@@ -58,12 +58,14 @@
                     {{ trail.name }}
                 </td>
                 <td class="text-end">
-                    {% if trail.grooming == "groomed-with-fresh" %}
+                    {% if trail.status == "closed" %}
+                        <span class="badge-closed">Closed</span>
+                    {% elif trail.grooming == "groomed-with-fresh" %}
                         <span class="badge-groomed-fresh"><i class="fas fa-snowflake"></i> Groomed + Fresh</span>
                     {% elif trail.grooming == "groomed" %}
                         <span class="badge-groomed"><i class="fas fa-check"></i> Groomed</span>
                     {% else %}
-                        <span class="badge-not-groomed">Not Groomed</span>
+                        <span class="badge-open">Open</span>
                     {% endif %}
                 </td>
             </tr>

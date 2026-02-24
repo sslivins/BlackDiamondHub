@@ -84,6 +84,17 @@ SAMPLE_HTML = """
     <span class="field field--name-title field--type-string field--label-hidden">Peak-A-Boo</span>
   </div>
   <div class="row-cell status">
+    <span class="icon-open"></span>
+  </div>
+</article>
+
+<article class="node node-type-trail node-view-row iso-item cat-sundance cat-5-park sport-ski label-roller-coaster">
+  <div class="row-cell level"><span class="icon-trail_5-park ski"></span></div>
+  <div class="row-cell name">
+    <span class="field field--name-title field--type-string field--label-hidden">Roller Coaster</span>
+  </div>
+  <div class="row-cell status">
+    <span class="icon-close"></span>
   </div>
 </article>
 
@@ -93,6 +104,7 @@ SAMPLE_HTML = """
     <span class="field field--name-title field--type-string field--label-hidden">Cześć Glades</span>
   </div>
   <div class="row-cell status">
+    <span class="icon-open"></span>
   </div>
 </article>
 
@@ -153,7 +165,7 @@ class ParseLiftStatusOfflineTests(TestCase):
 
     def test_sundance_trail_count(self):
         sd = next(z for z in self.data["zones"] if z["key"] == "sundance")
-        self.assertEqual(sd["trail_count"], 1)  # Peak-A-Boo
+        self.assertEqual(sd["trail_count"], 2)  # Peak-A-Boo + Roller Coaster
 
     def test_orient_ridge_trail_count(self):
         orr = next(z for z in self.data["zones"] if z["key"] == "orient-ridge")
@@ -178,6 +190,27 @@ class ParseLiftStatusOfflineTests(TestCase):
         all_trails = [t for g in sd["trails_by_difficulty"] for t in g["trails"]]
         pab = next(t for t in all_trails if "Peak" in t["name"])
         self.assertEqual(pab["grooming"], "none")
+
+    # --- Trail open/closed status ---
+
+    def test_trail_open_status(self):
+        sd = next(z for z in self.data["zones"] if z["key"] == "sundance")
+        all_trails = [t for g in sd["trails_by_difficulty"] for t in g["trails"]]
+        pab = next(t for t in all_trails if "Peak" in t["name"])
+        self.assertEqual(pab["status"], "open")
+
+    def test_trail_closed_status(self):
+        sd = next(z for z in self.data["zones"] if z["key"] == "sundance")
+        all_trails = [t for g in sd["trails_by_difficulty"] for t in g["trails"]]
+        rc = next(t for t in all_trails if t["name"] == "Roller Coaster")
+        self.assertEqual(rc["status"], "closed")
+
+    def test_groomed_trail_defaults_to_open(self):
+        """Trails with icon-tick groomed (no icon-open/close) default to open."""
+        tod = next(z for z in self.data["zones"] if z["key"] == "tod-mountain")
+        all_trails = [t for g in tod["trails_by_difficulty"] for t in g["trails"]]
+        five_mile = next(t for t in all_trails if "5 Mile" in t["name"])
+        self.assertEqual(five_mile["status"], "open")
 
     # --- Difficulty ---
 
@@ -381,6 +414,18 @@ class LiftStatusDataViewTests(TestCase):
         client = Client()
         response = client.get("/lift_status/data/")
         self.assertContains(response, "badge-open")
+        self.assertContains(response, "badge-closed")
+        self.assertContains(response, "badge-groomed")
+
+    @patch("lift_status.views.get_lift_status")
+    def test_data_shows_closed_badge_for_closed_trail(self, mock_get):
+        """Closed trails should show Closed badge, not grooming."""
+        mock_get.return_value = parse_lift_status(SAMPLE_HTML)
+        client = Client()
+        response = client.get("/lift_status/data/")
+        content = response.content.decode()
+        # Roller Coaster is closed — should show Closed badge
+        self.assertContains(response, "Roller Coaster")
         self.assertContains(response, "badge-closed")
 
     @patch("lift_status.views.get_lift_status")
