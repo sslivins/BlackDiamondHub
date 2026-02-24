@@ -259,16 +259,30 @@ GO2RTC_PUBLIC_URL = os.environ.get('GO2RTC_PUBLIC_URL', GO2RTC_URL)
 ### UniFi Protect Settings ###
 #################################
 # Multi-site: numbered pairs (UNIFI_PROTECT_HOST_1, _API_KEY_1, _NAME_1, etc.)
+# PTZ cameras: UNIFI_PROTECT_PTZ_CAMERAS_1=CameraName:3,OtherCam:5
+#   Maps camera names to preset counts. Cameras not listed are non-PTZ.
 UNIFI_PROTECT_SITES = []
 for i in range(1, 10):
     host = os.environ.get(f'UNIFI_PROTECT_HOST_{i}', '')
     api_key = os.environ.get(f'UNIFI_PROTECT_API_KEY_{i}', '')
     name = os.environ.get(f'UNIFI_PROTECT_NAME_{i}', f'Site {i}')
     if host and api_key:
+        # Parse PTZ camera config: "CamName:3,OtherCam:5"
+        ptz_cameras = {}
+        ptz_raw = os.environ.get(f'UNIFI_PROTECT_PTZ_CAMERAS_{i}', '')
+        for entry in ptz_raw.split(','):
+            entry = entry.strip()
+            if ':' in entry:
+                cam_name, count = entry.rsplit(':', 1)
+                try:
+                    ptz_cameras[cam_name.strip()] = int(count.strip())
+                except ValueError:
+                    pass
         UNIFI_PROTECT_SITES.append({
             'host': host,
             'api_key': api_key,
             'name': name,
+            'ptz_cameras': ptz_cameras,
         })
 
 ##############################

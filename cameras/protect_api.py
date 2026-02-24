@@ -81,6 +81,7 @@ def get_protect_cameras():
                 site_name = site.get('name', host)
                 f = pool.submit(
                     _fetch_cameras_from_site, host, api_key, site_name,
+                    site,
                 )
                 futures[f] = (i, site)
 
@@ -163,47 +164,6 @@ def _clean_rtsps_url(url):
     return url.split('?')[0] if url else url
 
 
-def _is_ptz_camera(host, api_key, camera_id):
-    """Detect if a camera supports PTZ by probing the goto endpoint.
-
-    The Integration API doesn't expose PTZ feature flags, so we probe
-    POST /v1/cameras/{id}/ptz/goto/0:
-    - 204 = PTZ camera (moved to preset 0)
-    - 400 = Not a PTZ camera ("Camera is not a type of PTZ")
-    """
-    url = f'https://{host}{API_BASE}/cameras/{camera_id}/ptz/goto/0'
-    headers = {'X-API-KEY': api_key}
-
-    try:
-        resp = requests.post(url, headers=headers, verify=False, timeout=10)
-        return resp.status_code == 204
-    except requests.RequestException:
-        return False
-
-
-def _get_ptz_preset_count(host, api_key, camera_id):
-    """Discover how many PTZ presets a camera has by probing slots 0-4.
-
-    Returns the number of valid presets. Stops at the first 404
-    ("Entity 'preset' not found").
-    """
-    headers = {'X-API-KEY': api_key}
-    count = 0
-
-    for slot in range(5):
-        url = f'https://{host}{API_BASE}/cameras/{camera_id}/ptz/goto/{slot}'
-        try:
-            resp = requests.post(url, headers=headers, verify=False, timeout=10)
-            if resp.status_code == 204:
-                count += 1
-            else:
-                break
-        except requests.RequestException:
-            break
-
-    return count
-
-
 def ptz_goto_preset(camera_id, slot):
     """Move a PTZ camera to the given preset slot.
 
@@ -256,7 +216,8 @@ def _find_site_for_camera(camera_id):
     return None, None
 
 
-def _fetch_cameras_from_site(host, api_key, site_name=None):
+def _fetch_cameras_from_site(host, api_key, site_name=None,
+                             site_config=None):
     """Fetch all cameras with RTSPS streams from a single Protect site.
 
     Uses API key authentication (X-API-KEY header). Discovers cameras via
@@ -266,8 +227,14 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
     name to avoid collisions when multiple sites have cameras with the
     same name (e.g., both sites have "Front Door").
 
+    PTZ capability is determined from the site_config 'ptz_cameras' dict
+    (camera name → preset count) rather than probing the API, since
+    POST /ptz/goto/0 has the side effect of moving the camera.
+
     Returns a list of camera dicts, or None on failure.
     """
+    if site_config is None:
+        site_config = {}
     if not all([host, api_key]):
         logger.warning("UniFi Protect not configured (need host and API key)")
         return None
@@ -312,20 +279,18 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
                 camera_id, name, stream_name = future_to_cam[f]
                 rtsps_urls = f.result()
                 if rtsps_urls:
+                    # Look up PTZ info from site config (no API probe needed)
+                    ptz_cameras = site_config.get('ptz_cameras', {})
+                    ptz_presets = ptz_cameras.get(name, 0)
                     cameras.append({
                         'name': name,
                         'camera_id': camera_id,
                         'stream_name': stream_name,
                         'rtsp_url': rtsps_urls.get('high', ''),
                         'rtsp_url_low': rtsps_urls.get('low', ''),
-                        'is_ptz': False,
-                        'ptz_presets': 0,
+                        'is_ptz': ptz_presets > 0,
+                        'ptz_presets': ptz_presets,
                     })
-
-                    # PTZ probe disabled — probing POST /ptz/goto/0 moves the
-                    # camera to preset 0, which disrupts the active view.
-                    # TODO: re-enable when the Protect API exposes PTZ feature
-                    # flags without side effects.
 
         cameras.sort(key=lambda c: c['name'])
         return cameras

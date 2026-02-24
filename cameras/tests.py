@@ -9,8 +9,7 @@ from unittest.mock import patch, MagicMock, call
 from .views import get_go2rtc_streams, _register_streams_with_go2rtc
 from .protect_api import (
     get_protect_cameras, clear_cache, _camera_name_to_stream_name,
-    _fetch_cameras_from_site, _is_ptz_camera, _get_ptz_preset_count,
-    ptz_goto_preset,
+    _fetch_cameras_from_site, ptz_goto_preset,
 )
 
 
@@ -777,80 +776,8 @@ class RegisterStreamsTests(TestCase):
 
 # --- PTZ API tests ---
 
-class PtzDetectionTests(TestCase):
-    """Tests for PTZ camera detection via probing."""
-
-    @patch('cameras.protect_api.requests.post')
-    def test_detects_ptz_camera(self, mock_post):
-        """Returns True when camera responds 204 to goto."""
-        mock_post.return_value = _make_mock_response({}, status_code=204)
-
-        result = _is_ptz_camera('192.168.10.1', 'key', 'cam_ptz')
-
-        self.assertTrue(result)
-        self.assertIn('/ptz/goto/0', mock_post.call_args.args[0])
-
-    @patch('cameras.protect_api.requests.post')
-    def test_detects_non_ptz_camera(self, mock_post):
-        """Returns False when camera responds 400."""
-        mock_post.return_value = _make_ptz_not_supported_response()
-
-        result = _is_ptz_camera('192.168.10.1', 'key', 'cam_fixed')
-
-        self.assertFalse(result)
-
-    @patch('cameras.protect_api.requests.post')
-    def test_returns_false_on_network_error(self, mock_post):
-        """Returns False when request fails."""
-        import requests
-        mock_post.side_effect = requests.RequestException("Timeout")
-
-        result = _is_ptz_camera('192.168.10.1', 'key', 'cam1')
-
-        self.assertFalse(result)
-
-
-class PtzPresetCountTests(TestCase):
-    """Tests for PTZ preset discovery."""
-
-    @patch('cameras.protect_api.requests.post')
-    def test_counts_valid_presets(self, mock_post):
-        """Counts presets until 404 is returned."""
-        def side_effect(url, **kwargs):
-            # Slots 0-3 exist, slot 4 does not
-            slot = int(url.rstrip('/').split('/')[-1])
-            if slot < 4:
-                return _make_mock_response({}, status_code=204)
-            return _make_mock_response(
-                {'error': "Entity 'preset' not found"}, status_code=404,
-            )
-
-        mock_post.side_effect = side_effect
-
-        count = _get_ptz_preset_count('192.168.10.1', 'key', 'cam_ptz')
-
-        self.assertEqual(count, 4)
-
-    @patch('cameras.protect_api.requests.post')
-    def test_returns_zero_when_no_presets(self, mock_post):
-        """Returns 0 when even slot 0 fails."""
-        mock_post.return_value = _make_mock_response(
-            {'error': "Entity 'preset' not found"}, status_code=404,
-        )
-
-        count = _get_ptz_preset_count('192.168.10.1', 'key', 'cam_ptz')
-
-        self.assertEqual(count, 0)
-
-    @patch('cameras.protect_api.requests.post')
-    def test_handles_network_error(self, mock_post):
-        """Returns 0 on network error."""
-        import requests
-        mock_post.side_effect = requests.RequestException("Timeout")
-
-        count = _get_ptz_preset_count('192.168.10.1', 'key', 'cam_ptz')
-
-        self.assertEqual(count, 0)
+# PtzDetectionTests and PtzPresetCountTests removed — PTZ is now
+# configured via settings (ptz_cameras dict) instead of probing the API.
 
 
 @override_settings(
@@ -906,7 +833,7 @@ class PtzGotoPresetTests(TestCase):
 
 
 class FetchCamerasWithPtzTests(TestCase):
-    """Tests for PTZ info in _fetch_cameras_from_site results."""
+    """Tests for config-based PTZ info in _fetch_cameras_from_site results."""
 
     def setUp(self):
         clear_cache()
@@ -914,7 +841,7 @@ class FetchCamerasWithPtzTests(TestCase):
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
     def test_non_ptz_cameras_have_is_ptz_false(self, mock_get, mock_post):
-        """Non-PTZ cameras have is_ptz=False and ptz_presets=0."""
+        """Cameras not listed in ptz_cameras have is_ptz=False."""
         mock_get.side_effect = _mock_get_side_effect
         mock_post.side_effect = _mock_post_non_ptz
 
@@ -926,8 +853,8 @@ class FetchCamerasWithPtzTests(TestCase):
 
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
-    def test_ptz_camera_detected_with_presets(self, mock_get, mock_post):
-        """PTZ probe is currently disabled — all cameras report is_ptz=False."""
+    def test_ptz_camera_from_config(self, mock_get, mock_post):
+        """Camera listed in ptz_cameras config gets is_ptz=True and preset count."""
         def get_side_effect(url, **kwargs):
             if url.endswith('/cameras'):
                 return _make_mock_response([
@@ -938,29 +865,37 @@ class FetchCamerasWithPtzTests(TestCase):
                 'medium': None, 'low': 'rtsps://192.168.10.1:7441/hottublow',
             })
 
-        def post_side_effect(url, **kwargs):
-            if '/ptz/' not in url:
-                return _make_ptz_not_supported_response()
-            # PTZ probe: slots 0-2 exist, slot 3 does not
-            slot_str = url.rstrip('/').split('/')[-1]
-            try:
-                slot = int(slot_str)
-            except ValueError:
-                return _make_mock_response({}, status_code=204)
-            if slot < 3:
-                return _make_mock_response({}, status_code=204)
-            return _make_mock_response({}, status_code=404)
-
         mock_get.side_effect = get_side_effect
-        mock_post.side_effect = post_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
 
-        cameras = _fetch_cameras_from_site('192.168.10.1', 'test_api_key')
+        site_config = {'ptz_cameras': {'Hot Tub': 3}}
+        cameras = _fetch_cameras_from_site(
+            '192.168.10.1', 'test_api_key', site_config=site_config,
+        )
 
         self.assertEqual(len(cameras), 1)
-        # PTZ probe disabled — camera defaults to non-PTZ
-        self.assertFalse(cameras[0]['is_ptz'])
-        self.assertEqual(cameras[0]['ptz_presets'], 0)
+        self.assertTrue(cameras[0]['is_ptz'])
+        self.assertEqual(cameras[0]['ptz_presets'], 3)
         self.assertEqual(cameras[0]['camera_id'], 'cam_ptz')
+
+    @patch('cameras.protect_api.requests.post')
+    @patch('cameras.protect_api.requests.get')
+    def test_mixed_ptz_and_non_ptz(self, mock_get, mock_post):
+        """Only cameras listed in ptz_cameras config are marked PTZ."""
+        mock_get.side_effect = _mock_get_side_effect
+        mock_post.side_effect = _mock_post_non_ptz
+
+        site_config = {'ptz_cameras': {'Front Door': 5}}
+        cameras = _fetch_cameras_from_site(
+            '192.168.10.1', 'test_api_key', site_config=site_config,
+        )
+
+        front = next(c for c in cameras if c['name'] == 'Front Door')
+        back = next(c for c in cameras if c['name'] == 'Backyard')
+        self.assertTrue(front['is_ptz'])
+        self.assertEqual(front['ptz_presets'], 5)
+        self.assertFalse(back['is_ptz'])
+        self.assertEqual(back['ptz_presets'], 0)
 
     @patch('cameras.protect_api.requests.post')
     @patch('cameras.protect_api.requests.get')
