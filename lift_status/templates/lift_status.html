@@ -579,6 +579,7 @@
         var scale = 1, posX = 0, posY = 0;
         var startDist = 0, startScale = 1;
         var startX = 0, startY = 0, startPosX = 0, startPosY = 0;
+        var startMidContX = 0, startMidContY = 0; // container-relative pinch midpoint
         var isPinching = false, isPanning = false;
 
         function clampPos() {
@@ -625,7 +626,10 @@
                 startDist = getDist(e.touches);
                 startScale = scale;
                 var mid = getMid(e.touches);
+                var rect = container.getBoundingClientRect();
                 startX = mid.x; startY = mid.y;
+                startMidContX = mid.x - rect.left;
+                startMidContY = mid.y - rect.top;
                 startPosX = posX; startPosY = posY;
                 if (hint) hint.style.opacity = '0';
             } else if (e.touches.length === 1 && scale > 1) {
@@ -643,8 +647,13 @@
                 var dist = getDist(e.touches);
                 scale = Math.min(5, Math.max(1, startScale * (dist / startDist)));
                 var mid = getMid(e.touches);
-                posX = startPosX + (mid.x - startX);
-                posY = startPosY + (mid.y - startY);
+                var rect = container.getBoundingClientRect();
+                var midContX = mid.x - rect.left;
+                var midContY = mid.y - rect.top;
+                // Zoom toward pinch center: keep the image point under the
+                // initial midpoint locked to the current midpoint
+                posX = midContX - (startMidContX - startPosX) * (scale / startScale);
+                posY = midContY - (startMidContY - startPosY) * (scale / startScale);
                 clampPos();
                 applyTransform();
             } else if (isPanning && e.touches.length === 1 && scale > 1) {
