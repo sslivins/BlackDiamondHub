@@ -183,6 +183,20 @@ def _parse_trails_by_zone(soup):
 
 
 def get_lift_status():
-    """Fetch and parse lift/trail status. Main entry point for views."""
-    html = fetch_lift_status_html()
-    return parse_lift_status(html)
+    """Fetch and parse lift/trail status, with 5-minute cache.
+
+    The scrape takes a few seconds, so we cache the result to make
+    subsequent page loads instant.  The default Django LocMemCache is
+    fine because we run a single Daphne process.
+    """
+    from django.core.cache import cache
+
+    CACHE_KEY = "lift_status_data"
+    CACHE_TTL = 5 * 60  # 5 minutes
+
+    data = cache.get(CACHE_KEY)
+    if data is None:
+        html = fetch_lift_status_html()
+        data = parse_lift_status(html)
+        cache.set(CACHE_KEY, data, CACHE_TTL)
+    return data
