@@ -163,47 +163,6 @@ def _clean_rtsps_url(url):
     return url.split('?')[0] if url else url
 
 
-def _is_ptz_camera(host, api_key, camera_id):
-    """Detect if a camera supports PTZ by probing the goto endpoint.
-
-    The Integration API doesn't expose PTZ feature flags, so we probe
-    POST /v1/cameras/{id}/ptz/goto/0:
-    - 204 = PTZ camera (moved to preset 0)
-    - 400 = Not a PTZ camera ("Camera is not a type of PTZ")
-    """
-    url = f'https://{host}{API_BASE}/cameras/{camera_id}/ptz/goto/0'
-    headers = {'X-API-KEY': api_key}
-
-    try:
-        resp = requests.post(url, headers=headers, verify=False, timeout=10)
-        return resp.status_code == 204
-    except requests.RequestException:
-        return False
-
-
-def _get_ptz_preset_count(host, api_key, camera_id):
-    """Discover how many PTZ presets a camera has by probing slots 0-4.
-
-    Returns the number of valid presets. Stops at the first 404
-    ("Entity 'preset' not found").
-    """
-    headers = {'X-API-KEY': api_key}
-    count = 0
-
-    for slot in range(5):
-        url = f'https://{host}{API_BASE}/cameras/{camera_id}/ptz/goto/{slot}'
-        try:
-            resp = requests.post(url, headers=headers, verify=False, timeout=10)
-            if resp.status_code == 204:
-                count += 1
-            else:
-                break
-        except requests.RequestException:
-            break
-
-    return count
-
-
 def ptz_goto_preset(camera_id, slot):
     """Move a PTZ camera to the given preset slot.
 
@@ -256,6 +215,26 @@ def _find_site_for_camera(camera_id):
     return None, None
 
 
+PTZ_DEFAULT_PRESETS = 4
+
+
+def _is_ptz_camera(host, api_key, camera_id):
+    """Detect if a camera supports PTZ without moving it.
+
+    Probes POST /ptz/goto/1000 (a slot that won't exist):
+    - 404 = PTZ camera (preset not found, but camera supports PTZ)
+    - 400 = Not a PTZ camera ("Camera is not a type of PTZ")
+    """
+    url = f'https://{host}{API_BASE}/cameras/{camera_id}/ptz/goto/1000'
+    headers = {'X-API-KEY': api_key}
+
+    try:
+        resp = requests.post(url, headers=headers, verify=False, timeout=10)
+        return resp.status_code == 404
+    except requests.RequestException:
+        return False
+
+
 def _fetch_cameras_from_site(host, api_key, site_name=None):
     """Fetch all cameras with RTSPS streams from a single Protect site.
 
@@ -265,6 +244,10 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
     When site_name is provided, stream names are prefixed with the site
     name to avoid collisions when multiple sites have cameras with the
     same name (e.g., both sites have "Front Door").
+
+    PTZ capability is auto-detected by probing a non-existent preset
+    slot (1000), which returns 404 for PTZ cameras and 400 for non-PTZ
+    cameras — without moving the camera.
 
     Returns a list of camera dicts, or None on failure.
     """
@@ -322,10 +305,20 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
                         'ptz_presets': 0,
                     })
 
-                    # PTZ probe disabled — probing POST /ptz/goto/0 moves the
-                    # camera to preset 0, which disrupts the active view.
-                    # TODO: re-enable when the Protect API exposes PTZ feature
-                    # flags without side effects.
+        # Probe PTZ support for all cameras in parallel
+        if cameras:
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                ptz_futures = {
+                    pool.submit(
+                        _is_ptz_camera, host, api_key, cam['camera_id'],
+                    ): cam
+                    for cam in cameras
+                }
+                for f in as_completed(ptz_futures):
+                    cam = ptz_futures[f]
+                    if f.result():
+                        cam['is_ptz'] = True
+                        cam['ptz_presets'] = PTZ_DEFAULT_PRESETS
 
         cameras.sort(key=lambda c: c['name'])
         return cameras
