@@ -126,6 +126,10 @@
         color: #ddd;
     }
 
+    .status-table td.text-end {
+        text-align: right;
+    }
+
     .status-table tr:last-child td {
         border-bottom: none;
     }
@@ -367,7 +371,7 @@
                     <thead>
                         <tr>
                             <th>Trail</th>
-                            <th>Grooming</th>
+                            <th class="text-end">Grooming</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -377,7 +381,7 @@
                                 <i class="fas {{ trail.difficulty_icon }}" style="font-size: 0.7rem;"></i>
                                 {{ trail.name }}
                             </td>
-                            <td>
+                            <td class="text-end">
                                 {% if trail.grooming == "groomed-with-fresh" %}
                                     <span class="badge-groomed-fresh"><i class="fas fa-snowflake"></i> Groomed + Fresh</span>
                                 {% elif trail.grooming == "groomed" %}
