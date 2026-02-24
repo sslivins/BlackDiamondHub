@@ -74,6 +74,36 @@
         object-fit: contain;
     }
 
+    /* Pinch-to-zoom container */
+    .map-zoom-container {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        border-radius: 8px;
+        position: relative;
+        touch-action: none; /* prevent browser zoom on this element */
+    }
+
+    .map-zoom-container img {
+        box-shadow: none;
+        border-radius: 0;
+        transition: none;
+        transform-origin: 0 0;
+    }
+
+    .map-zoom-hint {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        background: rgba(0,0,0,0.6);
+        color: #aaa;
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
     /* Map selector buttons */
     .map-selector {
         display: flex;
@@ -386,7 +416,10 @@
     <div class="lift-layout">
         <!-- Left: Trail map -->
         <div class="map-column">
-            <img id="trail-map" src="{% static 'lift_status/img/sunpeaks_alpine.png' %}" alt="Sun Peaks Trail Map">
+            <div class="map-zoom-container" id="map-zoom-container">
+                <img id="trail-map" src="{% static 'lift_status/img/sunpeaks_alpine.png' %}" alt="Sun Peaks Trail Map">
+                <div class="map-zoom-hint" id="map-zoom-hint">Pinch to zoom</div>
+            </div>
             <div class="map-selector" id="map-selector" style="display: none;">
                 <button class="map-btn active" data-map="{% static 'lift_status/img/sunpeaks_alpine.png' %}" data-label="Alpine">Alpine</button>
                 <button class="map-btn" data-map="{% static 'lift_status/img/west_bowl.png' %}" data-label="West Bowl">West Bowl</button>
@@ -566,5 +599,119 @@
 
     // Auto-refresh every 15 minutes
     setTimeout(function() { location.reload(); }, 15 * 60 * 1000);
+
+    // Pinch-to-zoom on trail map image
+    (function() {
+        var container = document.getElementById('map-zoom-container');
+        var img = document.getElementById('trail-map');
+        var hint = document.getElementById('map-zoom-hint');
+        var scale = 1, posX = 0, posY = 0;
+        var startDist = 0, startScale = 1;
+        var startX = 0, startY = 0, startPosX = 0, startPosY = 0;
+        var isPinching = false, isPanning = false;
+
+        function clampPos() {
+            if (scale <= 1) { posX = 0; posY = 0; return; }
+            var rect = container.getBoundingClientRect();
+            var imgW = img.naturalWidth * (rect.width / img.naturalWidth) * scale;
+            var imgH = img.naturalHeight * (rect.width / img.naturalWidth) * scale;
+            var maxX = 0;
+            var minX = rect.width - imgW;
+            var maxY = 0;
+            var minY = rect.height - imgH;
+            posX = Math.min(maxX, Math.max(minX, posX));
+            posY = Math.min(maxY, Math.max(minY, posY));
+        }
+
+        function applyTransform() {
+            img.style.transform = 'translate(' + posX + 'px,' + posY + 'px) scale(' + scale + ')';
+        }
+
+        function resetZoom() {
+            scale = 1; posX = 0; posY = 0;
+            applyTransform();
+            if (hint) hint.style.opacity = '1';
+        }
+
+        function getDist(touches) {
+            var dx = touches[0].clientX - touches[1].clientX;
+            var dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getMid(touches) {
+            return {
+                x: (touches[0].clientX + touches[1].clientX) / 2,
+                y: (touches[0].clientY + touches[1].clientY) / 2
+            };
+        }
+
+        container.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                isPinching = true;
+                isPanning = false;
+                startDist = getDist(e.touches);
+                startScale = scale;
+                var mid = getMid(e.touches);
+                startX = mid.x; startY = mid.y;
+                startPosX = posX; startPosY = posY;
+                if (hint) hint.style.opacity = '0';
+            } else if (e.touches.length === 1 && scale > 1) {
+                e.preventDefault();
+                isPanning = true;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                startPosX = posX; startPosY = posY;
+            }
+        }, { passive: false });
+
+        container.addEventListener('touchmove', function(e) {
+            if (isPinching && e.touches.length === 2) {
+                e.preventDefault();
+                var dist = getDist(e.touches);
+                scale = Math.min(5, Math.max(1, startScale * (dist / startDist)));
+                var mid = getMid(e.touches);
+                posX = startPosX + (mid.x - startX);
+                posY = startPosY + (mid.y - startY);
+                clampPos();
+                applyTransform();
+            } else if (isPanning && e.touches.length === 1 && scale > 1) {
+                e.preventDefault();
+                posX = startPosX + (e.touches[0].clientX - startX);
+                posY = startPosY + (e.touches[0].clientY - startY);
+                clampPos();
+                applyTransform();
+            }
+        }, { passive: false });
+
+        container.addEventListener('touchend', function(e) {
+            if (e.touches.length < 2) isPinching = false;
+            if (e.touches.length < 1) isPanning = false;
+            if (scale <= 1) resetZoom();
+        });
+
+        // Double-tap to reset zoom
+        var lastTap = 0;
+        container.addEventListener('touchend', function(e) {
+            if (e.touches.length === 0) {
+                var now = Date.now();
+                if (now - lastTap < 300) {
+                    resetZoom();
+                }
+                lastTap = now;
+            }
+        });
+
+        // Reset zoom when map image changes
+        document.querySelectorAll('.map-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() { resetZoom(); });
+        });
+
+        // Reset zoom on tab switch
+        document.querySelectorAll('.zone-tab').forEach(function(tab) {
+            tab.addEventListener('click', function() { resetZoom(); });
+        });
+    })();
 </script>
 {% endblock %}
