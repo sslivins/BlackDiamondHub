@@ -200,16 +200,14 @@ VACATION_STEPS = [
                 "description": "Basement Master TV",
                 "delay_after": 1,
             },
-            # TODO: Media Room TV socket powers hot tub controller — re-enable
-            # when hot tub controller is moved to a dedicated outlet.
-            # {
-            #     "action": "switch/turn_off",
-            #     "data": {
-            #         "entity_id": "switch.media_room_tv_socket_1",
-            #     },
-            #     "description": "Media Room TV",
-            #     "delay_after": 1,
-            # },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.media_room_tv_socket_1",
+                },
+                "description": "Media Room TV",
+                "delay_after": 1,
+            },
             {
                 "action": "switch/turn_off",
                 "data": {
@@ -463,16 +461,14 @@ HOME_STEPS = [
                 "description": "Basement Master TV",
                 "delay_after": 1,
             },
-            # TODO: Media Room TV socket powers hot tub controller — re-enable
-            # when hot tub controller is moved to a dedicated outlet.
-            # {
-            #     "action": "switch/turn_on",
-            #     "data": {
-            #         "entity_id": "switch.media_room_tv_socket_1",
-            #     },
-            #     "description": "Media Room TV",
-            #     "delay_after": 1,
-            # },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.media_room_tv_socket_1",
+                },
+                "description": "Media Room TV",
+                "delay_after": 1,
+            },
             {
                 "action": "switch/turn_on",
                 "data": {
