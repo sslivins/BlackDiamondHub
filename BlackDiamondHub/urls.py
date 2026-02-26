@@ -37,6 +37,7 @@ urlpatterns = [
     path('scenes/', include('scenes.urls')),
     path('vacation_mode/', include('vacation_mode.urls')),
     path('lift_status/', include('lift_status.urls')),
+    path('device_control/', include('device_control.urls')),
 ]
 
 if settings.DEBUG:

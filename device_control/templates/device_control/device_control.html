@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+
+{% block title %}Device Control{% endblock %}
+
+{% block content %}
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        background-color: #222;
+        color: #fff;
+        font-family: Arial, sans-serif;
+    }
+
+    .dc-header {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        z-index: 5;
+        background: #222;
+        padding: 10px 20px 0;
+    }
+
+    .dc-header-inner {
+        max-width: 1920px;
+        margin: 0 auto;
+    }
+
+    .dc-header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 8px;
+        color: #FFD700;
+    }
+
+    .dc-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 10px 20px 40px;
+        margin-top: 110px;
+    }
+
+    /* Tabs */
+    .dc-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 0;
+        padding: 0 0 10px;
+    }
+
+    .dc-tab {
+        padding: 8px 18px;
+        border: none;
+        border-radius: 6px;
+        background: #444;
+        color: #aaa;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+        min-height: 48px;
+        min-width: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .dc-tab:hover {
+        background: #555;
+        color: #ddd;
+    }
+
+    .dc-tab.active {
+        background: #3C6090;
+        color: #fff;
+    }
+
+    /* Tab panels */
+    .dc-panel {
+        display: none;
+    }
+
+    .dc-panel.active {
+        display: block;
+    }
+
+    /* Group header (floor/area) */
+    .dc-group-header {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #FFD700;
+        margin: 18px 0 10px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #444;
+    }
+
+    /* Room sub-header (lights tab) */
+    .dc-room-header {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #aaa;
+        margin: 12px 0 6px 4px;
+    }
+
+    /* Device cards */
+    .dc-device-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+
+    .dc-card {
+        background: #333;
+        border-radius: 8px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        transition: box-shadow 0.15s ease;
+    }
+
+    .dc-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .dc-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .dc-card-icon {
+        font-size: 1.2rem;
+        color: #888;
+        width: 24px;
+        text-align: center;
+    }
+
+    .dc-card-icon.state-on {
+        color: #FFD700;
+    }
+
+    .dc-card-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #ddd;
+        flex: 1;
+    }
+
+    .dc-card-icon.state-unavailable {
+        color: #f44336;
+    }
+
+    /* Action buttons */
+    .dc-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    .dc-btn {
+        flex: 1;
+        padding: 8px 6px;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, opacity 0.15s ease;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .dc-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .dc-btn-action {
+        background: #3C6090;
+        color: #fff;
+    }
+    .dc-btn-action:hover:not(:disabled) { background: #4a75ab; }
+
+    .dc-btn-action.action-off {
+        background: #7a2d2d;
+    }
+    .dc-btn-action.action-off:hover:not(:disabled) { background: #953838; }
+
+    .dc-btn-action.action-on {
+        background: #2d7a3a;
+    }
+    .dc-btn-action.action-on:hover:not(:disabled) { background: #38954a; }
+
+    .dc-btn-open {
+        background: #2d7a3a;
+        color: #fff;
+    }
+    .dc-btn-open:hover:not(:disabled) { background: #38954a; }
+
+    .dc-btn-close {
+        background: #7a2d2d;
+        color: #fff;
+    }
+    .dc-btn-close:hover:not(:disabled) { background: #953838; }
+
+    .dc-btn-stop {
+        background: #8a6d1b;
+        color: #fff;
+    }
+    .dc-btn-stop:hover:not(:disabled) { background: #a6831f; }
+
+    /* Cover position bar */
+    .dc-position-bar {
+        height: 4px;
+        background: #555;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .dc-position-fill {
+        height: 100%;
+        background: #3C6090;
+        transition: width 0.3s ease;
+    }
+
+    /* Loading spinner */
+    .dc-loading {
+        text-align: center;
+        padding: 40px;
+        color: #888;
+    }
+
+    .dc-loading i {
+        font-size: 2rem;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Pending action indicator */
+    .dc-card.pending {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    /* All-controls row */
+    .dc-all-controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        justify-content: center;
+    }
+
+    .dc-all-btn {
+        padding: 8px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        min-height: 44px;
+        transition: background 0.15s ease;
+    }
+
+    .dc-all-btn-on {
+        background: #2d7a3a;
+        color: #fff;
+    }
+    .dc-all-btn-on:hover { background: #38954a; }
+
+    .dc-all-btn-off {
+        background: #7a2d2d;
+        color: #fff;
+    }
+    .dc-all-btn-off:hover { background: #953838; }
+
+    .dc-all-btn-open {
+        background: #2d7a3a;
+        color: #fff;
+    }
+    .dc-all-btn-open:hover { background: #38954a; }
+
+    .dc-all-btn-close {
+        background: #7a2d2d;
+        color: #fff;
+    }
+    .dc-all-btn-close:hover { background: #953838; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+        .dc-device-grid {
+            grid-template-columns: 1fr;
+        }
+        .dc-tab {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+    }
+</style>
+
+<!-- Fixed header with tabs -->
+<div class="dc-header">
+    <div class="dc-header-inner">
+        <h1><i class="fas fa-sliders-h"></i> Device Control</h1>
+        <div class="dc-tabs">
+            {% for tab in tabs %}
+            <button class="dc-tab{% if forloop.first %} active{% endif %}"
+                    onclick="switchTab('{{ tab.key }}', this)">
+                <i class="fas {{ tab.icon }}"></i>
+                {{ tab.label }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Content -->
+<div class="dc-container">
+    {% for tab in tabs %}
+    <div id="panel-{{ tab.key }}" class="dc-panel{% if forloop.first %} active{% endif %}">
+        <div class="dc-loading" id="loading-{{ tab.key }}">
+            <i class="fas fa-spinner"></i>
+            <p>Loading devices...</p>
+        </div>
+        <div id="content-{{ tab.key }}" style="display:none;">
+            {% for group_name, devices in tab.devices.items %}
+            <div class="dc-group-header">{{ group_name }}</div>
+
+            {% if tab.key == "lights" %}
+                {# Group lights by room within the floor #}
+                {% regroup devices by room as rooms %}
+                {% for room in rooms %}
+                <div class="dc-room-header">{{ room.grouper }}</div>
+                <div class="dc-device-grid">
+                    {% for dev in room.list %}
+                    <div class="dc-card" id="card-{{ dev.entity_id|cut:'.' }}" data-entity="{{ dev.entity_id }}" data-type="{{ dev.type }}">
+                        <div class="dc-card-header">
+                            <i class="fas {{ dev.icon }} dc-card-icon" id="icon-{{ dev.entity_id|cut:'.' }}"></i>
+                            <span class="dc-card-name">{{ dev.name }}</span>
+                        </div>
+                        <div class="dc-actions">
+                            <button class="dc-btn dc-btn-action" id="btn-{{ dev.entity_id|cut:'.' }}" onclick="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
+                                <i class="fas fa-spinner fa-spin"></i> ...
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+            {% elif tab.key == "blinds" %}
+                {# Cover devices with open/close/stop buttons #}
+                <div class="dc-device-grid">
+                    {% for dev in devices %}
+                    <div class="dc-card" id="card-{{ dev.entity_id|cut:'.' }}" data-entity="{{ dev.entity_id }}" data-type="{{ dev.type }}">
+                        <div class="dc-card-header">
+                            <i class="fas {{ dev.icon }} dc-card-icon" id="icon-{{ dev.entity_id|cut:'.' }}"></i>
+                            <span class="dc-card-name">{{ dev.name }}</span>
+                        </div>
+                        <div class="dc-position-bar">
+                            <div class="dc-position-fill" id="pos-{{ dev.entity_id|cut:'.' }}" style="width: 0%"></div>
+                        </div>
+                        <div class="dc-actions">
+                            <button class="dc-btn dc-btn-open" onclick="doAction('{{ dev.entity_id }}', 'open', '{{ dev.type }}')">
+                                <i class="fas fa-arrow-up"></i> Open
+                            </button>
+                            <button class="dc-btn dc-btn-stop" onclick="doAction('{{ dev.entity_id }}', 'stop', '{{ dev.type }}')">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                            <button class="dc-btn dc-btn-close" onclick="doAction('{{ dev.entity_id }}', 'close', '{{ dev.type }}')">
+                                <i class="fas fa-arrow-down"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            {% else %}
+                {# Switch / media_player / generic devices with on/off #}
+                <div class="dc-device-grid">
+                    {% for dev in devices %}
+                    <div class="dc-card" id="card-{{ dev.entity_id|cut:'.' }}" data-entity="{{ dev.entity_id }}" data-type="{{ dev.type }}">
+                        <div class="dc-card-header">
+                            <i class="fas {{ dev.icon }} dc-card-icon" id="icon-{{ dev.entity_id|cut:'.' }}"></i>
+                            <span class="dc-card-name">{{ dev.name }}</span>
+                        </div>
+                        <div class="dc-actions">
+                            <button class="dc-btn dc-btn-action" id="btn-{{ dev.entity_id|cut:'.' }}" onclick="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
+                                <i class="fas fa-spinner fa-spin"></i> ...
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    const STATES_URL = "{% url 'device_control_states' %}";
+    const ACTION_URL = "{% url 'device_control_action' %}";
+    const CSRF = "{{ csrf_token }}";
+
+    // Cached states
+    let entityStates = {};
+    let refreshTimer = null;
+
+    // ── Tab switching ──
+    function switchTab(key, btn) {
+        document.querySelectorAll('.dc-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.dc-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + key).classList.add('active');
+    }
+
+    // ── Fetch states ──
+    function fetchStates() {
+        fetch(STATES_URL)
+            .then(r => r.json())
+            .then(data => {
+                entityStates = data;
+                updateUI();
+                // Hide spinners, show content
+                document.querySelectorAll('.dc-loading').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('[id^="content-"]').forEach(el => el.style.display = 'block');
+            })
+            .catch(err => {
+                console.error('Failed to fetch states:', err);
+            });
+    }
+
+    // ── Update UI from cached states ──
+    function updateUI() {
+        for (const [eid, info] of Object.entries(entityStates)) {
+            const safeId = eid.replace('.', '');
+            const iconEl = document.getElementById('icon-' + safeId);
+            const btnEl = document.getElementById('btn-' + safeId);
+            const posEl = document.getElementById('pos-' + safeId);
+            const state = info.state || 'unknown';
+            const isOn = state === 'on' || state === 'open' || state === 'playing';
+            const isUnavailable = state === 'unavailable';
+
+            // Icon reflects current state
+            if (iconEl) {
+                iconEl.classList.toggle('state-on', isOn);
+                iconEl.classList.toggle('state-unavailable', isUnavailable);
+            }
+
+            // Toggle button: show the action to change TO
+            if (btnEl) {
+                if (isUnavailable) {
+                    btnEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Unavailable';
+                    btnEl.disabled = true;
+                    btnEl.className = 'dc-btn dc-btn-action';
+                } else if (isOn) {
+                    btnEl.innerHTML = '<i class="fas fa-power-off"></i> Turn Off';
+                    btnEl.disabled = false;
+                    btnEl.className = 'dc-btn dc-btn-action action-off';
+                } else {
+                    btnEl.innerHTML = '<i class="fas fa-power-off"></i> Turn On';
+                    btnEl.disabled = false;
+                    btnEl.className = 'dc-btn dc-btn-action action-on';
+                }
+            }
+
+            // Cover position bar
+            if (posEl && info.current_position !== undefined) {
+                posEl.style.width = info.current_position + '%';
+            }
+
+            // Cover buttons: disable open when open, close when closed
+            const openBtn = document.querySelector(`#card-${safeId} .dc-btn-open`);
+            const closeBtn = document.querySelector(`#card-${safeId} .dc-btn-close`);
+            if (openBtn) openBtn.disabled = (state === 'open');
+            if (closeBtn) closeBtn.disabled = (state === 'closed');
+        }
+    }
+
+    // ── Toggle (single-button devices) ──
+    function toggleDevice(entityId, type) {
+        const safeId = entityId.replace('.', '');
+        const info = entityStates[entityId];
+        const state = info ? info.state : 'off';
+        const isOn = state === 'on' || state === 'playing';
+        const action = isOn ? 'off' : 'on';
+        doAction(entityId, action, type);
+    }
+
+    // ── Perform action ──
+    function doAction(entityId, action, type) {
+        const safeId = entityId.replace('.', '');
+        const card = document.getElementById('card-' + safeId);
+        if (card) card.classList.add('pending');
+
+        fetch(ACTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify({
+                entity_id: entityId,
+                action: action,
+                type: type,
+            }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (card) card.classList.remove('pending');
+            if (!data.ok && data.error) {
+                console.error('Action failed:', data.error);
+            }
+            // Refresh states after a short delay for HA to process
+            setTimeout(fetchStates, 1000);
+        })
+        .catch(err => {
+            if (card) card.classList.remove('pending');
+            console.error('Action error:', err);
+        });
+    }
+
+    // ── Init ──
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchStates();
+        // Auto-refresh every 10 seconds
+        refreshTimer = setInterval(fetchStates, 10000);
+    });
+</script>
+{% endblock %}
