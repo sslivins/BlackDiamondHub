@@ -257,6 +257,74 @@
     }
     .dc-btn-action.action-on:hover:not(:disabled) { background: #38954a; }
 
+    /* Toggle switch (iOS-style pill) */
+    .dc-toggle {
+        position: relative;
+        display: inline-block;
+        width: 56px;
+        height: 30px;
+        flex-shrink: 0;
+    }
+
+    .dc-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .dc-toggle-track {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: #555;
+        border-radius: 15px;
+        transition: background 0.25s ease;
+    }
+
+    .dc-toggle-track::after {
+        content: '';
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        left: 3px;
+        bottom: 3px;
+        background: #ccc;
+        border-radius: 50%;
+        transition: transform 0.25s ease, background 0.25s ease;
+    }
+
+    .dc-toggle input:checked + .dc-toggle-track {
+        background: #D4A843;
+    }
+
+    .dc-toggle input:checked + .dc-toggle-track::after {
+        transform: translateX(26px);
+        background: #fff;
+    }
+
+    .dc-toggle input:disabled + .dc-toggle-track {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .dc-toggle-label {
+        font-size: 0.7rem;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        min-width: 24px;
+    }
+
+    .dc-toggle-label.is-on {
+        color: #D4A843;
+    }
+
+    .dc-toggle-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     .dc-btn-open {
         background: #2d7a3a;
         color: #fff;
@@ -568,10 +636,14 @@
                                         <i class="fas fa-power-off"></i>
                                     </button>
                                 </div>
-                                {# Fallback on/off button for non-dimmable lights #}
-                                <button class="dc-btn dc-btn-action" id="btn-{{ dev.entity_id|cut:'.' }}" onclick="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
-                                    <i class="fas fa-spinner fa-spin"></i> ...
-                                </button>
+                                {# Fallback on/off toggle for non-dimmable lights #}
+                                <div class="dc-toggle-wrapper" id="toggle-wrap-{{ dev.entity_id|cut:'.' }}">
+                                    <span class="dc-toggle-label" id="toggle-label-{{ dev.entity_id|cut:'.' }}">Off</span>
+                                    <label class="dc-toggle">
+                                        <input type="checkbox" id="btn-{{ dev.entity_id|cut:'.' }}" onchange="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
+                                        <span class="dc-toggle-track"></span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -614,9 +686,13 @@
                         <div class="dc-card-body">
                             <span class="dc-card-name">{{ dev.name }}</span>
                             <div class="dc-actions">
-                                <button class="dc-btn dc-btn-action" id="btn-{{ dev.entity_id|cut:'.' }}" onclick="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
-                                    <i class="fas fa-spinner fa-spin"></i> ...
-                                </button>
+                                <div class="dc-toggle-wrapper" id="toggle-wrap-{{ dev.entity_id|cut:'.' }}">
+                                    <span class="dc-toggle-label" id="toggle-label-{{ dev.entity_id|cut:'.' }}">Off</span>
+                                    <label class="dc-toggle">
+                                        <input type="checkbox" id="btn-{{ dev.entity_id|cut:'.' }}" onchange="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
+                                        <span class="dc-toggle-track"></span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -729,20 +805,23 @@
                 }
             }
 
-            // Toggle button: show the action to change TO
+            // Toggle switch: reflect current state
             if (btnEl) {
+                const labelEl = document.getElementById('toggle-label-' + safeId);
                 if (isUnavailable) {
-                    btnEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Unavailable';
+                    btnEl.checked = false;
                     btnEl.disabled = true;
-                    btnEl.className = 'dc-btn dc-btn-action';
-                } else if (isOn) {
-                    btnEl.innerHTML = '<i class="fas fa-power-off"></i> Turn Off';
-                    btnEl.disabled = false;
-                    btnEl.className = 'dc-btn dc-btn-action action-off';
+                    if (labelEl) {
+                        labelEl.textContent = 'N/A';
+                        labelEl.classList.remove('is-on');
+                    }
                 } else {
-                    btnEl.innerHTML = '<i class="fas fa-power-off"></i> Turn On';
+                    btnEl.checked = isOn;
                     btnEl.disabled = false;
-                    btnEl.className = 'dc-btn dc-btn-action action-on';
+                    if (labelEl) {
+                        labelEl.textContent = isOn ? 'On' : 'Off';
+                        labelEl.classList.toggle('is-on', isOn);
+                    }
                 }
             }
 
@@ -754,7 +833,9 @@
                                info.supported_color_modes.includes('brightness');
             if (sliderRow && isDimmable) {
                 sliderRow.style.display = 'flex';
-                if (btnEl) btnEl.style.display = 'none';
+                // Hide the toggle wrapper for dimmable lights
+                const toggleWrap = document.getElementById('toggle-wrap-' + safeId);
+                if (toggleWrap) toggleWrap.style.display = 'none';
 
                 // Only sync slider if user is NOT actively dragging or in cooldown
                 if (!activeSliders.has(eid) && !sliderCooldowns.has(eid)) {
@@ -816,13 +897,12 @@
         }, 4000);
     }
 
-    // ── Toggle (single-button devices) ──
+    // ── Toggle (switch devices) ──
     function toggleDevice(entityId, type) {
         const safeId = entityId.replace('.', '');
-        const info = entityStates[entityId];
-        const state = info ? info.state : 'off';
-        const isOn = state === 'on' || state === 'playing';
-        const action = isOn ? 'off' : 'on';
+        const btnEl = document.getElementById('btn-' + safeId);
+        // Checkbox already flipped by the time onchange fires
+        const action = (btnEl && btnEl.checked) ? 'on' : 'off';
         doAction(entityId, action, type);
     }
 
