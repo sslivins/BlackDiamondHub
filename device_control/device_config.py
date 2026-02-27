@@ -313,9 +313,6 @@ LIGHT_DEVICES = {
         # Stairs
         {"entity_id": "light.stairs_upper_step_lights", "name": "Upper Step Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
         {"entity_id": "light.stairs_upstairs_hanging_lights", "name": "Hanging Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
-        {"entity_id": "light.stairs_screen_accent_lights", "name": "Screen Accent", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
-        {"entity_id": "light.stairs_downstairs_sconce_lights", "name": "Downstairs Sconces", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
-        {"entity_id": "light.stairs_lower_step_lights", "name": "Lower Step Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
     ],
     "Main Floor": [
         # Living Room
@@ -338,8 +335,13 @@ LIGHT_DEVICES = {
         {"entity_id": "switch.ski_room_ceiling_fan_light", "name": "Ceiling Fan Light", "type": "switch", "icon": "fa-lightbulb", "room": "Ski Room"},
         # Hallway
         {"entity_id": "light.hallway_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Hallway"},
+        # Stairs
+        {"entity_id": "light.stairs_screen_accent_lights", "name": "Screen Accent", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
     ],
     "Basement": [
+        # Stairs
+        {"entity_id": "light.stairs_downstairs_sconce_lights", "name": "Downstairs Sconces", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
+        {"entity_id": "light.stairs_lower_step_lights", "name": "Lower Step Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
         # Bar
         {"entity_id": "light.bar_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
         {"entity_id": "light.bar_shelf_lights", "name": "Shelf Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
