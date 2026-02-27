@@ -3,8 +3,9 @@ Tests for the device_control app.
 """
 
 from unittest.mock import patch, MagicMock
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, tag
 from django.urls import reverse
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 
 from .device_config import TABS, get_all_entity_ids
 from .ha_client import get_entity_state, get_entity_states, call_service
@@ -154,7 +155,7 @@ class ViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data["ok"])
-        mock_call.assert_called_once_with("switch", "turn_on", "switch.living_room_tv_socket_1")
+        mock_call.assert_called_once_with("switch", "turn_on", "switch.living_room_tv_socket_1", extra_data=None)
 
     def test_action_rejects_unknown_entity(self):
         resp = self.client.post(
@@ -189,7 +190,7 @@ class ViewTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, 200)
-        mock_call.assert_called_once_with("cover", "open_cover", "cover.kitchen_left_window")
+        mock_call.assert_called_once_with("cover", "open_cover", "cover.kitchen_left_window", extra_data=None)
 
     @patch("device_control.views.call_service")
     def test_action_ha_error_returns_502(self, mock_call):
@@ -202,3 +203,90 @@ class ViewTests(TestCase):
         self.assertEqual(resp.status_code, 502)
         data = resp.json()
         self.assertFalse(data["ok"])
+
+
+@tag('selenium')
+class DeviceControlShadesButtonOverflowTest(StaticLiveServerTestCase):
+    """Ensure shade card buttons are never clipped by card overflow."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        from selenium import webdriver
+        from tests.selenium_helpers import get_chrome_options
+        cls.browser = webdriver.Chrome(options=get_chrome_options())
+        # 1920×1080 desktop — grid packs many columns so cards stay near
+        # the 200px minmax floor, squeezing the 3 shade buttons.
+        cls.browser.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', {
+            'width': 1920,
+            'height': 1080,
+            'deviceScaleFactor': 1,
+            'mobile': False,
+        })
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.quit()
+        super().tearDownClass()
+
+    def test_shade_buttons_not_clipped(self):
+        """All three shade buttons (Open/Stop/Close) must be fully visible."""
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+
+        self.browser.get(self.live_server_url + reverse("device_control"))
+
+        # Click the Shades tab
+        WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "dc-tab"))
+        )
+        for tab_btn in self.browser.find_elements(By.CLASS_NAME, "dc-tab"):
+            if "Shades" in tab_btn.text:
+                tab_btn.click()
+                break
+
+        # Wait for shade cards to appear
+        WebDriverWait(self.browser, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".dc-btn-close"))
+        )
+
+        # Check every shade card's buttons
+        cards = self.browser.find_elements(By.CSS_SELECTOR, "[data-type='cover']")
+        self.assertTrue(len(cards) > 0, "No shade cards found")
+
+        for card in cards:
+            card_rect = card.rect  # {x, y, width, height}
+            card_right = card_rect['x'] + card_rect['width']
+            card_bottom = card_rect['y'] + card_rect['height']
+
+            buttons = card.find_elements(By.CSS_SELECTOR, ".dc-btn")
+            self.assertEqual(len(buttons), 3,
+                             f"Expected 3 buttons in card, found {len(buttons)}")
+
+            for btn in buttons:
+                btn_rect = btn.rect
+                btn_right = btn_rect['x'] + btn_rect['width']
+                btn_bottom = btn_rect['y'] + btn_rect['height']
+
+                # Button must not extend beyond the card's visible bounds
+                self.assertLessEqual(
+                    btn_right, card_right + 1,  # 1px tolerance for rounding
+                    f"Button '{btn.text}' right edge ({btn_right}px) extends "
+                    f"beyond card right edge ({card_right}px) — button is clipped horizontally"
+                )
+                self.assertLessEqual(
+                    btn_bottom, card_bottom + 1,
+                    f"Button '{btn.text}' bottom edge ({btn_bottom}px) extends "
+                    f"beyond card bottom edge ({card_bottom}px) — button is clipped vertically"
+                )
+
+                # Button must have positive visible dimensions
+                self.assertGreater(
+                    btn_rect['width'], 0,
+                    f"Button '{btn.text}' has zero width — not visible"
+                )
+                self.assertGreater(
+                    btn_rect['height'], 0,
+                    f"Button '{btn.text}' has zero height — not visible"
+                )

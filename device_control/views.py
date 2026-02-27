@@ -35,6 +35,7 @@ SERVICE_MAP = {
         "open": ("cover", "open_cover"),
         "close": ("cover", "close_cover"),
         "stop": ("cover", "stop_cover"),
+        "set_position": ("cover", "set_cover_position"),
     },
     "media_player": {
         "on": ("media_player", "turn_on"),
@@ -60,14 +61,22 @@ def device_control_states(request):
 
     result = {}
     for eid, data in raw_states.items():
+        attrs = data.get("attributes", {})
         entry = {
             "state": data.get("state", "unknown"),
-            "friendly_name": data.get("attributes", {}).get("friendly_name", eid),
+            "friendly_name": attrs.get("friendly_name", eid),
         }
         # Include position for covers
-        pos = data.get("attributes", {}).get("current_position")
+        pos = attrs.get("current_position")
         if pos is not None:
             entry["current_position"] = pos
+        # Include brightness info for lights
+        brightness = attrs.get("brightness")
+        if brightness is not None:
+            entry["brightness"] = brightness  # 0-255
+        color_modes = attrs.get("supported_color_modes")
+        if color_modes:
+            entry["supported_color_modes"] = color_modes
         result[eid] = entry
 
     return JsonResponse(result)
@@ -107,7 +116,19 @@ def device_control_action(request):
         return JsonResponse({"error": f"Unknown action: {action}"}, status=400)
 
     domain, service = service_info
-    success, error = call_service(domain, service, entity_id)
+
+    # Pass brightness for light dimming
+    extra_data = None
+    if device_type == "light" and action == "on":
+        brightness = body.get("brightness")
+        if brightness is not None:
+            extra_data = {"brightness": int(brightness)}
+    elif device_type == "cover" and action == "set_position":
+        position = body.get("position")
+        if position is not None:
+            extra_data = {"position": int(position)}
+
+    success, error = call_service(domain, service, entity_id, extra_data=extra_data)
 
     if success:
         return JsonResponse({"ok": True, "entity_id": entity_id, "action": action})

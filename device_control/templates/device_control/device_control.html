@@ -107,21 +107,67 @@
         margin: 12px 0 6px 4px;
     }
 
+    /* Scroll hint: fade gradient + bouncing chevron */
+    .scroll-hint {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 80px;
+        background: linear-gradient(transparent, #222);
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        padding-bottom: 10px;
+        pointer-events: none;
+        z-index: 10;
+        transition: opacity 0.4s ease;
+    }
+
+    .scroll-hint.hidden {
+        opacity: 0;
+    }
+
+    .scroll-hint i {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 24px;
+        animation: bounce 1.5s infinite;
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+
+    /* Failure flash on card */
+    .dc-card.action-failed {
+        box-shadow: 0 0 0 2px #f44336;
+    }
+
+    .dc-fail-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        color: #f44336;
+        font-size: 0.85rem;
+    }
+
     /* Device cards */
     .dc-device-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
         gap: 10px;
         margin-bottom: 6px;
     }
 
     .dc-card {
+        position: relative;
         background: #333;
         border-radius: 8px;
-        padding: 14px;
         display: flex;
-        flex-direction: column;
-        gap: 8px;
+        flex-direction: row;
+        overflow: hidden;
+        border: 2px solid rgba(255,255,255,0.15);
         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         transition: box-shadow 0.15s ease;
     }
@@ -130,17 +176,28 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
-    .dc-card-header {
+    .dc-card-icon-col {
         display: flex;
         align-items: center;
-        gap: 8px;
+        justify-content: center;
+        width: 52px;
+        min-width: 52px;
+        background: #2a2a2a;
+        border-right: 1px solid #444;
+    }
+
+    .dc-card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px 12px;
+        min-width: 0;
     }
 
     .dc-card-icon {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
         color: #888;
-        width: 24px;
-        text-align: center;
     }
 
     .dc-card-icon.state-on {
@@ -151,7 +208,6 @@
         font-size: 0.85rem;
         font-weight: 600;
         color: #ddd;
-        flex: 1;
     }
 
     .dc-card-icon.state-unavailable {
@@ -219,19 +275,81 @@
     }
     .dc-btn-stop:hover:not(:disabled) { background: #a6831f; }
 
-    /* Cover position bar */
-    .dc-position-bar {
-        height: 4px;
-        background: #555;
-        border-radius: 2px;
-        overflow: hidden;
+    /* Cover position slider */
+    .dc-cover-slider-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .dc-position-fill {
-        height: 100%;
-        background: #3C6090;
-        transition: width 0.3s ease;
+    .dc-cover-slider {
+        flex: 1;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 32px;
+        border-radius: 4px;
+        background: #444;
+        outline: none;
+        cursor: pointer;
+        border: 1px solid #555;
     }
+
+    .dc-cover-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 40px;
+        border-radius: 4px;
+        background: #6BA4E0;
+        cursor: pointer;
+        border: 2px solid #333;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    .dc-cover-slider::-moz-range-thumb {
+        width: 28px;
+        height: 40px;
+        border-radius: 4px;
+        background: #6BA4E0;
+        cursor: pointer;
+        border: 2px solid #333;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    .dc-cover-slider::-webkit-slider-runnable-track {
+        height: 32px;
+        border-radius: 4px;
+    }
+
+    .dc-cover-slider::-moz-range-track {
+        height: 32px;
+        border-radius: 4px;
+        background: #444;
+        border: 1px solid #555;
+    }
+
+    .dc-cover-slider:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .dc-cover-slider:disabled::-webkit-slider-thumb {
+        background: #888;
+    }
+
+    .dc-cover-stop-btn {
+        background: #8a6d1b;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        min-height: 40px;
+        min-width: 40px;
+        transition: background 0.15s ease;
+    }
+    .dc-cover-stop-btn:hover:not(:disabled) { background: #a6831f; }
 
     /* Loading spinner */
     .dc-loading {
@@ -299,6 +417,92 @@
     }
     .dc-all-btn-close:hover { background: #953838; }
 
+    /* Brightness slider */
+    .dc-slider-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .dc-brightness-slider {
+        flex: 1;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 32px;
+        border-radius: 4px;
+        background: #444;
+        outline: none;
+        cursor: pointer;
+        border: 1px solid #555;
+    }
+
+    .dc-brightness-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 28px;
+        height: 40px;
+        border-radius: 4px;
+        background: #FFD700;
+        cursor: pointer;
+        border: 2px solid #333;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    .dc-brightness-slider::-moz-range-thumb {
+        width: 28px;
+        height: 40px;
+        border-radius: 4px;
+        background: #FFD700;
+        cursor: pointer;
+        border: 2px solid #333;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    .dc-brightness-slider::-webkit-slider-runnable-track {
+        height: 32px;
+        border-radius: 4px;
+    }
+
+    .dc-brightness-slider::-moz-range-track {
+        height: 32px;
+        border-radius: 4px;
+        background: #444;
+        border: 1px solid #555;
+    }
+
+    .dc-brightness-slider:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .dc-brightness-slider:disabled::-webkit-slider-thumb {
+        background: #888;
+    }
+
+    .dc-off-btn {
+        background: #7a2d2d;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        min-height: 32px;
+        min-width: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s ease;
+    }
+
+    .dc-off-btn:hover:not(:disabled) { background: #953838; }
+    .dc-off-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .dc-off-btn.state-off {
+        background: #555;
+    }
+
     /* Responsive */
     @media (max-width: 600px) {
         .dc-device-grid {
@@ -347,42 +551,53 @@
                 <div class="dc-device-grid">
                     {% for dev in room.list %}
                     <div class="dc-card" id="card-{{ dev.entity_id|cut:'.' }}" data-entity="{{ dev.entity_id }}" data-type="{{ dev.type }}">
-                        <div class="dc-card-header">
+                        <div class="dc-card-icon-col">
                             <i class="fas {{ dev.icon }} dc-card-icon" id="icon-{{ dev.entity_id|cut:'.' }}"></i>
-                            <span class="dc-card-name">{{ dev.name }}</span>
                         </div>
-                        <div class="dc-actions">
-                            <button class="dc-btn dc-btn-action" id="btn-{{ dev.entity_id|cut:'.' }}" onclick="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
-                                <i class="fas fa-spinner fa-spin"></i> ...
-                            </button>
+                        <div class="dc-card-body">
+                            <span class="dc-card-name">{{ dev.name }}</span>
+                            <div class="dc-actions">
+                                {# Slider row: shown for dimmable lights, hidden for on/off-only (swapped by JS) #}
+                                <div class="dc-slider-row" id="slider-row-{{ dev.entity_id|cut:'.' }}" style="display:none;">
+                                    <input type="range" min="0" max="255" value="0"
+                                           class="dc-brightness-slider"
+                                           id="slider-{{ dev.entity_id|cut:'.' }}"
+                                           data-entity="{{ dev.entity_id }}">
+                                    <button class="dc-off-btn" id="offbtn-{{ dev.entity_id|cut:'.' }}"
+                                            onclick="doAction('{{ dev.entity_id }}', 'off', 'light')">
+                                        <i class="fas fa-power-off"></i>
+                                    </button>
+                                </div>
+                                {# Fallback on/off button for non-dimmable lights #}
+                                <button class="dc-btn dc-btn-action" id="btn-{{ dev.entity_id|cut:'.' }}" onclick="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
+                                    <i class="fas fa-spinner fa-spin"></i> ...
+                                </button>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% endfor %}
 
-            {% elif tab.key == "blinds" %}
-                {# Cover devices with open/close/stop buttons #}
+            {% elif tab.key == "shades" %}
+                {# Cover devices with position slider + stop button #}
                 <div class="dc-device-grid">
                     {% for dev in devices %}
                     <div class="dc-card" id="card-{{ dev.entity_id|cut:'.' }}" data-entity="{{ dev.entity_id }}" data-type="{{ dev.type }}">
-                        <div class="dc-card-header">
+                        <div class="dc-card-icon-col">
                             <i class="fas {{ dev.icon }} dc-card-icon" id="icon-{{ dev.entity_id|cut:'.' }}"></i>
+                        </div>
+                        <div class="dc-card-body">
                             <span class="dc-card-name">{{ dev.name }}</span>
-                        </div>
-                        <div class="dc-position-bar">
-                            <div class="dc-position-fill" id="pos-{{ dev.entity_id|cut:'.' }}" style="width: 0%"></div>
-                        </div>
-                        <div class="dc-actions">
-                            <button class="dc-btn dc-btn-open" onclick="doAction('{{ dev.entity_id }}', 'open', '{{ dev.type }}')">
-                                <i class="fas fa-arrow-up"></i> Open
-                            </button>
-                            <button class="dc-btn dc-btn-stop" onclick="doAction('{{ dev.entity_id }}', 'stop', '{{ dev.type }}')">
-                                <i class="fas fa-stop"></i> Stop
-                            </button>
-                            <button class="dc-btn dc-btn-close" onclick="doAction('{{ dev.entity_id }}', 'close', '{{ dev.type }}')">
-                                <i class="fas fa-arrow-down"></i> Close
-                            </button>
+                            <div class="dc-cover-slider-row">
+                                <input type="range" min="0" max="100" value="0"
+                                       class="dc-cover-slider"
+                                       id="cover-slider-{{ dev.entity_id|cut:'.' }}"
+                                       data-entity="{{ dev.entity_id }}">
+                                <button class="dc-cover-stop-btn" onclick="doAction('{{ dev.entity_id }}', 'stop', '{{ dev.type }}')" title="Stop">
+                                    <i class="fas fa-stop"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -393,14 +608,16 @@
                 <div class="dc-device-grid">
                     {% for dev in devices %}
                     <div class="dc-card" id="card-{{ dev.entity_id|cut:'.' }}" data-entity="{{ dev.entity_id }}" data-type="{{ dev.type }}">
-                        <div class="dc-card-header">
+                        <div class="dc-card-icon-col">
                             <i class="fas {{ dev.icon }} dc-card-icon" id="icon-{{ dev.entity_id|cut:'.' }}"></i>
-                            <span class="dc-card-name">{{ dev.name }}</span>
                         </div>
-                        <div class="dc-actions">
-                            <button class="dc-btn dc-btn-action" id="btn-{{ dev.entity_id|cut:'.' }}" onclick="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
-                                <i class="fas fa-spinner fa-spin"></i> ...
-                            </button>
+                        <div class="dc-card-body">
+                            <span class="dc-card-name">{{ dev.name }}</span>
+                            <div class="dc-actions">
+                                <button class="dc-btn dc-btn-action" id="btn-{{ dev.entity_id|cut:'.' }}" onclick="toggleDevice('{{ dev.entity_id }}', '{{ dev.type }}')">
+                                    <i class="fas fa-spinner fa-spin"></i> ...
+                                </button>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -410,6 +627,12 @@
         </div>
     </div>
     {% endfor %}
+
+    <div id="scroll-sentinel" style="height: 1px;"></div>
+</div>
+
+<div class="scroll-hint" id="scroll-hint">
+    <i class="fas fa-chevron-down"></i>
 </div>
 
 <script>
@@ -421,12 +644,39 @@
     let entityStates = {};
     let refreshTimer = null;
 
+    // ── Brightness slider state ──
+    // Tracks which sliders are being actively dragged so polling
+    // doesn't overwrite the thumb position while the user is sliding.
+    const activeSliders = new Set();
+    const sliderTimers = {};  // debounce timers per entity
+    // After a slider action completes, suppress polling updates briefly
+    // so the slider doesn't jump back before HA confirms the new state.
+    const sliderCooldowns = new Set();
+
+    // ── Scroll-hint (bouncing chevron) ──
+    const scrollHint = document.getElementById('scroll-hint');
+    const sentinel = document.getElementById('scroll-sentinel');
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                scrollHint.classList.add('hidden');
+            } else {
+                scrollHint.classList.remove('hidden');
+            }
+        });
+    }, { threshold: 0 });
+    observer.observe(sentinel);
+
     // ── Tab switching ──
     function switchTab(key, btn) {
         document.querySelectorAll('.dc-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.dc-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('panel-' + key).classList.add('active');
+
+        // Re-check scroll hint when switching tabs
+        observer.disconnect();
+        observer.observe(sentinel);
     }
 
     // ── Fetch states ──
@@ -460,6 +710,23 @@
             if (iconEl) {
                 iconEl.classList.toggle('state-on', isOn);
                 iconEl.classList.toggle('state-unavailable', isUnavailable);
+
+                // Cover icons: swap based on position
+                const card = document.getElementById('card-' + safeId);
+                if (card && card.dataset.type === 'cover') {
+                    const pos = info.current_position;
+                    // Remove previous icon classes
+                    iconEl.classList.remove('fa-window-maximize', 'fa-bars', 'fa-square');
+                    if (pos === undefined || pos === null) {
+                        iconEl.classList.add('fa-window-maximize');
+                    } else if (pos >= 95) {
+                        iconEl.classList.add('fa-window-maximize');   // fully open
+                    } else if (pos <= 5) {
+                        iconEl.classList.add('fa-square');            // fully closed
+                    } else {
+                        iconEl.classList.add('fa-bars');              // partially open
+                    }
+                }
             }
 
             // Toggle button: show the action to change TO
@@ -479,17 +746,74 @@
                 }
             }
 
-            // Cover position bar
-            if (posEl && info.current_position !== undefined) {
-                posEl.style.width = info.current_position + '%';
+            // Dimmable light: show slider row, hide toggle button
+            const sliderRow = document.getElementById('slider-row-' + safeId);
+            const slider = document.getElementById('slider-' + safeId);
+            const offBtn = document.getElementById('offbtn-' + safeId);
+            const isDimmable = info.supported_color_modes &&
+                               info.supported_color_modes.includes('brightness');
+            if (sliderRow && isDimmable) {
+                sliderRow.style.display = 'flex';
+                if (btnEl) btnEl.style.display = 'none';
+
+                // Only sync slider if user is NOT actively dragging or in cooldown
+                if (!activeSliders.has(eid) && !sliderCooldowns.has(eid)) {
+                    const brightness = (state === 'on' && info.brightness != null)
+                                       ? info.brightness : 0;
+                    slider.value = brightness;
+                    slider.disabled = isUnavailable;
+                }
+
+                if (offBtn) {
+                    offBtn.disabled = isUnavailable || state !== 'on';
+                    offBtn.classList.toggle('state-off', state !== 'on');
+                }
             }
 
-            // Cover buttons: disable open when open, close when closed
-            const openBtn = document.querySelector(`#card-${safeId} .dc-btn-open`);
-            const closeBtn = document.querySelector(`#card-${safeId} .dc-btn-close`);
-            if (openBtn) openBtn.disabled = (state === 'open');
-            if (closeBtn) closeBtn.disabled = (state === 'closed');
+            // Cover position slider: sync if not actively dragging or in cooldown
+            const coverSlider = document.getElementById('cover-slider-' + safeId);
+            if (coverSlider) {
+                if (!activeSliders.has(eid) && !sliderCooldowns.has(eid)) {
+                    const pos = (info.current_position != null) ? info.current_position : 0;
+                    coverSlider.value = pos;
+                    coverSlider.disabled = isUnavailable;
+                }
+            }
         }
+    }
+
+    // ── Optimistic UI: immediately flip state in cache ──
+    function applyOptimisticState(entityId, action) {
+        if (!entityStates[entityId]) return;
+        const prev = JSON.parse(JSON.stringify(entityStates[entityId]));
+        if (action === 'on')    entityStates[entityId].state = 'on';
+        else if (action === 'off')  entityStates[entityId].state = 'off';
+        else if (action === 'open') entityStates[entityId].state = 'open';
+        else if (action === 'close') entityStates[entityId].state = 'closed';
+        else if (action === 'stop') { /* no state change for stop */ }
+        updateUI();
+        return prev;
+    }
+
+    // ── Show failure badge on card, auto-clear after a few seconds ──
+    function showFailure(entityId) {
+        const safeId = entityId.replace('.', '');
+        const card = document.getElementById('card-' + safeId);
+        if (!card) return;
+        card.classList.add('action-failed');
+        // Add warning triangle if not already present
+        if (!card.querySelector('.dc-fail-badge')) {
+            const badge = document.createElement('i');
+            badge.className = 'fas fa-exclamation-triangle dc-fail-badge';
+            badge.title = 'Action failed';
+            card.appendChild(badge);
+        }
+        // Auto-clear after 4 seconds
+        setTimeout(() => {
+            card.classList.remove('action-failed');
+            const b = card.querySelector('.dc-fail-badge');
+            if (b) b.remove();
+        }, 4000);
     }
 
     // ── Toggle (single-button devices) ──
@@ -506,7 +830,9 @@
     function doAction(entityId, action, type) {
         const safeId = entityId.replace('.', '');
         const card = document.getElementById('card-' + safeId);
-        if (card) card.classList.add('pending');
+
+        // Save previous state and optimistically update the UI
+        const prevState = applyOptimisticState(entityId, action);
 
         fetch(ACTION_URL, {
             method: 'POST',
@@ -522,16 +848,25 @@
         })
         .then(r => r.json())
         .then(data => {
-            if (card) card.classList.remove('pending');
-            if (!data.ok && data.error) {
-                console.error('Action failed:', data.error);
+            if (!data.ok) {
+                // Revert to previous state
+                if (prevState) {
+                    entityStates[entityId] = prevState;
+                    updateUI();
+                }
+                showFailure(entityId);
             }
-            // Refresh states after a short delay for HA to process
-            setTimeout(fetchStates, 1000);
+            // Confirm with a real state fetch after HA processes
+            setTimeout(fetchStates, 1500);
         })
         .catch(err => {
-            if (card) card.classList.remove('pending');
             console.error('Action error:', err);
+            // Revert to previous state
+            if (prevState) {
+                entityStates[entityId] = prevState;
+                updateUI();
+            }
+            showFailure(entityId);
         });
     }
 
@@ -540,6 +875,181 @@
         fetchStates();
         // Auto-refresh every 10 seconds
         refreshTimer = setInterval(fetchStates, 10000);
+
+        // ── Brightness slider event wiring ──
+        document.querySelectorAll('.dc-brightness-slider').forEach(slider => {
+            const entityId = slider.dataset.entity;
+
+            // Mark as actively dragging on pointerdown / touchstart
+            slider.addEventListener('pointerdown', () => activeSliders.add(entityId));
+            slider.addEventListener('touchstart', () => activeSliders.add(entityId), { passive: true });
+
+            // 'input' fires continuously while dragging — debounce the HA call
+            slider.addEventListener('input', () => {
+                // Clear any pending send
+                if (sliderTimers[entityId]) clearTimeout(sliderTimers[entityId]);
+
+                const val = parseInt(slider.value);
+
+                // Optimistically update icon/state in cache
+                if (entityStates[entityId]) {
+                    if (val === 0) {
+                        entityStates[entityId].state = 'off';
+                        entityStates[entityId].brightness = null;
+                    } else {
+                        entityStates[entityId].state = 'on';
+                        entityStates[entityId].brightness = val;
+                    }
+                    // Update icon only (don't call full updateUI to avoid slider jitter)
+                    const safeId = entityId.replace('.', '');
+                    const iconEl = document.getElementById('icon-' + safeId);
+                    const offBtn = document.getElementById('offbtn-' + safeId);
+                    if (iconEl) {
+                        iconEl.classList.toggle('state-on', val > 0);
+                    }
+                    if (offBtn) {
+                        offBtn.disabled = val === 0;
+                        offBtn.classList.toggle('state-off', val === 0);
+                    }
+                }
+
+                // Debounce: send to HA 300ms after the user stops sliding
+                sliderTimers[entityId] = setTimeout(() => {
+                    sendBrightness(entityId, val);
+                }, 300);
+            });
+
+            // Release drag lock on pointerup / touchend / change
+            function releaseDrag() {
+                activeSliders.delete(entityId);
+            }
+            slider.addEventListener('pointerup', releaseDrag);
+            slider.addEventListener('touchend', releaseDrag);
+            slider.addEventListener('change', releaseDrag);
+        });
+
+        // ── Cover position slider event wiring ──
+        document.querySelectorAll('.dc-cover-slider').forEach(slider => {
+            const entityId = slider.dataset.entity;
+
+            slider.addEventListener('pointerdown', () => activeSliders.add(entityId));
+            slider.addEventListener('touchstart', () => activeSliders.add(entityId), { passive: true });
+
+            slider.addEventListener('input', () => {
+                if (sliderTimers[entityId]) clearTimeout(sliderTimers[entityId]);
+
+                const val = parseInt(slider.value);
+
+                // Optimistically update icon
+                if (entityStates[entityId]) {
+                    entityStates[entityId].current_position = val;
+                    if (val >= 95) entityStates[entityId].state = 'open';
+                    else if (val <= 5) entityStates[entityId].state = 'closed';
+                    else entityStates[entityId].state = 'open';
+
+                    const safeId = entityId.replace('.', '');
+                    const iconEl = document.getElementById('icon-' + safeId);
+                    if (iconEl) {
+                        iconEl.classList.remove('fa-window-maximize', 'fa-bars', 'fa-square');
+                        if (val >= 95) iconEl.classList.add('fa-window-maximize');
+                        else if (val <= 5) iconEl.classList.add('fa-square');
+                        else iconEl.classList.add('fa-bars');
+                    }
+                }
+
+                sliderTimers[entityId] = setTimeout(() => {
+                    sendCoverPosition(entityId, val);
+                }, 300);
+            });
+
+            function releaseDrag() {
+                activeSliders.delete(entityId);
+            }
+            slider.addEventListener('pointerup', releaseDrag);
+            slider.addEventListener('touchend', releaseDrag);
+            slider.addEventListener('change', releaseDrag);
+        });
     });
+
+    // ── Send brightness to HA ──
+    function sendBrightness(entityId, brightness) {
+        // Enter cooldown so polling doesn't snap the slider back
+        sliderCooldowns.add(entityId);
+
+        const action = brightness === 0 ? 'off' : 'on';
+        const body = {
+            entity_id: entityId,
+            action: action,
+            type: 'light',
+        };
+        if (brightness > 0) {
+            body.brightness = brightness;
+        }
+
+        fetch(ACTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify(body),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) {
+                showFailure(entityId);
+            }
+            // Allow polling to update again after HA has had time to process
+            setTimeout(() => {
+                sliderCooldowns.delete(entityId);
+                fetchStates();
+            }, 2000);
+        })
+        .catch(err => {
+            console.error('Brightness error:', err);
+            showFailure(entityId);
+            setTimeout(() => {
+                sliderCooldowns.delete(entityId);
+                fetchStates();
+            }, 2000);
+        });
+    }
+
+    // ── Send cover position to HA ──
+    function sendCoverPosition(entityId, position) {
+        sliderCooldowns.add(entityId);
+
+        fetch(ACTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify({
+                entity_id: entityId,
+                action: 'set_position',
+                type: 'cover',
+                position: position,
+            }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) {
+                showFailure(entityId);
+            }
+            setTimeout(() => {
+                sliderCooldowns.delete(entityId);
+                fetchStates();
+            }, 2000);
+        })
+        .catch(err => {
+            console.error('Cover position error:', err);
+            showFailure(entityId);
+            setTimeout(() => {
+                sliderCooldowns.delete(entityId);
+                fetchStates();
+            }, 2000);
+        });
+    }
 </script>
 {% endblock %}

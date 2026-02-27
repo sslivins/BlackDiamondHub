@@ -16,7 +16,7 @@ TV_DEVICES = {
     "Living Room": [
         {
             "entity_id": "media_player.living_room_television",
-            "name": "Living Room TV (85\" Frame)",
+            "name": "Living Room TV",
             "type": "media_player",
             "icon": "fa-tv",
         },
@@ -61,10 +61,10 @@ TV_DEVICES = {
             "icon": "fa-plug",
         },
     ],
-    "Media Room": [
+    "Games Room": [
         {
             "entity_id": "media_player.65_the_frame",
-            "name": "Media Room TV (65\" Frame)",
+            "name": "Games Room TV",
             "type": "media_player",
             "icon": "fa-tv",
         },
@@ -170,6 +170,18 @@ BLIND_DEVICES = {
             "type": "cover",
             "icon": "fa-window-maximize",
         },
+        {
+            "entity_id": "cover.double_bunk_room_bedroom_shades",
+            "name": "Double Bunk Room Shades",
+            "type": "cover",
+            "icon": "fa-window-maximize",
+        },
+        {
+            "entity_id": "cover.queen_and_bunk_bedroom_window_shade",
+            "name": "Bunk + Queen Bedroom Shade",
+            "type": "cover",
+            "icon": "fa-window-maximize",
+        },
     ],
     "Main Floor": [
         {
@@ -246,18 +258,6 @@ BLIND_DEVICES = {
             "type": "cover",
             "icon": "fa-window-maximize",
         },
-        {
-            "entity_id": "cover.double_bunk_room_bedroom_shades",
-            "name": "Double Bunk Room Shades",
-            "type": "cover",
-            "icon": "fa-window-maximize",
-        },
-        {
-            "entity_id": "cover.queen_and_bunk_bedroom_window_shade",
-            "name": "Queen & Bunk Bedroom Shade",
-            "type": "cover",
-            "icon": "fa-window-maximize",
-        },
     ],
     "Deck / Exterior": [
         {
@@ -299,73 +299,73 @@ BLIND_DEVICES = {
 LIGHT_DEVICES = {
     "Upper Floor": [
         # Master Bedroom
-        {"entity_id": "light.master_bedroom_main_lights", "name": "Master Bedroom Main", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
-        {"entity_id": "light.master_bedroom_chandelier", "name": "Master Bedroom Chandelier", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
-        {"entity_id": "light.master_bedroom_left_reading_light", "name": "Master Bedroom Right Reading", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
-        {"entity_id": "light.master_bedroom_right_reading_light", "name": "Master Bedroom Left Reading", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
-        {"entity_id": "light.master_bedroom_accent_lights", "name": "Master Bedroom Desk Light", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
-        {"entity_id": "light.master_bedroom_closet_light", "name": "Master Bedroom Closet", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
+        {"entity_id": "light.master_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
+        {"entity_id": "light.master_bedroom_chandelier", "name": "Chandelier", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
+        {"entity_id": "light.master_bedroom_left_reading_light", "name": "Left Reading Light", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
+        {"entity_id": "light.master_bedroom_right_reading_light", "name": "Right Reading Light", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
+        {"entity_id": "light.master_bedroom_accent_lights", "name": "Desk Light", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
+        {"entity_id": "light.master_bedroom_closet_light", "name": "Closet Light", "type": "light", "icon": "fa-lightbulb", "room": "Master Bedroom"},
         # Master Bathroom
-        {"entity_id": "light.master_bathroom_main_lights", "name": "Master Bathroom Main", "type": "light", "icon": "fa-lightbulb", "room": "Master Bathroom"},
-        {"entity_id": "light.master_bathroom_vanity_lights", "name": "Master Bathroom Vanity", "type": "light", "icon": "fa-lightbulb", "room": "Master Bathroom"},
+        {"entity_id": "light.master_bathroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Master Bathroom"},
+        {"entity_id": "light.master_bathroom_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Master Bathroom"},
         # Bedrooms
-        {"entity_id": "light.double_bunk_bedroom_main_lights", "name": "Double Bunk Bedroom Main", "type": "light", "icon": "fa-lightbulb", "room": "Double Bunk Bedroom"},
-        {"entity_id": "light.bunk_with_queen_bedroom_main_lights", "name": "Bunk + Queen Bedroom Main", "type": "light", "icon": "fa-lightbulb", "room": "Bunk + Queen Bedroom"},
+        {"entity_id": "light.double_bunk_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Double Bunk Bedroom"},
+        {"entity_id": "light.bunk_with_queen_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bunk + Queen Bedroom"},
         # Kids Bathroom
-        {"entity_id": "light.kids_bathroom_main_lights", "name": "Kids Bathroom Main", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
-        {"entity_id": "light.kids_bathroom_toilet_room_lights", "name": "Kids Bathroom Toilet Room", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
-        {"entity_id": "light.kids_bathroom_tub_lights", "name": "Kids Bathroom Tub", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
-        {"entity_id": "light.kids_bathroom_vanity_lights", "name": "Kids Bathroom Vanity", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
+        {"entity_id": "light.kids_bathroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
+        {"entity_id": "light.kids_bathroom_toilet_room_lights", "name": "Toilet Room", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
+        {"entity_id": "light.kids_bathroom_tub_lights", "name": "Tub Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
+        {"entity_id": "light.kids_bathroom_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
         # Hallway & Stairs
-        {"entity_id": "light.hallway_main_lights", "name": "Hallway Main", "type": "light", "icon": "fa-lightbulb", "room": "Hallway"},
-        {"entity_id": "light.stairs_upper_step_lights", "name": "Stairs Upper Steps", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
-        {"entity_id": "light.stairs_upstairs_hanging_lights", "name": "Stairs Hanging Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
-        {"entity_id": "light.stairs_screen_accent_lights", "name": "Stairs Screen Accent", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
-        {"entity_id": "light.stairs_downstairs_sconce_lights", "name": "Stairs Downstairs Sconces", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
-        {"entity_id": "light.stairs_lower_step_lights", "name": "Stairs Lower Steps", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
+        {"entity_id": "light.hallway_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Hallway"},
+        {"entity_id": "light.stairs_upper_step_lights", "name": "Upper Step Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
+        {"entity_id": "light.stairs_upstairs_hanging_lights", "name": "Hanging Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
+        {"entity_id": "light.stairs_screen_accent_lights", "name": "Screen Accent", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
+        {"entity_id": "light.stairs_downstairs_sconce_lights", "name": "Downstairs Sconces", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
+        {"entity_id": "light.stairs_lower_step_lights", "name": "Lower Step Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
     ],
     "Main Floor": [
         # Living Room
-        {"entity_id": "light.living_room_main_lights", "name": "Living Room Main", "type": "light", "icon": "fa-lightbulb", "room": "Living Room"},
+        {"entity_id": "light.living_room_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Living Room"},
         # Kitchen
-        {"entity_id": "light.kitchen_main_lights", "name": "Kitchen Main", "type": "light", "icon": "fa-lightbulb", "room": "Kitchen"},
-        {"entity_id": "light.kitchen_island_pendants", "name": "Kitchen Island Pendants", "type": "light", "icon": "fa-lightbulb", "room": "Kitchen"},
-        {"entity_id": "light.kitchen_shelf_lights", "name": "Kitchen Shelf Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kitchen"},
+        {"entity_id": "light.kitchen_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kitchen"},
+        {"entity_id": "light.kitchen_island_pendants", "name": "Island Pendants", "type": "light", "icon": "fa-lightbulb", "room": "Kitchen"},
+        {"entity_id": "light.kitchen_shelf_lights", "name": "Shelf Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kitchen"},
         # Dining Room
-        {"entity_id": "light.dining_room_chandelier", "name": "Dining Room Chandelier", "type": "light", "icon": "fa-lightbulb", "room": "Dining Room"},
+        {"entity_id": "light.dining_room_chandelier", "name": "Chandelier", "type": "light", "icon": "fa-lightbulb", "room": "Dining Room"},
         # Office
-        {"entity_id": "light.office_main_lights", "name": "Office Main", "type": "light", "icon": "fa-lightbulb", "room": "Office"},
-        {"entity_id": "light.office_table_lamp", "name": "Office Floor Lamp", "type": "light", "icon": "fa-lightbulb", "room": "Office"},
+        {"entity_id": "light.office_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Office"},
+        {"entity_id": "light.office_table_lamp", "name": "Floor Lamp", "type": "light", "icon": "fa-lightbulb", "room": "Office"},
         # Bar
-        {"entity_id": "light.bar_main_lights", "name": "Bar Main", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
-        {"entity_id": "light.bar_shelf_lights", "name": "Bar Shelf Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
+        {"entity_id": "light.bar_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
+        {"entity_id": "light.bar_shelf_lights", "name": "Shelf Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
         # Foyer & Powder Room
-        {"entity_id": "light.front_foyer_chandelier", "name": "Front Foyer Chandelier", "type": "light", "icon": "fa-lightbulb", "room": "Front Foyer"},
-        {"entity_id": "light.powder_room_main_lights", "name": "Powder Room Main", "type": "light", "icon": "fa-lightbulb", "room": "Powder Room"},
-        {"entity_id": "light.powder_room_vanity_lights", "name": "Powder Room Vanity", "type": "light", "icon": "fa-lightbulb", "room": "Powder Room"},
+        {"entity_id": "light.front_foyer_chandelier", "name": "Chandelier", "type": "light", "icon": "fa-lightbulb", "room": "Front Foyer"},
+        {"entity_id": "light.powder_room_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Powder Room"},
+        {"entity_id": "light.powder_room_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Powder Room"},
         # Ski Room
-        {"entity_id": "light.ski_room_main_lights", "name": "Ski Room Main", "type": "light", "icon": "fa-lightbulb", "room": "Ski Room"},
-        {"entity_id": "switch.ski_room_ceiling_fan_light", "name": "Ski Room Ceiling Fan Light", "type": "switch", "icon": "fa-lightbulb", "room": "Ski Room"},
+        {"entity_id": "light.ski_room_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Ski Room"},
+        {"entity_id": "switch.ski_room_ceiling_fan_light", "name": "Ceiling Fan Light", "type": "switch", "icon": "fa-lightbulb", "room": "Ski Room"},
     ],
     "Basement": [
         # Basement Master Bedroom
-        {"entity_id": "light.basement_master_bedroom_main_lights", "name": "Basement Master Main", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
-        {"entity_id": "light.basement_master_bedroom_accent_lights", "name": "Basement Master Accent", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
-        {"entity_id": "light.basement_master_bedroom_left_reading_light", "name": "Basement Master Left Reading", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
-        {"entity_id": "light.basement_master_bedroom_right_reading_light", "name": "Basement Master Right Reading", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
+        {"entity_id": "light.basement_master_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
+        {"entity_id": "light.basement_master_bedroom_accent_lights", "name": "Accent Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
+        {"entity_id": "light.basement_master_bedroom_left_reading_light", "name": "Left Reading Light", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
+        {"entity_id": "light.basement_master_bedroom_right_reading_light", "name": "Right Reading Light", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
         # Basement Master Ensuite
-        {"entity_id": "light.basement_master_ensuite_bathroom_main_lights", "name": "Basement Ensuite Main", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Ensuite"},
-        {"entity_id": "light.basement_master_ensuite_bathroom_vanity_lights", "name": "Basement Ensuite Vanity", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Ensuite"},
+        {"entity_id": "light.basement_master_ensuite_bathroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Ensuite"},
+        {"entity_id": "light.basement_master_ensuite_bathroom_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Ensuite"},
         # Game Area
-        {"entity_id": "light.basement_game_area_main_lights", "name": "Game Area Main", "type": "light", "icon": "fa-lightbulb", "room": "Game Area"},
+        {"entity_id": "light.basement_game_area_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Game Area"},
         # Hallway & Storage
-        {"entity_id": "light.downstairs_hallway_main_lights", "name": "Downstairs Hallway Main", "type": "light", "icon": "fa-lightbulb", "room": "Downstairs Hallway"},
+        {"entity_id": "light.downstairs_hallway_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Downstairs Hallway"},
         {"entity_id": "light.under_stairs_storage_room_main_lights", "name": "Under Stairs Storage", "type": "light", "icon": "fa-lightbulb", "room": "Storage"},
     ],
     "Exterior": [
-        {"entity_id": "light.exterior_deck_ceiling_lights", "name": "Deck Ceiling Lights", "type": "light", "icon": "fa-lightbulb", "room": "Deck"},
-        {"entity_id": "light.exterior_deck_sconce_lights", "name": "Deck Sconce Lights", "type": "light", "icon": "fa-lightbulb", "room": "Deck"},
-        {"entity_id": "switch.exterior_lower_deck_sconces", "name": "Lower Deck Sconces", "type": "switch", "icon": "fa-lightbulb", "room": "Lower Deck"},
+        {"entity_id": "light.exterior_deck_ceiling_lights", "name": "Ceiling Lights", "type": "light", "icon": "fa-lightbulb", "room": "Deck"},
+        {"entity_id": "light.exterior_deck_sconce_lights", "name": "Sconce Lights", "type": "light", "icon": "fa-lightbulb", "room": "Deck"},
+        {"entity_id": "switch.exterior_lower_deck_sconces", "name": "Sconces", "type": "switch", "icon": "fa-lightbulb", "room": "Lower Deck"},
         {"entity_id": "light.exterior_front_sconces", "name": "Front Sconces", "type": "light", "icon": "fa-lightbulb", "room": "Front"},
         {"entity_id": "light.hot_tub_light", "name": "Hot Tub Light", "type": "light", "icon": "fa-lightbulb", "room": "Hot Tub"},
     ],
@@ -378,10 +378,10 @@ FAN_DEVICES = {
     "Upper Floor": [
         {"entity_id": "switch.kids_bathroom_toilet_exhaust_fan", "name": "Kids Bathroom Toilet Exhaust Fan", "type": "switch", "icon": "fa-fan"},
         {"entity_id": "switch.kids_bathroom_tub_exhaust_fan", "name": "Kids Bathroom Tub Exhaust Fan", "type": "switch", "icon": "fa-fan"},
+        {"entity_id": "switch.master_bathroom_exhaust_fan", "name": "Master Bathroom Exhaust Fan", "type": "switch", "icon": "fa-fan"},
     ],
     "Main Floor": [
         {"entity_id": "switch.powder_room_exhaust_fan", "name": "Powder Room Exhaust Fan", "type": "switch", "icon": "fa-fan"},
-        {"entity_id": "switch.master_bedroom_ceiling_fan", "name": "Master Bathroom Exhaust Fan", "type": "switch", "icon": "fa-fan"},
     ],
     "Basement": [
         {"entity_id": "switch.basement_master_ensuite_bathroom_exhaust_fan", "name": "Basement Master Ensuite Exhaust Fan", "type": "switch", "icon": "fa-fan"},
@@ -413,7 +413,7 @@ PATIO_DEVICES = {
 TABS = [
     {"key": "tvs", "label": "TVs", "icon": "fa-tv", "devices": TV_DEVICES},
     {"key": "sonos", "label": "Sonos", "icon": "fa-music", "devices": SONOS_DEVICES},
-    {"key": "blinds", "label": "Blinds", "icon": "fa-window-maximize", "devices": BLIND_DEVICES},
+    {"key": "shades", "label": "Shades", "icon": "fa-window-maximize", "devices": BLIND_DEVICES},
     {"key": "lights", "label": "Lights", "icon": "fa-lightbulb", "devices": LIGHT_DEVICES},
     {"key": "fans", "label": "Fans", "icon": "fa-fan", "devices": FAN_DEVICES},
     {"key": "garage", "label": "Garage", "icon": "fa-warehouse", "devices": GARAGE_DEVICES},
