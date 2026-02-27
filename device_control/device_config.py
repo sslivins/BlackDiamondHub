@@ -107,13 +107,7 @@ TV_DEVICES = {
 # Tab: Sonos (PDU-powered amps for in-wall/ceiling speakers)
 # ──────────────────────────────────────────────
 SONOS_DEVICES = {
-    "In-Wall / Ceiling Amps": [
-        {
-            "entity_id": "switch.pdu_audio_rack_deck_sonos",
-            "name": "Deck Sonos Amp",
-            "type": "switch",
-            "icon": "fa-volume-high",
-        },
+    "Interior": [
         {
             "entity_id": "switch.pdu_audio_rack_dining_room_sonos",
             "name": "Dining Room Sonos Amp",
@@ -129,6 +123,14 @@ SONOS_DEVICES = {
         {
             "entity_id": "switch.pdu_audio_rack_master_en_suite",
             "name": "Master En-suite Sonos Amp",
+            "type": "switch",
+            "icon": "fa-volume-high",
+        },
+    ],
+    "Exterior": [
+        {
+            "entity_id": "switch.pdu_audio_rack_deck_sonos",
+            "name": "Deck Sonos Amp",
             "type": "switch",
             "icon": "fa-volume-high",
         },
@@ -399,11 +401,11 @@ GARAGE_DEVICES = {
 }
 
 # ──────────────────────────────────────────────
-# Tab: Patio
+# Tab: Deck
 # ──────────────────────────────────────────────
-PATIO_DEVICES = {
-    "Patio": [
-        {"entity_id": "switch.patio_deck_heaters", "name": "Patio Deck Heaters", "type": "switch", "icon": "fa-fire"},
+DECK_DEVICES = {
+    "Deck": [
+        {"entity_id": "switch.patio_deck_heaters", "name": "Deck Heaters", "type": "switch", "icon": "fa-fire"},
     ],
 }
 
@@ -417,7 +419,7 @@ TABS = [
     {"key": "lights", "label": "Lights", "icon": "fa-lightbulb", "devices": LIGHT_DEVICES},
     {"key": "fans", "label": "Fans", "icon": "fa-fan", "devices": FAN_DEVICES},
     {"key": "garage", "label": "Garage", "icon": "fa-warehouse", "devices": GARAGE_DEVICES},
-    {"key": "patio", "label": "Patio", "icon": "fa-umbrella-beach", "devices": PATIO_DEVICES},
+    {"key": "deck", "label": "Deck", "icon": "fa-grip-lines", "devices": DECK_DEVICES},
 ]
 
 

@@ -90,12 +90,21 @@
     }
 
     /* Group header (floor/area) */
+    /* Group panel: wraps heading + device grid */
+    .dc-group-panel {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 14px 16px 16px;
+        margin-bottom: 14px;
+    }
+
     .dc-group-header {
         font-size: 1.1rem;
         font-weight: 700;
         color: #FFD700;
-        margin: 18px 0 10px;
-        padding-bottom: 4px;
+        margin: 0 0 10px;
+        padding-bottom: 6px;
         border-bottom: 1px solid #444;
     }
 
@@ -257,7 +266,7 @@
     }
     .dc-btn-action.action-on:hover:not(:disabled) { background: #38954a; }
 
-    /* Toggle switch (iOS-style pill) */
+    /* Toggle switch (square style matching sliders) */
     .dc-toggle {
         position: relative;
         display: inline-block;
@@ -277,7 +286,8 @@
         cursor: pointer;
         top: 0; left: 0; right: 0; bottom: 0;
         background: #555;
-        border-radius: 15px;
+        border-radius: 4px;
+        border: 1px solid #666;
         transition: background 0.25s ease;
     }
 
@@ -287,14 +297,15 @@
         width: 24px;
         height: 24px;
         left: 3px;
-        bottom: 3px;
+        bottom: 2px;
         background: #ccc;
-        border-radius: 50%;
+        border-radius: 4px;
         transition: transform 0.25s ease, background 0.25s ease;
     }
 
     .dc-toggle input:checked + .dc-toggle-track {
         background: #D4A843;
+        border-color: #D4A843;
     }
 
     .dc-toggle input:checked + .dc-toggle-track::after {
@@ -343,81 +354,12 @@
     }
     .dc-btn-stop:hover:not(:disabled) { background: #a6831f; }
 
-    /* Cover position slider */
+    /* Cover position slider (inherits shared slider base) */
     .dc-cover-slider-row {
         display: flex;
         align-items: center;
         gap: 8px;
     }
-
-    .dc-cover-slider {
-        flex: 1;
-        -webkit-appearance: none;
-        appearance: none;
-        height: 32px;
-        border-radius: 4px;
-        background: #444;
-        outline: none;
-        cursor: pointer;
-        border: 1px solid #555;
-    }
-
-    .dc-cover-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 28px;
-        height: 40px;
-        border-radius: 4px;
-        background: #6BA4E0;
-        cursor: pointer;
-        border: 2px solid #333;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    }
-
-    .dc-cover-slider::-moz-range-thumb {
-        width: 28px;
-        height: 40px;
-        border-radius: 4px;
-        background: #6BA4E0;
-        cursor: pointer;
-        border: 2px solid #333;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    }
-
-    .dc-cover-slider::-webkit-slider-runnable-track {
-        height: 32px;
-        border-radius: 4px;
-    }
-
-    .dc-cover-slider::-moz-range-track {
-        height: 32px;
-        border-radius: 4px;
-        background: #444;
-        border: 1px solid #555;
-    }
-
-    .dc-cover-slider:disabled {
-        opacity: 0.3;
-        cursor: not-allowed;
-    }
-
-    .dc-cover-slider:disabled::-webkit-slider-thumb {
-        background: #888;
-    }
-
-    .dc-cover-stop-btn {
-        background: #8a6d1b;
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        padding: 6px 10px;
-        font-size: 0.85rem;
-        cursor: pointer;
-        min-height: 40px;
-        min-width: 40px;
-        transition: background 0.15s ease;
-    }
-    .dc-cover-stop-btn:hover:not(:disabled) { background: #a6831f; }
 
     /* Loading spinner */
     .dc-loading {
@@ -485,14 +427,61 @@
     }
     .dc-all-btn-close:hover { background: #953838; }
 
-    /* Brightness slider */
+    /* Active-only filter toggle (sticky, below tabs) */
+    .dc-filter-bar {
+        display: flex;
+        justify-content: center;
+        padding: 8px 0 4px;
+    }
+
+    .dc-filter-bar.hidden {
+        display: none;
+    }
+
+    .dc-filter-btn {
+        background: #444;
+        color: #aaa;
+        border: 1px solid #555;
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .dc-filter-btn:hover {
+        background: #555;
+        color: #ddd;
+    }
+
+    .dc-filter-btn.active {
+        background: #D4A843;
+        color: #1a1a2e;
+        border-color: #D4A843;
+    }
+
+    .dc-card.filter-hidden {
+        display: none !important;
+    }
+
+    .dc-room-header.filter-hidden,
+    .dc-group-header.filter-hidden {
+        display: none !important;
+    }
+
+    /* Shared slider base (brightness + cover) */
     .dc-slider-row {
         display: flex;
         align-items: center;
         gap: 8px;
     }
 
-    .dc-brightness-slider {
+    .dc-brightness-slider,
+    .dc-cover-slider {
         flex: 1;
         -webkit-appearance: none;
         appearance: none;
@@ -504,7 +493,8 @@
         border: 1px solid #555;
     }
 
-    .dc-brightness-slider::-webkit-slider-thumb {
+    .dc-brightness-slider::-webkit-slider-thumb,
+    .dc-cover-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
         width: 28px;
@@ -516,7 +506,8 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
 
-    .dc-brightness-slider::-moz-range-thumb {
+    .dc-brightness-slider::-moz-range-thumb,
+    .dc-cover-slider::-moz-range-thumb {
         width: 28px;
         height: 40px;
         border-radius: 4px;
@@ -526,25 +517,37 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
 
-    .dc-brightness-slider::-webkit-slider-runnable-track {
+    .dc-brightness-slider::-webkit-slider-runnable-track,
+    .dc-cover-slider::-webkit-slider-runnable-track {
         height: 32px;
         border-radius: 4px;
     }
 
-    .dc-brightness-slider::-moz-range-track {
+    .dc-brightness-slider::-moz-range-track,
+    .dc-cover-slider::-moz-range-track {
         height: 32px;
         border-radius: 4px;
         background: #444;
         border: 1px solid #555;
     }
 
-    .dc-brightness-slider:disabled {
+    .dc-brightness-slider:disabled,
+    .dc-cover-slider:disabled {
         opacity: 0.3;
         cursor: not-allowed;
     }
 
-    .dc-brightness-slider:disabled::-webkit-slider-thumb {
+    .dc-brightness-slider:disabled::-webkit-slider-thumb,
+    .dc-cover-slider:disabled::-webkit-slider-thumb {
         background: #888;
+    }
+
+    /* Cover slider thumb color override */
+    .dc-cover-slider::-webkit-slider-thumb {
+        background: #6BA4E0;
+    }
+    .dc-cover-slider::-moz-range-thumb {
+        background: #6BA4E0;
     }
 
     .dc-off-btn {
@@ -596,6 +599,11 @@
             </button>
             {% endfor %}
         </div>
+        <div class="dc-filter-bar hidden" id="filter-bar">
+            <button class="dc-filter-btn" id="filter-btn" onclick="toggleFilter()">
+                <i class="fas fa-filter"></i> Active only
+            </button>
+        </div>
     </div>
 </div>
 
@@ -609,6 +617,7 @@
         </div>
         <div id="content-{{ tab.key }}" style="display:none;">
             {% for group_name, devices in tab.devices.items %}
+            <div class="dc-group-panel">
             <div class="dc-group-header">{{ group_name }}</div>
 
             {% if tab.key == "lights" %}
@@ -652,7 +661,7 @@
                 {% endfor %}
 
             {% elif tab.key == "shades" %}
-                {# Cover devices with position slider + stop button #}
+                {# Cover devices with position slider #}
                 <div class="dc-device-grid">
                     {% for dev in devices %}
                     <div class="dc-card" id="card-{{ dev.entity_id|cut:'.' }}" data-entity="{{ dev.entity_id }}" data-type="{{ dev.type }}">
@@ -666,9 +675,6 @@
                                        class="dc-cover-slider"
                                        id="cover-slider-{{ dev.entity_id|cut:'.' }}"
                                        data-entity="{{ dev.entity_id }}">
-                                <button class="dc-cover-stop-btn" onclick="doAction('{{ dev.entity_id }}', 'stop', '{{ dev.type }}')" title="Stop">
-                                    <i class="fas fa-stop"></i>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -699,6 +705,7 @@
                     {% endfor %}
                 </div>
             {% endif %}
+            </div>{# /dc-group-panel #}
             {% endfor %}
         </div>
     </div>
@@ -729,6 +736,10 @@
     // so the slider doesn't jump back before HA confirms the new state.
     const sliderCooldowns = new Set();
 
+    // ── Active-only filter state ──
+    let filterActive = false;  // global active-only filter
+    const FILTERABLE_TABS = new Set(['lights', 'shades']);
+
     // ── Scroll-hint (bouncing chevron) ──
     const scrollHint = document.getElementById('scroll-hint');
     const sentinel = document.getElementById('scroll-sentinel');
@@ -744,11 +755,20 @@
     observer.observe(sentinel);
 
     // ── Tab switching ──
+    let currentTab = '{{ tabs.0.key }}';
     function switchTab(key, btn) {
         document.querySelectorAll('.dc-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.dc-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('panel-' + key).classList.add('active');
+        currentTab = key;
+
+        // Show/hide filter bar based on whether tab is filterable
+        const bar = document.getElementById('filter-bar');
+        bar.classList.toggle('hidden', !FILTERABLE_TABS.has(key));
+
+        // Re-apply filter for the newly visible tab
+        applyFilters();
 
         // Re-check scroll hint when switching tabs
         observer.disconnect();
@@ -861,6 +881,49 @@
                 }
             }
         }
+
+        // Re-apply active-only filters after state update
+        applyFilters();
+    }
+
+    // ── Active-only filter ──
+    function toggleFilter() {
+        filterActive = !filterActive;
+        const btn = document.getElementById('filter-btn');
+        if (btn) btn.classList.toggle('active', filterActive);
+        applyFilters();
+    }
+
+    function applyFilters() {
+        FILTERABLE_TABS.forEach(tabKey => {
+            const panel = document.getElementById('content-' + tabKey);
+            if (!panel) return;
+
+            if (filterActive) {
+                panel.querySelectorAll('.dc-card').forEach(card => {
+                    const eid = card.dataset.entity;
+                    const info = entityStates[eid];
+                    let isActive = false;
+                    if (tabKey === 'lights') {
+                        isActive = info && (info.state === 'on' || info.state === 'playing');
+                    } else if (tabKey === 'shades') {
+                        const pos = info ? info.current_position : null;
+                        isActive = pos !== null && pos > 5;
+                    }
+                    card.classList.toggle('filter-hidden', !isActive);
+                });
+                // Hide room/group headers if all their cards are hidden
+                panel.querySelectorAll('.dc-device-grid').forEach(grid => {
+                    const visibleCards = grid.querySelectorAll('.dc-card:not(.filter-hidden)');
+                    const header = grid.previousElementSibling;
+                    if (header && (header.classList.contains('dc-room-header') || header.classList.contains('dc-group-header'))) {
+                        header.classList.toggle('filter-hidden', visibleCards.length === 0);
+                    }
+                });
+            } else {
+                panel.querySelectorAll('.filter-hidden').forEach(el => el.classList.remove('filter-hidden'));
+            }
+        });
     }
 
     // ── Optimistic UI: immediately flip state in cache ──
