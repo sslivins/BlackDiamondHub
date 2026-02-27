@@ -416,13 +416,13 @@ DECK_DEVICES = {
 # All tabs in display order
 # ──────────────────────────────────────────────
 TABS = [
-    {"key": "tvs", "label": "TVs", "icon": "fa-tv", "devices": TV_DEVICES},
-    {"key": "sonos", "label": "Sonos", "icon": "fa-music", "devices": SONOS_DEVICES},
-    {"key": "shades", "label": "Shades", "icon": "fa-window-maximize", "devices": BLIND_DEVICES},
     {"key": "lights", "label": "Lights", "icon": "fa-lightbulb", "devices": LIGHT_DEVICES},
+    {"key": "shades", "label": "Shades", "icon": "fa-window-maximize", "devices": BLIND_DEVICES},
     {"key": "fans", "label": "Fans", "icon": "fa-fan", "devices": FAN_DEVICES},
     {"key": "garage", "label": "Garage", "icon": "fa-warehouse", "devices": GARAGE_DEVICES},
     {"key": "deck", "label": "Deck", "icon": "fa-grip-lines", "devices": DECK_DEVICES},
+    {"key": "tvs", "label": "TVs", "icon": "fa-tv", "devices": TV_DEVICES},
+    {"key": "sonos", "label": "Sonos", "icon": "fa-music", "devices": SONOS_DEVICES},
 ]
 
 
