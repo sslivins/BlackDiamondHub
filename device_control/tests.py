@@ -206,8 +206,8 @@ class ViewTests(TestCase):
 
 
 @tag('selenium')
-class DeviceControlShadesButtonOverflowTest(StaticLiveServerTestCase):
-    """Ensure shade card buttons are never clipped by card overflow."""
+class DeviceControlShadesSliderTest(StaticLiveServerTestCase):
+    """Ensure shade cards render a position slider that fits within the card."""
 
     @classmethod
     def setUpClass(cls):
@@ -215,8 +215,6 @@ class DeviceControlShadesButtonOverflowTest(StaticLiveServerTestCase):
         from selenium import webdriver
         from tests.selenium_helpers import get_chrome_options
         cls.browser = webdriver.Chrome(options=get_chrome_options())
-        # 1920×1080 desktop — grid packs many columns so cards stay near
-        # the 200px minmax floor, squeezing the 3 shade buttons.
         cls.browser.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', {
             'width': 1920,
             'height': 1080,
@@ -229,8 +227,8 @@ class DeviceControlShadesButtonOverflowTest(StaticLiveServerTestCase):
         cls.browser.quit()
         super().tearDownClass()
 
-    def test_shade_buttons_not_clipped(self):
-        """All three shade buttons (Open/Stop/Close) must be fully visible."""
+    def test_shade_slider_visible(self):
+        """Each shade card must contain a visible position slider."""
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support.ui import WebDriverWait
         from selenium.webdriver.support import expected_conditions as EC
@@ -248,45 +246,38 @@ class DeviceControlShadesButtonOverflowTest(StaticLiveServerTestCase):
 
         # Wait for shade cards to appear
         WebDriverWait(self.browser, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, ".dc-btn-close"))
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".dc-cover-slider"))
         )
 
-        # Check every shade card's buttons
+        # Check every shade card's slider
         cards = self.browser.find_elements(By.CSS_SELECTOR, "[data-type='cover']")
         self.assertTrue(len(cards) > 0, "No shade cards found")
 
         for card in cards:
-            card_rect = card.rect  # {x, y, width, height}
+            card_rect = card.rect
             card_right = card_rect['x'] + card_rect['width']
-            card_bottom = card_rect['y'] + card_rect['height']
 
-            buttons = card.find_elements(By.CSS_SELECTOR, ".dc-btn")
-            self.assertEqual(len(buttons), 3,
-                             f"Expected 3 buttons in card, found {len(buttons)}")
+            sliders = card.find_elements(By.CSS_SELECTOR, ".dc-cover-slider")
+            self.assertEqual(len(sliders), 1,
+                             f"Expected 1 slider in card, found {len(sliders)}")
 
-            for btn in buttons:
-                btn_rect = btn.rect
-                btn_right = btn_rect['x'] + btn_rect['width']
-                btn_bottom = btn_rect['y'] + btn_rect['height']
+            slider = sliders[0]
+            slider_rect = slider.rect
+            slider_right = slider_rect['x'] + slider_rect['width']
 
-                # Button must not extend beyond the card's visible bounds
-                self.assertLessEqual(
-                    btn_right, card_right + 1,  # 1px tolerance for rounding
-                    f"Button '{btn.text}' right edge ({btn_right}px) extends "
-                    f"beyond card right edge ({card_right}px) — button is clipped horizontally"
-                )
-                self.assertLessEqual(
-                    btn_bottom, card_bottom + 1,
-                    f"Button '{btn.text}' bottom edge ({btn_bottom}px) extends "
-                    f"beyond card bottom edge ({card_bottom}px) — button is clipped vertically"
-                )
+            # Slider must not extend beyond the card
+            self.assertLessEqual(
+                slider_right, card_right + 1,
+                f"Slider right edge ({slider_right}px) extends "
+                f"beyond card right edge ({card_right}px)"
+            )
 
-                # Button must have positive visible dimensions
-                self.assertGreater(
-                    btn_rect['width'], 0,
-                    f"Button '{btn.text}' has zero width — not visible"
-                )
-                self.assertGreater(
-                    btn_rect['height'], 0,
-                    f"Button '{btn.text}' has zero height — not visible"
-                )
+            # Slider must have positive visible dimensions
+            self.assertGreater(
+                slider_rect['width'], 0,
+                "Slider has zero width — not visible"
+            )
+            self.assertGreater(
+                slider_rect['height'], 0,
+                "Slider has zero height — not visible"
+            )
