@@ -332,7 +332,6 @@ LIGHT_DEVICES = {
         {"entity_id": "light.powder_room_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Powder Room"},
         # Ski Room
         {"entity_id": "light.ski_room_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Ski Room"},
-        {"entity_id": "switch.ski_room_ceiling_fan_light", "name": "Ceiling Fan Light", "type": "switch", "icon": "fa-lightbulb", "room": "Ski Room"},
         # Hallway
         {"entity_id": "light.hallway_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Hallway"},
         # Stairs
@@ -381,14 +380,15 @@ LIGHT_DEVICES = {
 # ──────────────────────────────────────────────
 FAN_DEVICES = {
     "Upper Floor": [
-        {"entity_id": "switch.kids_bathroom_toilet_exhaust_fan", "name": "Kids Bathroom Toilet Exhaust Fan", "type": "switch", "icon": "fa-fan"},
-        {"entity_id": "switch.kids_bathroom_tub_exhaust_fan", "name": "Kids Bathroom Tub Exhaust Fan", "type": "switch", "icon": "fa-fan"},
         {"entity_id": "switch.master_bathroom_exhaust_fan", "name": "Master Bathroom Exhaust Fan", "type": "switch", "icon": "fa-fan"},
     ],
     "Main Floor": [
         {"entity_id": "switch.powder_room_exhaust_fan", "name": "Powder Room Exhaust Fan", "type": "switch", "icon": "fa-fan"},
+        {"entity_id": "switch.ski_room_exhaust_fan", "name": "Ski Room Exhaust Fan", "type": "switch", "icon": "fa-fan"},
     ],
     "Basement": [
+        {"entity_id": "switch.kids_bathroom_toilet_exhaust_fan", "name": "Kids Bathroom Toilet Exhaust Fan", "type": "switch", "icon": "fa-fan"},
+        {"entity_id": "switch.kids_bathroom_tub_exhaust_fan", "name": "Kids Bathroom Tub Exhaust Fan", "type": "switch", "icon": "fa-fan"},
         {"entity_id": "switch.basement_master_ensuite_bathroom_exhaust_fan", "name": "Basement Master Ensuite Exhaust Fan", "type": "switch", "icon": "fa-fan"},
     ],
 }
