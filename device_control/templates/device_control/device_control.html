@@ -108,12 +108,20 @@
         border-bottom: 1px solid #444;
     }
 
-    /* Room sub-header (lights tab) */
+    /* Room sub-panel (lights tab) */
+    .dc-room-panel {
+        background: #333;
+        border: 1px solid #444;
+        border-radius: 6px;
+        padding: 10px 12px 12px;
+        margin-top: 10px;
+    }
+
     .dc-room-header {
         font-size: 0.95rem;
         font-weight: 600;
         color: #aaa;
-        margin: 12px 0 6px 4px;
+        margin: 0 0 8px 2px;
     }
 
     /* Scroll hint: fade gradient + bouncing chevron */
@@ -624,6 +632,7 @@
                 {# Group lights by room within the floor #}
                 {% regroup devices by room as rooms %}
                 {% for room in rooms %}
+                <div class="dc-room-panel">
                 <div class="dc-room-header">{{ room.grouper }}</div>
                 <div class="dc-device-grid">
                     {% for dev in room.list %}
@@ -658,6 +667,7 @@
                     </div>
                     {% endfor %}
                 </div>
+                </div>{# /dc-room-panel #}
                 {% endfor %}
 
             {% elif tab.key == "shades" %}
