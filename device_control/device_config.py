@@ -310,13 +310,7 @@ LIGHT_DEVICES = {
         # Master Bathroom
         {"entity_id": "light.master_bathroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Master Bathroom"},
         {"entity_id": "light.master_bathroom_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Master Bathroom"},
-        # Kids Bathroom
-        {"entity_id": "light.kids_bathroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
-        {"entity_id": "light.kids_bathroom_toilet_room_lights", "name": "Toilet Room", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
-        {"entity_id": "light.kids_bathroom_tub_lights", "name": "Tub Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
-        {"entity_id": "light.kids_bathroom_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
-        # Hallway & Stairs
-        {"entity_id": "light.hallway_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Hallway"},
+        # Stairs
         {"entity_id": "light.stairs_upper_step_lights", "name": "Upper Step Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
         {"entity_id": "light.stairs_upstairs_hanging_lights", "name": "Hanging Lights", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
         {"entity_id": "light.stairs_screen_accent_lights", "name": "Screen Accent", "type": "light", "icon": "fa-lightbulb", "room": "Stairs"},
@@ -342,6 +336,8 @@ LIGHT_DEVICES = {
         # Ski Room
         {"entity_id": "light.ski_room_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Ski Room"},
         {"entity_id": "switch.ski_room_ceiling_fan_light", "name": "Ceiling Fan Light", "type": "switch", "icon": "fa-lightbulb", "room": "Ski Room"},
+        # Hallway
+        {"entity_id": "light.hallway_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Hallway"},
     ],
     "Basement": [
         # Bar
@@ -350,6 +346,11 @@ LIGHT_DEVICES = {
         # Bedrooms
         {"entity_id": "light.double_bunk_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Double Bunk Bedroom"},
         {"entity_id": "light.bunk_with_queen_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bunk + Queen Bedroom"},
+        # Kids Bathroom
+        {"entity_id": "light.kids_bathroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
+        {"entity_id": "light.kids_bathroom_toilet_room_lights", "name": "Toilet Room", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
+        {"entity_id": "light.kids_bathroom_tub_lights", "name": "Tub Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
+        {"entity_id": "light.kids_bathroom_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
         # Basement Master Bedroom
         {"entity_id": "light.basement_master_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
         {"entity_id": "light.basement_master_bedroom_accent_lights", "name": "Accent Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
