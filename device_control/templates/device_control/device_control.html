@@ -607,7 +607,7 @@
             </button>
             {% endfor %}
         </div>
-        <div class="dc-filter-bar hidden" id="filter-bar">
+        <div class="dc-filter-bar{% if tabs.0.key != 'lights' and tabs.0.key != 'shades' %} hidden{% endif %}" id="filter-bar">
             <button class="dc-filter-btn" id="filter-btn" onclick="toggleFilter()">
                 <i class="fas fa-filter"></i> Active only
             </button>

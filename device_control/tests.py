@@ -11,6 +11,9 @@ from .device_config import TABS, get_all_entity_ids
 from .ha_client import get_entity_state, get_entity_states, call_service
 from . import views
 
+# The FILTERABLE_TABS set must stay in sync with the JS in the template.
+FILTERABLE_TABS = {"lights", "shades"}
+
 
 class DeviceConfigTests(TestCase):
     """Tests for device_config.py."""
@@ -120,6 +123,24 @@ class ViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "Device Control")
         self.assertContains(resp, "dc-tab")
+
+    def test_filter_bar_visible_on_initial_load(self):
+        """The filter bar must not be hidden when the first tab is filterable."""
+        first_tab_key = TABS[0]["key"]
+        resp = self.client.get(reverse("device_control"))
+        content = resp.content.decode()
+
+        if first_tab_key in FILTERABLE_TABS:
+            # Filter bar should NOT have the 'hidden' class
+            self.assertNotIn(
+                'dc-filter-bar hidden',
+                content,
+                "Filter bar is hidden on initial load but the first tab "
+                f"('{first_tab_key}') is filterable — it should be visible.",
+            )
+        else:
+            # Filter bar SHOULD have the 'hidden' class
+            self.assertIn('dc-filter-bar hidden', content)
 
     def test_main_page_has_all_tabs(self):
         resp = self.client.get(reverse("device_control"))
