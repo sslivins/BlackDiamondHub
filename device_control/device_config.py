@@ -310,9 +310,6 @@ LIGHT_DEVICES = {
         # Master Bathroom
         {"entity_id": "light.master_bathroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Master Bathroom"},
         {"entity_id": "light.master_bathroom_vanity_lights", "name": "Vanity Lights", "type": "light", "icon": "fa-lightbulb", "room": "Master Bathroom"},
-        # Bedrooms
-        {"entity_id": "light.double_bunk_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Double Bunk Bedroom"},
-        {"entity_id": "light.bunk_with_queen_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bunk + Queen Bedroom"},
         # Kids Bathroom
         {"entity_id": "light.kids_bathroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
         {"entity_id": "light.kids_bathroom_toilet_room_lights", "name": "Toilet Room", "type": "light", "icon": "fa-lightbulb", "room": "Kids Bathroom"},
@@ -350,6 +347,9 @@ LIGHT_DEVICES = {
         # Bar
         {"entity_id": "light.bar_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
         {"entity_id": "light.bar_shelf_lights", "name": "Shelf Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
+        # Bedrooms
+        {"entity_id": "light.double_bunk_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Double Bunk Bedroom"},
+        {"entity_id": "light.bunk_with_queen_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bunk + Queen Bedroom"},
         # Basement Master Bedroom
         {"entity_id": "light.basement_master_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
         {"entity_id": "light.basement_master_bedroom_accent_lights", "name": "Accent Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
