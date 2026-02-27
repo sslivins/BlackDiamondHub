@@ -338,9 +338,6 @@ LIGHT_DEVICES = {
         # Office
         {"entity_id": "light.office_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Office"},
         {"entity_id": "light.office_table_lamp", "name": "Floor Lamp", "type": "light", "icon": "fa-lightbulb", "room": "Office"},
-        # Bar
-        {"entity_id": "light.bar_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
-        {"entity_id": "light.bar_shelf_lights", "name": "Shelf Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
         # Foyer & Powder Room
         {"entity_id": "light.front_foyer_chandelier", "name": "Chandelier", "type": "light", "icon": "fa-lightbulb", "room": "Front Foyer"},
         {"entity_id": "light.powder_room_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Powder Room"},
@@ -350,6 +347,9 @@ LIGHT_DEVICES = {
         {"entity_id": "switch.ski_room_ceiling_fan_light", "name": "Ceiling Fan Light", "type": "switch", "icon": "fa-lightbulb", "room": "Ski Room"},
     ],
     "Basement": [
+        # Bar
+        {"entity_id": "light.bar_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
+        {"entity_id": "light.bar_shelf_lights", "name": "Shelf Lights", "type": "light", "icon": "fa-lightbulb", "room": "Bar"},
         # Basement Master Bedroom
         {"entity_id": "light.basement_master_bedroom_main_lights", "name": "Main Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
         {"entity_id": "light.basement_master_bedroom_accent_lights", "name": "Accent Lights", "type": "light", "icon": "fa-lightbulb", "room": "Basement Master Bedroom"},
