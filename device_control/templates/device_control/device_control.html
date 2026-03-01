@@ -582,6 +582,41 @@
         background: #555;
     }
 
+    /* Power-cycle button */
+    .dc-powercycle-btn {
+        background: #5a3d8a;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        min-height: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        transition: background 0.15s ease, opacity 0.15s ease;
+        white-space: nowrap;
+    }
+
+    .dc-powercycle-btn:hover:not(:disabled) { background: #6f4fa6; }
+    .dc-powercycle-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .dc-powercycle-btn.cycling {
+        background: #8a6d1b;
+        pointer-events: none;
+    }
+
+    .dc-powercycle-countdown {
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        min-width: 18px;
+        text-align: center;
+    }
+
     /* Responsive */
     @media (max-width: 600px) {
         .dc-device-grid {
@@ -709,6 +744,15 @@
                                         <span class="dc-toggle-track"></span>
                                     </label>
                                 </div>
+                                {% if tab.key == "tvs" and dev.type == "switch" %}
+                                <button class="dc-powercycle-btn" id="pcbtn-{{ dev.entity_id|cut:'.' }}"
+                                        onclick="powerCycle('{{ dev.entity_id }}', '{{ dev.type }}')"
+                                        disabled
+                                        title="Power cycle: turn off, wait 5s, turn back on">
+                                    <i class="fas fa-sync-alt"></i>
+                                    <span class="dc-powercycle-countdown" id="pc-countdown-{{ dev.entity_id|cut:'.' }}"></span>
+                                </button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -745,6 +789,15 @@
     // After a slider action completes, suppress polling updates briefly
     // so the slider doesn't jump back before HA confirms the new state.
     const sliderCooldowns = new Set();
+
+    // ── Toggle cooldown state ──
+    // After a toggle action, suppress polling updates for this entity
+    // so the optimistic state isn't overwritten by HA's stale response.
+    const toggleCooldowns = new Set();
+
+    // ── Power-cycle state ──
+    // Entities currently mid-power-cycle; updateUI & scheduled fetches skip them.
+    const powerCyclingEntities = new Set();
 
     // ── Active-only filter state ──
     let filterActive = false;  // global active-only filter
@@ -790,6 +843,14 @@
         fetch(STATES_URL)
             .then(r => r.json())
             .then(data => {
+                // Preserve optimistic state for entities mid-power-cycle
+                for (const eid of powerCyclingEntities) {
+                    if (entityStates[eid]) data[eid] = entityStates[eid];
+                }
+                // Preserve optimistic state for entities in toggle cooldown
+                for (const eid of toggleCooldowns) {
+                    if (entityStates[eid]) data[eid] = entityStates[eid];
+                }
                 entityStates = data;
                 updateUI();
                 // Hide spinners, show content
@@ -853,6 +914,12 @@
                         labelEl.classList.toggle('is-on', isOn);
                     }
                 }
+            }
+
+            // Power-cycle button: enable only when switch is on and not mid-cycle
+            const pcBtn = document.getElementById('pcbtn-' + safeId);
+            if (pcBtn && !pcBtn.classList.contains('cycling')) {
+                pcBtn.disabled = !isOn || isUnavailable;
             }
 
             // Dimmable light: show slider row, hide toggle button
@@ -970,6 +1037,87 @@
         }, 4000);
     }
 
+    // ── Power cycle (TV sockets) ──
+    function powerCycle(entityId, type) {
+        const safeId = entityId.replace('.', '');
+        const pcBtn = document.getElementById('pcbtn-' + safeId);
+        const countdown = document.getElementById('pc-countdown-' + safeId);
+        const btnEl = document.getElementById('btn-' + safeId);
+        if (!pcBtn) return;
+
+        // Lock this entity so polling/fetches don't overwrite our state
+        powerCyclingEntities.add(entityId);
+
+        // Disable the power-cycle button and toggle during the cycle
+        pcBtn.disabled = true;
+        pcBtn.classList.add('cycling');
+        if (btnEl) btnEl.disabled = true;
+
+        // Step 1: Turn off (send directly, don't use doAction to avoid its scheduled fetchStates)
+        applyOptimisticState(entityId, 'off');
+        fetch(ACTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ entity_id: entityId, action: 'off', type: type }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) {
+                showFailure(entityId);
+                powerCyclingEntities.delete(entityId);
+                pcBtn.classList.remove('cycling');
+                countdown.textContent = '';
+                fetchStates();
+                return;
+            }
+
+            // Step 2: Countdown from 5
+            let remaining = 5;
+            countdown.textContent = remaining + 's';
+
+            const interval = setInterval(() => {
+                remaining--;
+                if (remaining > 0) {
+                    countdown.textContent = remaining + 's';
+                } else {
+                    clearInterval(interval);
+                    countdown.textContent = '';
+
+                    // Step 3: Turn back on
+                    applyOptimisticState(entityId, 'on');
+                    fetch(ACTION_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                        body: JSON.stringify({ entity_id: entityId, action: 'on', type: type }),
+                    })
+                    .then(r => r.json())
+                    .then(onData => {
+                        if (!onData.ok) showFailure(entityId);
+                    })
+                    .catch(err => {
+                        console.error('[powerCycle] ON error:', err);
+                        showFailure(entityId);
+                    })
+                    .finally(() => {
+                        // Release the lock after HA has time to process
+                        setTimeout(() => {
+                            powerCyclingEntities.delete(entityId);
+                            pcBtn.classList.remove('cycling');
+                            fetchStates();
+                        }, 1500);
+                    });
+                }
+            }, 1000);
+        })
+        .catch(err => {
+            console.error('[powerCycle] OFF error:', err);
+            showFailure(entityId);
+            powerCyclingEntities.delete(entityId);
+            pcBtn.classList.remove('cycling');
+            countdown.textContent = '';
+        });
+    }
+
     // ── Toggle (switch devices) ──
     function toggleDevice(entityId, type) {
         const safeId = entityId.replace('.', '');
@@ -983,6 +1131,9 @@
     function doAction(entityId, action, type) {
         const safeId = entityId.replace('.', '');
         const card = document.getElementById('card-' + safeId);
+
+        // Enter cooldown so polling doesn't snap the toggle back
+        toggleCooldowns.add(entityId);
 
         // Save previous state and optimistically update the UI
         const prevState = applyOptimisticState(entityId, action);
@@ -1008,9 +1159,14 @@
                     updateUI();
                 }
                 showFailure(entityId);
+                toggleCooldowns.delete(entityId);
+                return;
             }
-            // Confirm with a real state fetch after HA processes
-            setTimeout(fetchStates, 1500);
+            // Release cooldown and confirm with a real state fetch after HA processes
+            setTimeout(() => {
+                toggleCooldowns.delete(entityId);
+                fetchStates();
+            }, 3000);
         })
         .catch(err => {
             console.error('Action error:', err);
@@ -1020,6 +1176,7 @@
                 updateUI();
             }
             showFailure(entityId);
+            toggleCooldowns.delete(entityId);
         });
     }
 
