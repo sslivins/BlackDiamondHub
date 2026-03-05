@@ -13,9 +13,7 @@
                            href="#speaker-content-{{ info.uid }}"
                            role="tab"
                            aria-controls="speaker-content-{{ info.uid }}"
-                           aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
-                            {{ info.group_label }}
-                        </a>
+                           aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">{{ info.group_label }}</a>
                     {% endif %}
                 {% endfor %}
             </div>
