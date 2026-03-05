@@ -66,12 +66,13 @@
                                     </div>
 
                                     <!-- Volume Controls -->
-                                    <div class="col-md-9">
+                                    <!-- Volume Controls & Group -->
+                                    <div class="d-flex align-items-center mt-2 px-2">
                                         <button class="volume-btn volume-down"
                                                 onclick="adjustVolume('{{ info.uid }}', decreaseVolume('{{ info.uid }}'))">
                                             <i class="fas fa-volume-down"></i>
                                         </button>
-                                        <input type="range" class="volume-slider"
+                                        <input type="range" class="volume-slider flex-grow-1 mx-2"
                                                min="0" max="100" value="{{ info.volume }}"
                                                id="volume-slider-{{ info.uid }}"
                                                onchange="adjustVolume('{{ info.uid }}', this.value)">
@@ -79,19 +80,15 @@
                                                 onclick="adjustVolume('{{ info.uid }}', increaseVolume('{{ info.uid }}'))">
                                             <i class="fas fa-volume-up"></i>
                                         </button>
-                                    </div>
-
-                                    <!-- Group Button -->
-                                    <div class="col-md-3">
-                                        <button onclick="openModal('{{ info.uid }}')" class="btn btn-success">Group</button>
+                                        <button onclick="openModal('{{ info.uid }}')" class="btn btn-success btn-sm ms-3">Group</button>
                                     </div>
                                 </div>
 
                                 <!-- Queue Section -->
                                 <hr class="my-4">
                                 <div class="queue-container">
-                                    <div class="d-flex justify-content-between">
-                                        <h5 class="d-inline">Queue:</h5>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">Queue:</h5>
                                         <button class="btn btn-danger btn-sm" onclick="clearQueue('{{ info.uid }}')">Clear Queue</button>
                                     </div>
                                     <ul class="queue-list list-group">
