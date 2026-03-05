@@ -48,8 +48,10 @@ services:
       UNIFI_PROTECT_API_KEY_2: ${UNIFI_PROTECT_API_KEY_2}
       UNIFI_PROTECT_NAME_2: ${UNIFI_PROTECT_NAME_2}
 
-    ports:
-      - "8000:8000"
+      # Sonos discovery interface (needed with host networking)
+      SONOS_INTERFACE: ${SONOS_INTERFACE:-}
+
+    network_mode: host
     
     restart: unless-stopped
 
