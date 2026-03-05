@@ -17,8 +17,23 @@ import io
 import base64
 import uuid
 from django.core.cache import cache
+import os
 from .utils import generate_auth_url, generate_qr_code
 from .cache_handler import ServerCacheHandler, SessionCacheHandler
+
+
+def _discover_sonos(**kwargs):
+    """Discover Sonos speakers, optionally binding to a specific network interface.
+
+    Set the SONOS_INTERFACE env var to the IP of the network interface
+    where Sonos speakers live (needed when running inside Docker with
+    host networking, since soco may pick the wrong interface).
+    """
+    interface = os.getenv('SONOS_INTERFACE')
+    if interface:
+        kwargs.setdefault('interface_addr', interface)
+    return soco.discover(**kwargs)
+
 
 def sonos_control_view(request):
     speakers_info = sonos_get_speaker_info()
@@ -52,7 +67,7 @@ def toggle_group(request):
             return JsonResponse({'status': 'error', 'message': 'Invalid action'}, status=400)
 
         # Discover the Sonos speakers
-        speakers = soco.discover()
+        speakers = _discover_sonos()
         if not speakers:
             return JsonResponse({'status': 'error', 'message': 'No speakers found'}, status=404)
 
@@ -113,7 +128,7 @@ def adjust_speaker_volume(speaker_uid, volume):
         return {'status': 'error', 'message': 'Invalid parameters', 'status_code': 400}
 
     # Discover Sonos speakers
-    speakers = soco.discover()
+    speakers = _discover_sonos()
     if not speakers:
         return {'status': 'error', 'message': 'No Sonos speakers found', 'status_code': 404}
 
@@ -139,7 +154,7 @@ def speaker_play_pause(speaker_uid, action, track_index=None):
         return {'status': 'error', 'message': 'Invalid parameters', 'status_code': 400}
 
     # Discover Sonos speakers
-    speakers = soco.discover()
+    speakers = _discover_sonos()
     if not speakers:
         return {'status': 'error', 'message': 'No Sonos speakers found', 'status_code': 404}
 
@@ -191,7 +206,7 @@ def queue_track(request):
         print(f'Looking for speaker: {speakerUid} - adding track: {track_uri} at position: {position}')
         
         # Find the Sonos speaker by name
-        speakers = soco.discover()
+        speakers = _discover_sonos()
         if speakers:
             speaker = next((s for s in speakers if s.uid == speakerUid), None)
             if speaker:
@@ -223,7 +238,7 @@ def play_uri(request):
         print(f'Looking for speaker: {speakerUid}')
         
         # Find the Sonos speaker by name
-        speakers = soco.discover()
+        speakers = _discover_sonos()
         if speakers:
             speaker = next((s for s in speakers if s.uid == speakerUid), None)
             if speaker:
@@ -262,7 +277,7 @@ def play_track(request):
             return JsonResponse({'status': 'error', 'message': 'Invalid parameters'}, status=400)
 
         # Discover Sonos speakers
-        speakers = soco.discover()
+        speakers = _discover_sonos()
         if not speakers:
             return JsonResponse({'status': 'error', 'message': 'No Sonos speakers found'}, status=404)
 
@@ -286,7 +301,7 @@ def sonos_clear_queue(speaker_uid):
         return {'status': 'error', 'message': 'Invalid parameters', 'status_code': 400}    
         
     # Discover and find the speaker by UID
-    speakers = soco.discover()
+    speakers = _discover_sonos()
     speaker = next((s for s in speakers if s.uid == speaker_uid), None)
 
     if speaker:
@@ -308,7 +323,7 @@ def speaker_play_pause(speaker_uid, action, track_index=None):
         return {'status': 'error', 'message': 'Invalid parameters', 'status_code': 400}
 
     # Discover Sonos speakers
-    speakers = soco.discover()
+    speakers = _discover_sonos()
     if not speakers:
         return {'status': 'error', 'message': 'No Sonos speakers found', 'status_code': 404}
 
@@ -334,7 +349,7 @@ def speaker_play_pause(speaker_uid, action, track_index=None):
 
 def sonos_get_speaker_info():
     speakers_info = []
-    speakers = soco.discover()
+    speakers = _discover_sonos()
     all_ungrouped_speakers = []
 
     if speakers:
