@@ -51,8 +51,9 @@ def execute_view(request):
         return JsonResponse({"error": "Invalid mode. Must be 'vacation' or 'home'"}, status=400)
 
     dry_run = body.get("dry_run", False)
+    skip_steps = body.get("skip_steps", [])
 
-    run_id, error = start_execution(mode, dry_run=dry_run)
+    run_id, error = start_execution(mode, dry_run=dry_run, skip_steps=skip_steps)
     if error:
         return JsonResponse({"error": error}, status=409)
 

@@ -181,7 +181,7 @@ VACATION_STEPS = [
         ],
     },
     {
-        "alias": "Turn Off Televisions",
+        "alias": "Turn Off Televisions & Sonos",
         "icon": "fas fa-tv",
         "actions": [
             {
@@ -190,6 +190,13 @@ VACATION_STEPS = [
                     "entity_id": "switch.living_room_tv_socket_1",
                 },
                 "description": "Living Room TV",
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.living_room_tv_socket_2",
+                },
+                "description": "Living Room Sonos",
                 "delay_after": 1,
             },
             {
@@ -198,6 +205,13 @@ VACATION_STEPS = [
                     "entity_id": "switch.basement_master_tv_socket_1",
                 },
                 "description": "Basement Master TV",
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.smart_outlet_2_socket_2",
+                },
+                "description": "Basement Master Sonos",
                 "delay_after": 1,
             },
             {
@@ -205,7 +219,14 @@ VACATION_STEPS = [
                 "data": {
                     "entity_id": "switch.media_room_tv_socket_1",
                 },
-                "description": "Media Room TV",
+                "description": "Games Room TV",
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.media_room_tv_socket_2",
+                },
+                "description": "Games Room Sonos",
                 "delay_after": 1,
             },
             {
@@ -214,6 +235,13 @@ VACATION_STEPS = [
                     "entity_id": "switch.office_tv_socket_1",
                 },
                 "description": "Office TV",
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.office_tv_socket_2",
+                },
+                "description": "Office Sonos",
                 "delay_after": 1,
             },
             {
@@ -222,6 +250,13 @@ VACATION_STEPS = [
                     "entity_id": "switch.master_bedroom_tv_socket_1",
                 },
                 "description": "Master Bedroom TV",
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.master_bedroom_tv_socket_2",
+                },
+                "description": "Master Bedroom Sonos",
             },
         ],
     },
@@ -442,7 +477,7 @@ HOME_STEPS = [
         ],
     },
     {
-        "alias": "Turn On Televisions",
+        "alias": "Turn On Televisions & Sonos",
         "icon": "fas fa-tv",
         "actions": [
             {
@@ -451,6 +486,13 @@ HOME_STEPS = [
                     "entity_id": "switch.living_room_tv_socket_1",
                 },
                 "description": "Living Room TV",
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.living_room_tv_socket_2",
+                },
+                "description": "Living Room Sonos",
                 "delay_after": 1,
             },
             {
@@ -459,6 +501,13 @@ HOME_STEPS = [
                     "entity_id": "switch.basement_master_tv_socket_1",
                 },
                 "description": "Basement Master TV",
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.smart_outlet_2_socket_2",
+                },
+                "description": "Basement Master Sonos",
                 "delay_after": 1,
             },
             {
@@ -466,7 +515,14 @@ HOME_STEPS = [
                 "data": {
                     "entity_id": "switch.media_room_tv_socket_1",
                 },
-                "description": "Media Room TV",
+                "description": "Games Room TV",
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.media_room_tv_socket_2",
+                },
+                "description": "Games Room Sonos",
                 "delay_after": 1,
             },
             {
@@ -475,6 +531,13 @@ HOME_STEPS = [
                     "entity_id": "switch.office_tv_socket_1",
                 },
                 "description": "Office TV",
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.office_tv_socket_2",
+                },
+                "description": "Office Sonos",
                 "delay_after": 1,
             },
             {
@@ -483,6 +546,13 @@ HOME_STEPS = [
                     "entity_id": "switch.master_bedroom_tv_socket_1",
                 },
                 "description": "Master Bedroom TV",
+            },
+            {
+                "action": "switch/turn_on",
+                "data": {
+                    "entity_id": "switch.master_bedroom_tv_socket_2",
+                },
+                "description": "Master Bedroom Sonos",
             },
         ],
     },

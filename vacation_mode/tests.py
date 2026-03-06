@@ -162,8 +162,9 @@ class ExecuteStepTests(TestCase):
             ],
         }
         step_status = {"status": "running", "error": None}
-        result = execute_step(step, step_status)
-        self.assertTrue(result)
+        success, failed_indices = execute_step(step, step_status)
+        self.assertTrue(success)
+        self.assertEqual(failed_indices, set())
         mock_verify.assert_called_once()
 
     @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
@@ -177,8 +178,9 @@ class ExecuteStepTests(TestCase):
             ],
         }
         step_status = {"status": "running", "error": None}
-        result = execute_step(step, step_status)
-        self.assertFalse(result)
+        success, failed_indices = execute_step(step, step_status)
+        self.assertFalse(success)
+        self.assertEqual(failed_indices, {0})
         self.assertIn("Service unavailable", step_status["error"])
         # verify_entity_state should NOT be called when service call fails
         mock_verify.assert_not_called()
@@ -197,8 +199,9 @@ class ExecuteStepTests(TestCase):
             ],
         }
         step_status = {"status": "running", "error": None}
-        result = execute_step(step, step_status)
-        self.assertFalse(result)
+        success, failed_indices = execute_step(step, step_status)
+        self.assertFalse(success)
+        self.assertEqual(failed_indices, {1})  # Only action index 1 failed
         # But all 3 actions were attempted (continue on sub-action failure)
         self.assertEqual(mock_call.call_count, 3)
         # verify_entity_state called for action 1 and 3 (succeeded), not 2 (failed)
@@ -217,8 +220,9 @@ class ExecuteStepTests(TestCase):
             ],
         }
         step_status = {"status": "running", "error": None}
-        result = execute_step(step, step_status)
-        self.assertFalse(result)
+        success, failed_indices = execute_step(step, step_status)
+        self.assertFalse(success)
+        self.assertEqual(failed_indices, {0})
         self.assertIn("unavailable", step_status["error"])
 
 
@@ -549,8 +553,9 @@ class DryRunTests(TestCase):
             ],
         }
         step_status = {"status": "running", "error": None}
-        result = execute_step(step, step_status, dry_run=True)
-        self.assertTrue(result)
+        success, failed_indices = execute_step(step, step_status, dry_run=True)
+        self.assertTrue(success)
+        self.assertEqual(failed_indices, set())
         mock_post.assert_not_called()
 
     @patch("vacation_mode.views.start_execution")
@@ -564,7 +569,7 @@ class DryRunTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        mock_start.assert_called_once_with("vacation", dry_run=True)
+        mock_start.assert_called_once_with("vacation", dry_run=True, skip_steps=[])
 
 
 class StepDefinitionTests(TestCase):
@@ -731,6 +736,47 @@ class RunStepsTests(TestCase):
         self.assertEqual(run_data["status"], "complete")
         self.assertEqual(run_data["steps"][0]["status"], STATUS_FAILED)
         self.assertEqual(run_data["steps"][1]["status"], STATUS_SUCCESS)
+
+    @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
+    @patch("vacation_mode.executor.call_ha_service")
+    @patch("vacation_mode.executor.RETRY_DELAY", 0)
+    def test_retry_only_reruns_failed_actions(self, mock_call, mock_verify):
+        """On retry, only the failed actions should be re-executed, not the whole step."""
+        # 3 actions: first succeeds, second fails, third succeeds → retry second → succeeds
+        mock_call.side_effect = [
+            (True, None),   # action 0: succeeds
+            (False, "err"), # action 1: fails
+            (True, None),   # action 2: succeeds
+            (True, None),   # retry action 1: succeeds
+        ]
+
+        steps = [
+            {
+                "alias": "Multi Step",
+                "icon": "fas fa-test",
+                "actions": [
+                    {"action": "switch/turn_on", "data": {"entity_id": "s1"}},
+                    {"action": "switch/turn_on", "data": {"entity_id": "s2"}},
+                    {"action": "switch/turn_on", "data": {"entity_id": "s3"}},
+                ],
+            },
+        ]
+
+        run_id = "test-run-retry-partial"
+        _execution_lock.acquire()
+        _runs[run_id] = {
+            "run_id": run_id, "mode": "home", "status": "running",
+            "steps": [{"alias": "Multi Step", "icon": "fas fa-test", "status": STATUS_PENDING, "attempt": 0, "error": None, "progress": None}],
+        }
+
+        run_steps(run_id, steps)
+
+        run_data = _runs[run_id]
+        self.assertEqual(run_data["steps"][0]["status"], STATUS_SUCCESS)
+        # Total calls: 3 initial + 1 retry = 4 (NOT 3 initial + 3 retry = 6)
+        self.assertEqual(mock_call.call_count, 4)
+        # verify called for: action 0, action 2 (initial) + action 1 (retry) = 3
+        self.assertEqual(mock_verify.call_count, 3)
 
     @patch("vacation_mode.executor.verify_entity_state", return_value=(True, None))
     @patch("vacation_mode.executor.call_ha_service")
@@ -921,7 +967,7 @@ class AdditionalViewTests(TestCase):
             data=json.dumps({"mode": "vacation"}),
             content_type="application/json",
         )
-        mock_start.assert_called_once_with("vacation", dry_run=False)
+        mock_start.assert_called_once_with("vacation", dry_run=False, skip_steps=[])
 
 
 class TemplateRenderTests(TestCase):
