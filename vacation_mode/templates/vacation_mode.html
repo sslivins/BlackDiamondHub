@@ -199,6 +199,52 @@
         background-color: #fff5f5;
     }
 
+    .step-item.skipped {
+        border-left-color: #adb5bd;
+        background-color: #f8f9fa;
+        opacity: 0.6;
+    }
+
+    .step-checkbox {
+        flex-shrink: 0;
+        margin-right: 6px;
+    }
+
+    .step-checkbox input[type="checkbox"] {
+        display: none;
+    }
+
+    .step-checkbox label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid #adb5bd;
+        background-color: transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: transparent;
+        font-size: 16px;
+    }
+
+    .step-checkbox input[type="checkbox"]:checked + label {
+        border-color: #28a745;
+        background-color: #28a745;
+        color: #fff;
+    }
+
+    .step-checkbox label:active {
+        transform: scale(0.9);
+    }
+
+    .step-item.skipped .step-name,
+    .step-item.skipped .step-icon {
+        text-decoration: line-through;
+        color: #adb5bd;
+    }
+
     .step-icon {
         width: 36px;
         font-size: 21px;
@@ -410,13 +456,32 @@
 
     function renderSteps(steps) {
         const list = document.getElementById('step-list');
+        const isRunning = runId !== null;
         list.innerHTML = '';
         steps.forEach((step, idx) => {
             const li = document.createElement('li');
             li.className = 'step-item ' + step.status;
             li.id = 'step-' + idx;
             const detailClass = step.status === 'failed' && step.error ? 'step-detail has-error' : 'step-detail';
+
+            // Show checkbox only before execution starts
+            let checkboxHtml = '';
+            if (!isRunning) {
+                const checked = step.status !== 'skipped' ? 'checked' : '';
+                checkboxHtml = `
+                    <div class="step-checkbox">
+                        <input type="checkbox" id="step-cb-${idx}" ${checked}
+                               data-step-idx="${idx}"
+                               onchange="toggleStep(${idx}, this.checked)">
+                        <label for="step-cb-${idx}">
+                            <i class="fas fa-check"></i>
+                        </label>
+                    </div>
+                `;
+            }
+
             li.innerHTML = `
+                ${checkboxHtml}
                 <div class="step-icon">
                     <i class="${step.icon}"></i>
                 </div>
@@ -451,6 +516,7 @@
             case 'retrying': return '<i class="fas fa-spinner" style="color: #fd7e14;"></i>';
             case 'success': return '<i class="fas fa-check-circle" style="color: #28a745;"></i>';
             case 'failed': return '<i class="fas fa-times-circle" style="color: #dc3545;"></i>';
+            case 'skipped': return '<i class="fas fa-forward" style="color: #adb5bd;"></i>';
             default: return '';
         }
     }
@@ -461,11 +527,22 @@
 
     function updateProgress(steps) {
         const total = steps.length;
-        const done = steps.filter(s => s.status === 'success' || s.status === 'failed').length;
+        const done = steps.filter(s => s.status === 'success' || s.status === 'failed' || s.status === 'skipped').length;
         const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
         document.getElementById('progress-bar').style.width = pct + '%';
         document.getElementById('progress-text').textContent = `${done} / ${total} steps`;
+    }
+
+    function toggleStep(idx, checked) {
+        const li = document.getElementById('step-' + idx);
+        if (checked) {
+            li.classList.remove('skipped');
+            initialSteps[idx].status = 'pending';
+        } else {
+            li.classList.add('skipped');
+            initialSteps[idx].status = 'skipped';
+        }
     }
 
     function startExecution() {
@@ -473,13 +550,21 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
 
+        // Collect indices of unchecked (skipped) steps
+        const skipSteps = [];
+        initialSteps.forEach((step, idx) => {
+            if (step.status === 'skipped') {
+                skipSteps.push(idx);
+            }
+        });
+
         fetch('/vacation_mode/api/execute/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken,
             },
-            body: JSON.stringify({ mode: currentMode, dry_run: dryRun }),
+            body: JSON.stringify({ mode: currentMode, dry_run: dryRun, skip_steps: skipSteps }),
         })
         .then(res => res.json())
         .then(data => {
@@ -533,6 +618,7 @@
         const steps = data.steps;
         const successCount = steps.filter(s => s.status === 'success').length;
         const failCount = steps.filter(s => s.status === 'failed').length;
+        const skippedCount = steps.filter(s => s.status === 'skipped').length;
         const total = steps.length;
 
         const summary = document.getElementById('run-summary');
@@ -540,7 +626,8 @@
 
         if (failCount === 0) {
             summary.className = 'run-summary all-success';
-            summary.innerHTML = `<i class="fas fa-check-circle"></i> All ${total} steps completed successfully!`;
+            const skippedNote = skippedCount > 0 ? ` (${skippedCount} skipped)` : '';
+            summary.innerHTML = `<i class="fas fa-check-circle"></i> All ${successCount} steps completed successfully!${skippedNote}`;
             // Auto-reload after a brief delay on full success
             setTimeout(() => {
                 window.location.reload();

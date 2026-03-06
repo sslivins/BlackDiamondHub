@@ -33,6 +33,7 @@ STATUS_RUNNING = "running"
 STATUS_RETRYING = "retrying"
 STATUS_SUCCESS = "success"
 STATUS_FAILED = "failed"
+STATUS_SKIPPED = "skipped"
 
 
 def get_ha_headers():
@@ -323,17 +324,31 @@ def _check_entities(entity_ids, check_type, expected):
     return errors
 
 
-def execute_step(step, step_status, dry_run=False):
+def execute_step(step, step_status, dry_run=False, action_indices=None):
     """
     Execute a single step (which may contain multiple actions).
     Updates step_status dict in-place.
 
-    Returns True if the step succeeded, False otherwise.
+    Args:
+        step: Step definition dict with "actions" list.
+        step_status: Mutable status dict updated in-place.
+        dry_run: If True, simulate without hitting HA.
+        action_indices: Optional set of action indices to run. If None, runs
+                        all actions. Used on retries to only re-run failed ones.
+
+    Returns:
+        (success: bool, failed_indices: set of int) — failed_indices contains
+        the indices of actions that failed (empty on full success).
     """
     actions = step.get("actions", [])
     sub_errors = []
+    failed_indices = set()
 
     for i, action in enumerate(actions):
+        # On retry, skip actions that already succeeded
+        if action_indices is not None and i not in action_indices:
+            continue
+
         # Update progress message if the action has a description
         description = action.get("description")
         if description:
@@ -350,6 +365,7 @@ def execute_step(step, step_status, dry_run=False):
 
         if not success:
             sub_errors.append(f"Action {i + 1} ({action['action']}): {error}")
+            failed_indices.add(i)
             # Don't stop on sub-action failure within a step — try remaining actions
             continue
 
@@ -357,6 +373,7 @@ def execute_step(step, step_status, dry_run=False):
         verify_success, verify_error = verify_entity_state(action, dry_run=dry_run)
         if not verify_success:
             sub_errors.append(f"Action {i + 1} ({action['action']}): {verify_error}")
+            failed_indices.add(i)
             continue
 
         # Apply delay if specified
@@ -367,10 +384,10 @@ def execute_step(step, step_status, dry_run=False):
     if sub_errors:
         step_status["error"] = "; ".join(sub_errors)
         step_status["progress"] = None
-        return False
+        return False, failed_indices
 
     step_status["progress"] = None
-    return True
+    return True, failed_indices
 
 
 def run_steps(run_id, steps, dry_run=False):
@@ -382,20 +399,28 @@ def run_steps(run_id, steps, dry_run=False):
 
     for idx, step in enumerate(steps):
         step_status = run_data["steps"][idx]
+
+        # Skip steps that were marked as skipped before execution
+        if step_status["status"] == STATUS_SKIPPED:
+            continue
+
         step_status["status"] = STATUS_RUNNING
         step_status["attempt"] = 1
 
-        success = execute_step(step, step_status, dry_run=dry_run)
+        success, failed_indices = execute_step(step, step_status, dry_run=dry_run)
 
         if not success:
-            # Retry logic
+            # Retry logic — only re-run the actions that failed
             for retry in range(MAX_RETRIES):
                 step_status["status"] = STATUS_RETRYING
                 step_status["attempt"] = retry + 2
                 step_status["error"] = None
                 time.sleep(RETRY_DELAY)
 
-                success = execute_step(step, step_status, dry_run=dry_run)
+                success, failed_indices = execute_step(
+                    step, step_status, dry_run=dry_run,
+                    action_indices=failed_indices,
+                )
                 if success:
                     break
 
@@ -415,13 +440,14 @@ def run_steps(run_id, steps, dry_run=False):
         _execution_lock.release()
 
 
-def start_execution(mode, dry_run=False):
+def start_execution(mode, dry_run=False, skip_steps=None):
     """
     Start executing steps for the given mode.
 
     Args:
         mode: "vacation" or "home"
         dry_run: If True, simulate all steps without hitting HA
+        skip_steps: Optional list of step indices to skip
 
     Returns:
         (run_id, error_message) - error_message is None on success
@@ -432,6 +458,7 @@ def start_execution(mode, dry_run=False):
         return None, "An execution is already in progress"
 
     steps = VACATION_STEPS if mode == "vacation" else HOME_STEPS
+    skip_set = set(skip_steps) if skip_steps else set()
     run_id = str(uuid.uuid4())[:8]
 
     _runs[run_id] = {
@@ -445,12 +472,12 @@ def start_execution(mode, dry_run=False):
             {
                 "alias": step["alias"],
                 "icon": step["icon"],
-                "status": STATUS_PENDING,
+                "status": STATUS_SKIPPED if i in skip_set else STATUS_PENDING,
                 "attempt": 0,
                 "error": None,
                 "progress": None,
             }
-            for step in steps
+            for i, step in enumerate(steps)
         ],
     }
 

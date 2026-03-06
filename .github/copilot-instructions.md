@@ -83,6 +83,15 @@ BlackDiamondHub is a Django-based home automation and management hub for a vacat
 - Branch naming: `feature/description`, `fix/description`
 - `main` branch has protection rules: require PR, require status checks (unit-tests, selenium-tests), no force push, no deletion
 
+## Pull Requests
+
+- **Always use the GitHub CLI (`gh`) for PR operations** — do not use MCP tools, API calls, or browser-based approaches
+- Create PRs: `gh pr create --title "..." --body "..." --base main`
+- View PR status: `gh pr view`
+- List PRs: `gh pr list`
+- Check CI status: `gh pr checks`
+- The `gh` CLI is already authenticated on this machine
+
 ## Testing
 
 - Run unit tests: `venv\Scripts\python.exe manage.py test --exclude-tag=selenium --verbosity 2`
