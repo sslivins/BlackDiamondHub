@@ -1,31 +1,35 @@
 from django.test import TestCase
 from unittest.mock import patch
-import json
-import os
 
-# Create your tests here.
-from sonos_control.views import sonos_get_speaker_info  # Adjust the import path as needed
 
-class SonosSpeakerInfoTest(TestCase):
-
-    def setUp(self):
-        # Load the mock data from the JSON file
-        current_directory = os.path.dirname(os.path.abspath(__file__))
-        json_file_path = os.path.join(current_directory, 'sonos_speakers_info.json')
-
-        with open(json_file_path, 'r') as json_file:
-            self.mock_speaker_info = json.load(json_file)
+class SpotifySearchInputTest(TestCase):
+    """Tests for touch-screen keyboard support on the Spotify search input."""
 
     @patch('sonos_control.views.sonos_get_speaker_info')
-    def test_sonos_speaker_info(self, mock_get_speaker_info):
-        # Set the mock to return the mock data
-        mock_get_speaker_info.return_value = self.mock_speaker_info
+    def test_search_input_has_inputmode_search(self, mock_speakers):
+        """The search input should have inputmode='search' so touch devices show an on-screen keyboard."""
+        mock_speakers.return_value = {}
 
-        # Now call the code that uses sonos_get_speaker_info()
-        # For example, if you have a view that uses it:
+        # Set session so the template thinks we're authenticated with Spotify
+        session = self.client.session
+        session['spotify_token_info'] = {'access_token': 'fake-token'}
+        session.save()
 
-        response = self.client.get('/your-sonos-endpoint/')  # Replace with your actual endpoint
+        response = self.client.get('/sonos_control/')
+        content = response.content.decode()
 
-        # Now you can assert that the response is as expected
-        self.assertEqual(response.status_code, 200)
-        # Add more assertions as needed
+        self.assertIn('inputmode="search"', content)
+
+    @patch('sonos_control.views.sonos_get_speaker_info')
+    def test_search_input_has_autocomplete_off(self, mock_speakers):
+        """The search input should have autocomplete='off' to avoid browser suggestions covering the keyboard."""
+        mock_speakers.return_value = {}
+
+        session = self.client.session
+        session['spotify_token_info'] = {'access_token': 'fake-token'}
+        session.save()
+
+        response = self.client.get('/sonos_control/')
+        content = response.content.decode()
+
+        self.assertIn('autocomplete="off"', content)

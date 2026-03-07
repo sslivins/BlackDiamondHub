@@ -1,8 +1,8 @@
 {% load static %}
 <div class="container-fluid">
-    <div class="row">
+    <div class="d-flex gap-3">
         <!-- Speaker Tabs -->
-        <div class="col-md-3">
+        <div class="sonos-tabs-col flex-shrink-0">
             <div class="nav flex-column nav-tabs" id="speaker-tabs"
                  role="tablist" aria-orientation="vertical">
                 {% for info in speaker_info %}
@@ -20,7 +20,7 @@
         </div>
 
         <!-- Speaker Content -->
-        <div class="col-md-9 speaker-dropzone">
+        <div class="sonos-content-col flex-grow-1 min-width-0">
             <div class="tab-content" id="speaker-tabContent">
                 {% for info in speaker_info %}
                     {% if info.is_coordinator %}
@@ -33,7 +33,7 @@
                             <div class="card mb-3">
                                 <div class="row no-gutters">
                                     <!-- Album Art -->
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <h2 class="mt-3 text-center">{{ info.group_label }}</h2>
                                         <div class="album-art-container position-relative">
                                             <img src="{{ info.album_art }}"
@@ -59,7 +59,7 @@
                                     </div>
 
                                     <!-- Track Info -->
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <h5 class="track-title"><strong>Title:</strong> {{ info.track }}</h5>
                                         <p class="track-artist"><strong>Artist:</strong> {{ info.artist }}</p>
                                         <p class="track-album"><strong>Album:</strong> {{ info.album }}</p>
@@ -122,7 +122,7 @@
     </div>
 </div>
 
-<!-- Group Modals (outside main layout to avoid z-index issues) -->
+<!-- Group Modals -->
 {% for info in speaker_info %}
     <div class="modal fade" id="groupModal-{{ info.uid }}" tabindex="-1"
          aria-labelledby="group-modal-{{ info.uid }}" aria-hidden="true">
