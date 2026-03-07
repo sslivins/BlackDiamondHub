@@ -276,3 +276,13 @@ for i in range(1, 10):
 ### SCENE CONTROL SETTINGS ###
 ##############################
 SCENE_FILTER = os.environ.get('SCENE_FILTER', '').split(',') if os.environ.get('SCENE_FILTER') else []
+
+############################################
+### Security headers (internal LAN app)  ###
+############################################
+# Relax headers that Django sets by default — they cause problems on
+# limited embedded browsers (e.g. Ubiquiti Connect Screen) when served
+# over plain HTTP on a LAN IP.
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None   # default "same-origin"
+SECURE_REFERRER_POLICY = None              # default "same-origin"
+X_FRAME_OPTIONS = 'ALLOWALL'               # allow embedding in iframes (Connect Screen may use one)
