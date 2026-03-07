@@ -301,20 +301,56 @@
     // ---- Spotify Data Fetching and Display ----
     function fetchSpotifyData() {
       fetch("{% url 'fetch_spotify_data' %}")
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(err => {
+              throw new Error(err.error || `HTTP ${response.status}`);
+            });
+          }
+          return response.json();
+        })
         .then(data => {
+          if (data.error) {
+            throw new Error(data.error);
+          }
           populateSpotifyData(data);  // Populate Recently Played and Favorites
         })
-        .catch(error => console.error('Error fetching Spotify data:', error));
+        .catch(error => {
+          console.error('Error fetching Spotify data:', error);
+          const contentContainer = document.getElementById('spotify-content');
+          contentContainer.innerHTML = `
+            <div class="alert alert-warning m-3" role="alert">
+              <strong>Could not load Spotify data:</strong> ${error.message}
+            </div>
+          `;
+        });
     }
   
     function fetchSearchResults(query) {
       fetch(`{% url 'spotify_search' %}?query=${query}`)
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(err => {
+              throw new Error(err.error || `HTTP ${response.status}`);
+            });
+          }
+          return response.json();
+        })
         .then(data => {
+          if (data.error) {
+            throw new Error(data.error);
+          }
           displaySearchResults(data.search_results);  // Display search results in content container
         })
-        .catch(error => console.error('Error fetching search results:', error));
+        .catch(error => {
+          console.error('Error fetching search results:', error);
+          const contentContainer = document.getElementById('spotify-content');
+          contentContainer.innerHTML = `
+            <div class="alert alert-warning m-3" role="alert">
+              <strong>Search failed:</strong> ${error.message}
+            </div>
+          `;
+        });
     }
   
     function populateSpotifyData(data) {
