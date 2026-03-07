@@ -6,11 +6,10 @@ class SpotifySearchInputTest(TestCase):
     """Tests for touch-screen keyboard support on the Spotify search input."""
 
     @patch('sonos_control.views.sonos_get_speaker_info')
-    def test_search_input_has_inputmode_search(self, mock_speakers):
-        """The search input should have inputmode='search' so touch devices show an on-screen keyboard."""
+    def test_search_input_has_inputmode_none(self, mock_speakers):
+        """The search input should have inputmode='none' to suppress the native keyboard in favour of the custom virtual keyboard."""
         mock_speakers.return_value = {}
 
-        # Set session so the template thinks we're authenticated with Spotify
         session = self.client.session
         session['spotify_token_info'] = {'access_token': 'fake-token'}
         session.save()
@@ -18,7 +17,7 @@ class SpotifySearchInputTest(TestCase):
         response = self.client.get('/sonos_control/')
         content = response.content.decode()
 
-        self.assertIn('inputmode="search"', content)
+        self.assertIn('inputmode="none"', content)
 
     @patch('sonos_control.views.sonos_get_speaker_info')
     def test_search_input_has_autocomplete_off(self, mock_speakers):
@@ -33,3 +32,18 @@ class SpotifySearchInputTest(TestCase):
         content = response.content.decode()
 
         self.assertIn('autocomplete="off"', content)
+
+    @patch('sonos_control.views.sonos_get_speaker_info')
+    def test_virtual_keyboard_present(self, mock_speakers):
+        """The page should include the custom virtual keyboard container for touch-screen use."""
+        mock_speakers.return_value = {}
+
+        session = self.client.session
+        session['spotify_token_info'] = {'access_token': 'fake-token'}
+        session.save()
+
+        response = self.client.get('/sonos_control/')
+        content = response.content.decode()
+
+        self.assertIn('id="virtual-keyboard"', content)
+        self.assertIn('vk-container', content)
