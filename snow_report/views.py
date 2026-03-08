@@ -4,21 +4,40 @@ import requests
 import re
 
 # Conversion Functions
+def sanitize_number(value):
+    """Clean malformed numeric strings from the source website (e.g. '--7' → '-7', 'N/A' → None)."""
+    if not value:
+        return None
+    # Keep only digits, minus sign, and decimal point
+    cleaned = re.sub(r'[^\d.\-]', '', str(value))
+    # Collapse multiple minus signs into one (e.g. '--7' → '-7')
+    cleaned = re.sub(r'-+', '-', cleaned)
+    if not cleaned or cleaned == '-':
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
 def convert_celsius_to_fahrenheit(celsius):
     """Convert Celsius to Fahrenheit."""
-    return round((float(celsius) * 9/5) + 32) if celsius else None
+    val = sanitize_number(celsius)
+    return round((val * 9/5) + 32) if val is not None else None
 
 def convert_meters_to_feet(meters):
     """Convert meters to feet."""
-    return round(float(meters) * 3.28084) if meters else None
+    val = sanitize_number(meters)
+    return round(val * 3.28084) if val is not None else None
 
 def convert_cm_to_inches(cm):
     """Convert cm to inches."""
-    return round(float(cm) * 0.393701) if cm else None
+    val = sanitize_number(cm)
+    return round(val * 0.393701) if val is not None else None
 
 def convert_kph_to_mph(kph):
     """Convert kilometers per hour to miles per hour."""
-    return round(float(kph) * 0.621371) if kph else None
+    val = sanitize_number(kph)
+    return round(val * 0.621371) if val is not None else None
 
 # Main View
 def snow_report(request):

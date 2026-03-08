@@ -6,7 +6,61 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from snow_report.views import parse_weather_html
+from snow_report.views import parse_weather_html, sanitize_number, convert_celsius_to_fahrenheit, convert_cm_to_inches, convert_meters_to_feet, convert_kph_to_mph
+
+
+class SanitizeNumberTests(TestCase):
+    """Tests for sanitize_number and conversion functions handling malformed input."""
+
+    def test_double_dash_negative(self):
+        """'--7' from the website should be treated as -7."""
+        self.assertEqual(sanitize_number('--7'), -7.0)
+
+    def test_normal_negative(self):
+        self.assertEqual(sanitize_number('-7'), -7.0)
+
+    def test_normal_positive(self):
+        self.assertEqual(sanitize_number('15'), 15.0)
+
+    def test_empty_string(self):
+        self.assertIsNone(sanitize_number(''))
+
+    def test_none(self):
+        self.assertIsNone(sanitize_number(None))
+
+    def test_na_string(self):
+        self.assertIsNone(sanitize_number('N/A'))
+
+    def test_dash_only(self):
+        self.assertIsNone(sanitize_number('-'))
+
+    def test_double_dash_only(self):
+        self.assertIsNone(sanitize_number('--'))
+
+    def test_decimal(self):
+        self.assertEqual(sanitize_number('3.5'), 3.5)
+
+    def test_celsius_to_fahrenheit_double_dash(self):
+        """'--7' should convert as -7°C → 19°F."""
+        self.assertEqual(convert_celsius_to_fahrenheit('--7'), 19)
+
+    def test_celsius_to_fahrenheit_normal(self):
+        self.assertEqual(convert_celsius_to_fahrenheit('-7'), 19)
+
+    def test_celsius_to_fahrenheit_none(self):
+        self.assertIsNone(convert_celsius_to_fahrenheit(None))
+
+    def test_celsius_to_fahrenheit_na(self):
+        self.assertIsNone(convert_celsius_to_fahrenheit('N/A'))
+
+    def test_cm_to_inches_double_dash(self):
+        self.assertEqual(convert_cm_to_inches('--10'), -4)
+
+    def test_meters_to_feet_normal(self):
+        self.assertEqual(convert_meters_to_feet('1000'), 3281)
+
+    def test_kph_to_mph_normal(self):
+        self.assertEqual(convert_kph_to_mph('100'), 62)
 from tests.selenium_helpers import get_chrome_options
 
 class LiveParseWeatherHtmlTests(TestCase):
