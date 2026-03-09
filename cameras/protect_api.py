@@ -18,15 +18,15 @@ import requests
 import urllib3
 
 from django.conf import settings
+from django.core.cache import cache as django_cache
 
 logger = logging.getLogger(__name__)
 
 # Suppress InsecureRequestWarning for self-signed NVR certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Per-site in-memory cache: {host: {'cameras': [...], 'timestamp': float}}
-_cache = {}
 CACHE_TTL = 300  # 5 minutes
+CACHE_KEY_PREFIX = 'protect_cameras_'
 
 API_BASE = '/proxy/protect/integration/v1'
 
@@ -53,26 +53,28 @@ def get_protect_cameras():
     if not sites:
         return []
 
-    now = time.time()
-
     # Separate cached vs uncached sites
     result_map = {}  # index -> site dict
     to_fetch = []    # (index, site) pairs needing API calls
 
     for i, site in enumerate(sites):
         host = site['host']
-        cached = _cache.get(host)
-        if cached and (now - cached['timestamp']) < CACHE_TTL:
+        cache_key = f'{CACHE_KEY_PREFIX}{host}'
+        cached = django_cache.get(cache_key)
+        if cached is not None:
+            logger.info("Camera cache HIT for %s", host)
             result_map[i] = {
                 'name': site.get('name', host),
                 'host': host,
-                'cameras': cached['cameras'],
+                'cameras': cached,
             }
         else:
+            logger.info("Camera cache MISS for %s", host)
             to_fetch.append((i, site))
 
     # Fetch uncached sites in parallel
     if to_fetch:
+        t0 = time.time()
         with ThreadPoolExecutor(max_workers=len(to_fetch)) as pool:
             futures = {}
             for i, site in to_fetch:
@@ -90,7 +92,8 @@ def get_protect_cameras():
                 site_name = site.get('name', host)
                 cameras = f.result()
                 if cameras is not None:
-                    _cache[host] = {'cameras': cameras, 'timestamp': now}
+                    cache_key = f'{CACHE_KEY_PREFIX}{host}'
+                    django_cache.set(cache_key, cameras, CACHE_TTL)
                 else:
                     cameras = []
                 result_map[i] = {
@@ -98,13 +101,18 @@ def get_protect_cameras():
                     'host': host,
                     'cameras': cameras,
                 }
+        logger.info("Fetched cameras from %d site(s) in %.1fs",
+                    len(to_fetch), time.time() - t0)
 
     return [result_map[i] for i in sorted(result_map)]
 
 
 def clear_cache():
     """Clear the camera cache for all sites."""
-    _cache.clear()
+    sites = getattr(settings, 'UNIFI_PROTECT_SITES', [])
+    for site in sites:
+        django_cache.delete(f'{CACHE_KEY_PREFIX}{site["host"]}')
+    logger.info("Camera cache cleared for %d sites", len(sites))
 
 
 def _get_rtsps_url(host, api_key, camera_id):
@@ -202,7 +210,7 @@ def _find_site_for_camera(camera_id):
     # Search cache for the camera
     for site in sites:
         host = site['host']
-        cached = _cache.get(host)
+        cached = django_cache.get(f'{CACHE_KEY_PREFIX}{host}')
         if cached:
             for cam in cached['cameras']:
                 if cam['camera_id'] == camera_id:
@@ -239,7 +247,8 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
     """Fetch all cameras with RTSPS streams from a single Protect site.
 
     Uses API key authentication (X-API-KEY header). Discovers cameras via
-    GET /v1/cameras, then fetches/creates RTSPS stream URLs for each.
+    GET /v1/cameras, then fetches/creates RTSPS stream URLs and probes
+    PTZ support for all cameras in a single parallel pass.
 
     When site_name is provided, stream names are prefixed with the site
     name to avoid collisions when multiple sites have cameras with the
@@ -284,18 +293,27 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
                 stream_name = _camera_name_to_stream_name(name)
             pending.append((camera_id, name, stream_name))
 
-        # Fetch RTSPS URLs for all cameras in parallel
+        # Fetch RTSPS URLs and probe PTZ in a single parallel pass
         cameras = []
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            future_to_cam = {
+        if not pending:
+            return cameras
+        with ThreadPoolExecutor(max_workers=min(len(pending) * 2, 16)) as pool:
+            rtsps_futures = {
                 pool.submit(_get_rtsps_url, host, api_key, cid): (cid, name, sn)
                 for cid, name, sn in pending
             }
-            for f in as_completed(future_to_cam):
-                camera_id, name, stream_name = future_to_cam[f]
+            ptz_futures = {
+                pool.submit(_is_ptz_camera, host, api_key, cid): cid
+                for cid, name, sn in pending
+            }
+
+            # Collect RTSPS results
+            rtsps_results = {}
+            for f in as_completed(rtsps_futures):
+                camera_id, name, stream_name = rtsps_futures[f]
                 rtsps_urls = f.result()
                 if rtsps_urls:
-                    cameras.append({
+                    rtsps_results[camera_id] = {
                         'name': name,
                         'camera_id': camera_id,
                         'stream_name': stream_name,
@@ -303,22 +321,16 @@ def _fetch_cameras_from_site(host, api_key, site_name=None):
                         'rtsp_url_low': rtsps_urls.get('low', ''),
                         'is_ptz': False,
                         'ptz_presets': 0,
-                    })
+                    }
 
-        # Probe PTZ support for all cameras in parallel
-        if cameras:
-            with ThreadPoolExecutor(max_workers=8) as pool:
-                ptz_futures = {
-                    pool.submit(
-                        _is_ptz_camera, host, api_key, cam['camera_id'],
-                    ): cam
-                    for cam in cameras
-                }
-                for f in as_completed(ptz_futures):
-                    cam = ptz_futures[f]
-                    if f.result():
-                        cam['is_ptz'] = True
-                        cam['ptz_presets'] = PTZ_DEFAULT_PRESETS
+            # Collect PTZ results
+            for f in as_completed(ptz_futures):
+                camera_id = ptz_futures[f]
+                if camera_id in rtsps_results and f.result():
+                    rtsps_results[camera_id]['is_ptz'] = True
+                    rtsps_results[camera_id]['ptz_presets'] = PTZ_DEFAULT_PRESETS
+
+            cameras = list(rtsps_results.values())
 
         cameras.sort(key=lambda c: c['name'])
         return cameras
