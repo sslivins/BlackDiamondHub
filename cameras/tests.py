@@ -7,10 +7,11 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.contrib.auth.models import User
 from unittest.mock import patch, MagicMock, call
 from .views import get_go2rtc_streams, _register_streams_with_go2rtc
+from django.core.cache import cache as django_cache
 from .protect_api import (
     get_protect_cameras, clear_cache, _camera_name_to_stream_name,
     _fetch_cameras_from_site, _is_ptz_camera, ptz_goto_preset,
-    PTZ_DEFAULT_PRESETS,
+    PTZ_DEFAULT_PRESETS, CACHE_KEY_PREFIX,
 )
 
 
@@ -327,12 +328,12 @@ class ProtectCachingTests(TestCase):
 
     def test_clear_cache(self):
         """clear_cache resets the internal cache."""
-        from cameras.protect_api import _cache
-        _cache['192.168.10.1'] = {'cameras': [{'name': 'test'}], 'timestamp': 9999999999}
+        cache_key = f'{CACHE_KEY_PREFIX}192.168.10.1'
+        django_cache.set(cache_key, {'cameras': [{'name': 'test'}]}, 300)
 
         clear_cache()
 
-        self.assertEqual(_cache, {})
+        self.assertIsNone(django_cache.get(cache_key))
 
     @override_settings(UNIFI_PROTECT_SITES=[])
     def test_returns_empty_list_when_no_sites(self):
@@ -821,12 +822,11 @@ class PtzGotoPresetTests(TestCase):
     def setUp(self):
         clear_cache()
         # Populate cache so _find_site_for_camera can find the host
-        from cameras.protect_api import _cache
-        _cache['192.168.10.1'] = {
+        cache_key = f'{CACHE_KEY_PREFIX}192.168.10.1'
+        django_cache.set(cache_key, {
             'cameras': [{'camera_id': 'cam_ptz', 'name': 'PTZ Cam'},
                         {'camera_id': 'cam_fixed', 'name': 'Fixed Cam'}],
-            'timestamp': 9999999999,
-        }
+        }, 300)
 
     @patch('cameras.protect_api.requests.post')
     def test_returns_true_on_success(self, mock_post):
