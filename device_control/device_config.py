@@ -15,12 +15,6 @@ floor, and room. Each device entry specifies:
 TV_DEVICES = {
     "Living Room": [
         {
-            "entity_id": "media_player.living_room_television",
-            "name": "Living Room TV",
-            "type": "media_player",
-            "icon": "fa-tv",
-        },
-        {
             "entity_id": "switch.living_room_tv_socket_1",
             "name": "TV Power Socket",
             "type": "switch",
@@ -54,20 +48,8 @@ TV_DEVICES = {
             "type": "switch",
             "icon": "fa-plug",
         },
-        {
-            "entity_id": "switch.smart_outlet_2_socket_2",
-            "name": "Sonos Arc Ultra",
-            "type": "switch",
-            "icon": "fa-plug",
-        },
     ],
     "Games Room": [
-        {
-            "entity_id": "media_player.65_the_frame",
-            "name": "Games Room TV",
-            "type": "media_player",
-            "icon": "fa-tv",
-        },
         {
             "entity_id": "switch.media_room_tv_socket_1",
             "name": "TV Power Socket",
@@ -82,12 +64,6 @@ TV_DEVICES = {
         },
     ],
     "Office": [
-        {
-            "entity_id": "media_player.office_television",
-            "name": "Office TV",
-            "type": "media_player",
-            "icon": "fa-tv",
-        },
         {
             "entity_id": "switch.office_tv_socket_1",
             "name": "TV Power Socket",
