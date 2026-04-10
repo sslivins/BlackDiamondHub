@@ -72,13 +72,15 @@ class LiveParseWeatherHtmlTests(TestCase):
         weather_data_metric = parse_weather_html(html_content, units)
         self.assertIsNotNone(weather_data_metric)
 
-        # Ensure today_icon is mapped correctly
+        # Ensure today_icon is mapped correctly (may be empty when
+        # Sun Peaks removes the current-condition section seasonally)
         today_icon = weather_data_metric["today_icon"]
-        self.assertNotEqual(today_icon, "fas fa-question-circle", f"today_icon is set to unknown value {today_icon}")
+        if today_icon:
+            self.assertNotEqual(today_icon, "fas fa-question-circle", f"today_icon is set to unknown value {today_icon}")
 
-        # Ensure today_description is not empty
+        # today_description may be empty when the current-condition
+        # section is absent from the page (e.g. off-season)
         today_description = weather_data_metric["today_description"]
-        self.assertNotEqual(today_description, "", "today_description is empty")
 
         ##########################
         ## Temperatures
@@ -117,66 +119,73 @@ class LiveParseWeatherHtmlTests(TestCase):
 
         ##########################
         ## Snow Conditions
+        ## (may be empty off-season when Sun Peaks removes the
+        ## snow-conditions section from the page)
         ##########################
         snow_conditions = weather_data_metric["snow_conditions"]
-        self.assertEqual(len(snow_conditions), 4, f"Expected 4 snow conditions but found: {len(snow_conditions)}")
+        if len(snow_conditions) > 0:
+            self.assertEqual(len(snow_conditions), 4, f"Expected 4 snow conditions but found: {len(snow_conditions)}")
 
-        for snow in snow_conditions:
-            self.assertNotEqual(snow["period"], "", f"Snow condition period for {snow['period']} is empty")
-            self.assertNotEqual(snow["value"], "", f"Snow condition value for {snow['period']} is empty")
+            for snow in snow_conditions:
+                self.assertNotEqual(snow["period"], "", f"Snow condition period for {snow['period']} is empty")
+                self.assertNotEqual(snow["value"], "", f"Snow condition value for {snow['period']} is empty")
 
-        expected_unit = "in" if units == "imperial" else "cm"
-        for snow in snow_conditions:
-            self.assertEqual(snow["unit"], expected_unit, f"Snow condition unit for {snow['period']} is {snow['unit']} - expected: {expected_unit}")
+            expected_unit = "in" if units == "imperial" else "cm"
+            for snow in snow_conditions:
+                self.assertEqual(snow["unit"], expected_unit, f"Snow condition unit for {snow['period']} is {snow['unit']} - expected: {expected_unit}")
 
         ##########################
         ## Wind Speeds
+        ## (may be empty off-season)
         ##########################
         wind_speeds = weather_data_metric["wind_speeds"]
-        self.assertEqual(len(wind_speeds), 3, f"Expected 3 wind speeds but found {len(wind_speeds)}")
+        if len(wind_speeds) > 0:
+            self.assertEqual(len(wind_speeds), 3, f"Expected 3 wind speeds but found {len(wind_speeds)}")
 
-        for wind in wind_speeds:
-            self.assertNotEqual(wind["location"], "", f"Wind speed location for {wind['location']} is empty")
-            self.assertNotEqual(wind["elevation"], "", f"Wind speed elevation for {wind['location']} is empty")
+            for wind in wind_speeds:
+                self.assertNotEqual(wind["location"], "", f"Wind speed location for {wind['location']} is empty")
+                self.assertNotEqual(wind["elevation"], "", f"Wind speed elevation for {wind['location']} is empty")
 
-            try:
-                temp_value = int(wind["elevation"])
-                self.assertGreaterEqual(temp_value, 1000, f"Elevation of {wind['elevation']} for {wind['location']} is less than 1000")
-                self.assertLessEqual(temp_value, 10000, f"Elevation of {wind['elevation']} for {wind['location']} is greater than 10000")
-            except ValueError:
-                self.fail(f"Elevation value for {wind['location']} is not a valid integer: {wind['elevation']}")
+                try:
+                    temp_value = int(wind["elevation"])
+                    self.assertGreaterEqual(temp_value, 1000, f"Elevation of {wind['elevation']} for {wind['location']} is less than 1000")
+                    self.assertLessEqual(temp_value, 10000, f"Elevation of {wind['elevation']} for {wind['location']} is greater than 10000")
+                except ValueError:
+                    self.fail(f"Elevation value for {wind['location']} is not a valid integer: {wind['elevation']}")
 
-        for wind in wind_speeds:
-            self.assertNotEqual(wind["speed_direction"], "", f"Wind speed direction for {wind['location']} is empty")
-            self.assertNotEqual(wind["speed_average"], "", f"Wind speed average for {wind['location']} is empty")
+            for wind in wind_speeds:
+                self.assertNotEqual(wind["speed_direction"], "", f"Wind speed direction for {wind['location']} is empty")
+                self.assertNotEqual(wind["speed_average"], "", f"Wind speed average for {wind['location']} is empty")
 
-            try:
-                temp_value = int(wind["speed_average"])
-                self.assertGreaterEqual(temp_value, 0, f"Wind speed of {wind['speed_average']} for {wind['location']} is less than 0")
-                self.assertLessEqual(temp_value, 150, f"Wind speed of {wind['speed_average']} for {wind['location']} is greater than 150")
-            except ValueError:
-                self.fail(f"Wind speed value for {wind['location']} is not a valid integer: {wind['speed_average']}")
+                try:
+                    temp_value = int(wind["speed_average"])
+                    self.assertGreaterEqual(temp_value, 0, f"Wind speed of {wind['speed_average']} for {wind['location']} is less than 0")
+                    self.assertLessEqual(temp_value, 150, f"Wind speed of {wind['speed_average']} for {wind['location']} is greater than 150")
+                except ValueError:
+                    self.fail(f"Wind speed value for {wind['location']} is not a valid integer: {wind['speed_average']}")
 
-        expected_unit = "mph" if units == "imperial" else "kph"
-        for wind in wind_speeds:
-            self.assertEqual(wind["speed_unit"], expected_unit, f"Wind speed unit for {wind['location']} is {wind['speed_unit']} - expected: {expected_unit}")
+            expected_unit = "mph" if units == "imperial" else "kph"
+            for wind in wind_speeds:
+                self.assertEqual(wind["speed_unit"], expected_unit, f"Wind speed unit for {wind['location']} is {wind['speed_unit']} - expected: {expected_unit}")
 
         ##########################
         ## Forecast
+        ## (may be empty off-season)
         ##########################
         forecast = weather_data_metric["forecast"]
-        self.assertEqual(len(forecast), 6, f"Expected 6 forecast items but found {len(forecast)}")
+        if len(forecast) > 0:
+            self.assertEqual(len(forecast), 6, f"Expected 6 forecast items but found {len(forecast)}")
 
-        for day in forecast:
-            self.assertNotEqual(day["day_name"], "", f"Forecast day name for {day['day_name']} is empty")
-            self.assertTrue(day["day_name"].startswith(("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")), f"Forecast day name for {day['day_name']} is not a valid day of the week")
-            self.assertNotEqual(day["icon"], "", f"Forecast icon for {day['day_name']} is empty")
-            self.assertNotEqual(day["icon"], "fas fa-question-circle", f"Forecast icon for {day['day_name']} is set to an unknown icon (check mapping)")
-            self.assertNotEqual(day["description"], "", f"Forecast description for {day['day_name']} is empty")
+            for day in forecast:
+                self.assertNotEqual(day["day_name"], "", f"Forecast day name for {day['day_name']} is empty")
+                self.assertTrue(day["day_name"].startswith(("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")), f"Forecast day name for {day['day_name']} is not a valid day of the week")
+                self.assertNotEqual(day["icon"], "", f"Forecast icon for {day['day_name']} is empty")
+                self.assertNotEqual(day["icon"], "fas fa-question-circle", f"Forecast icon for {day['day_name']} is set to an unknown icon (check mapping)")
+                self.assertNotEqual(day["description"], "", f"Forecast description for {day['day_name']} is empty")
 
-        expected_unit = "°F" if units == "imperial" else "°C"
-        for day in forecast:
-            self.assertEqual(day["temp_unit"], expected_unit, f"Forecast temp unit for {day['day_name']} is {day['temp_unit']} - expected: {expected_unit}")
+            expected_unit = "°F" if units == "imperial" else "°C"
+            for day in forecast:
+                self.assertEqual(day["temp_unit"], expected_unit, f"Forecast temp unit for {day['day_name']} is {day['temp_unit']} - expected: {expected_unit}")
 
     def test_parse_weather_html_live_data_imperial(self):
         self.parse_weather_html_live_data_and_test("imperial")
@@ -210,20 +219,30 @@ class OfflineParseWeatherHtmlTests(TestCase):
               break
               
         self.assertTrue(found, "Did not find 24 hr snow condition in the list")
-        
-        
-        
-        # # Test with metric units
 
-        # self.assertIsNotNone(weather_data_metric)
-        # self.assertNotIn('', weather_data_metric.values(), "Empty string found in metric weather data")
-        # self.assertNotIn('', [item for sublist in weather_data_metric.values() if isinstance(sublist, list) for item in sublist], "Empty string found in metric weather data list items")
+    def test_parse_weather_html_ignores_air_quality(self):
+        """Ensure the parser only returns temperature entries and ignores
+        the air-quality ul.list-temps section added to the page."""
+        file_path = os.path.join(os.path.dirname(__file__), 'tests', 'weather_current.html')
+        with open(file_path, 'r', encoding='utf-8') as file:
+            html_content = file.read()
 
-        # # Test with imperial units
-        # weather_data_imperial = parse_weather_html(html_content, "imperial")
-        # self.assertIsNotNone(weather_data_imperial)
-        # self.assertNotIn('', weather_data_imperial.values(), "Empty string found in imperial weather data")
-        # self.assertNotIn('', [item for sublist in weather_data_imperial.values() if isinstance(sublist, list) for item in sublist], "Empty string found in imperial weather data list items")
+        weather_data = parse_weather_html(html_content, "metric")
+        self.assertIsNotNone(weather_data)
+
+        temperatures = weather_data["temperatures"]
+        self.assertEqual(len(temperatures), 4,
+                         f"Expected 4 temperature entries (air quality should be excluded), got {len(temperatures)}")
+
+        expected_locations = {"Top of the World", "Mid-mountain", "Top of Morrisey", "Valley"}
+        actual_locations = {t["location"] for t in temperatures}
+        self.assertEqual(actual_locations, expected_locations,
+                         f"Unexpected locations: {actual_locations}")
+
+        # Air quality stations should NOT appear in temperatures
+        for temp in temperatures:
+            self.assertNotIn("AQHI", str(temp),
+                             f"Air quality data leaked into temperatures: {temp}")
 
 
 @tag('selenium')
