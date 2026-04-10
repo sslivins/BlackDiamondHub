@@ -26,8 +26,8 @@ def landing_page(request):
     
     weather_data = []
 
-    # Find all list items under the class "list-temps"
-    list_temps = soup.select('ul.list-temps li')
+    # Find all list items under current-temps (not air-quality or other sections)
+    list_temps = soup.select('div.current-temps ul.list-temps li')
 
     # Iterate over each item and extract the relevant data
     for item in list_temps:
