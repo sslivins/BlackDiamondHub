@@ -72,13 +72,15 @@ class LiveParseWeatherHtmlTests(TestCase):
         weather_data_metric = parse_weather_html(html_content, units)
         self.assertIsNotNone(weather_data_metric)
 
-        # Ensure today_icon is mapped correctly
+        # Ensure today_icon is mapped correctly (may be empty when
+        # Sun Peaks removes the current-condition section seasonally)
         today_icon = weather_data_metric["today_icon"]
-        self.assertNotEqual(today_icon, "fas fa-question-circle", f"today_icon is set to unknown value {today_icon}")
+        if today_icon:
+            self.assertNotEqual(today_icon, "fas fa-question-circle", f"today_icon is set to unknown value {today_icon}")
 
-        # Ensure today_description is not empty
+        # today_description may be empty when the current-condition
+        # section is absent from the page (e.g. off-season)
         today_description = weather_data_metric["today_description"]
-        self.assertNotEqual(today_description, "", "today_description is empty")
 
         ##########################
         ## Temperatures
@@ -210,20 +212,30 @@ class OfflineParseWeatherHtmlTests(TestCase):
               break
               
         self.assertTrue(found, "Did not find 24 hr snow condition in the list")
-        
-        
-        
-        # # Test with metric units
 
-        # self.assertIsNotNone(weather_data_metric)
-        # self.assertNotIn('', weather_data_metric.values(), "Empty string found in metric weather data")
-        # self.assertNotIn('', [item for sublist in weather_data_metric.values() if isinstance(sublist, list) for item in sublist], "Empty string found in metric weather data list items")
+    def test_parse_weather_html_ignores_air_quality(self):
+        """Ensure the parser only returns temperature entries and ignores
+        the air-quality ul.list-temps section added to the page."""
+        file_path = os.path.join(os.path.dirname(__file__), 'tests', 'weather_current.html')
+        with open(file_path, 'r', encoding='utf-8') as file:
+            html_content = file.read()
 
-        # # Test with imperial units
-        # weather_data_imperial = parse_weather_html(html_content, "imperial")
-        # self.assertIsNotNone(weather_data_imperial)
-        # self.assertNotIn('', weather_data_imperial.values(), "Empty string found in imperial weather data")
-        # self.assertNotIn('', [item for sublist in weather_data_imperial.values() if isinstance(sublist, list) for item in sublist], "Empty string found in imperial weather data list items")
+        weather_data = parse_weather_html(html_content, "metric")
+        self.assertIsNotNone(weather_data)
+
+        temperatures = weather_data["temperatures"]
+        self.assertEqual(len(temperatures), 4,
+                         f"Expected 4 temperature entries (air quality should be excluded), got {len(temperatures)}")
+
+        expected_locations = {"Top of the World", "Mid-mountain", "Top of Morrisey", "Valley"}
+        actual_locations = {t["location"] for t in temperatures}
+        self.assertEqual(actual_locations, expected_locations,
+                         f"Unexpected locations: {actual_locations}")
+
+        # Air quality stations should NOT appear in temperatures
+        for temp in temperatures:
+            self.assertNotIn("AQHI", str(temp),
+                             f"Air quality data leaked into temperatures: {temp}")
 
 
 @tag('selenium')
