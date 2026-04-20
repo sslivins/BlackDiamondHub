@@ -82,6 +82,11 @@ class CheckForNewWebcamsTests(TestCase):
                 'location': 'Village Square',
                 'elevation': "Village Base, 1,255m (4,116')"
             },
+            'Golf Course': {
+                'static_image_url': 'https://www.sunpeaksresort.com/sites/default/files/spr_website_data/webcams/Golf Course.jpg',
+                'location': 'Overlooking hole 17 on the left and hole 10 on the right',
+                'elevation': "Village Base, 1,255m (4,116')"
+            },
         }
         
         
