@@ -281,7 +281,7 @@ VACATION_STEPS = [
             {
                 "action": "switch/turn_off",
                 "data": {
-                    "entity_id": "switch.master_bedroom_power",
+                    "entity_id": "switch.master_bedroom",
                 },
                 "description": "Master Bedroom fireplace flames → off",
                 "delay_after": 1,
@@ -298,7 +298,7 @@ VACATION_STEPS = [
             {
                 "action": "switch/turn_off",
                 "data": {
-                    "entity_id": "switch.living_room_fireplace_power",
+                    "entity_id": "switch.living_room_fireplace",
                 },
                 "description": "Living Room fireplace flames → off",
             },
