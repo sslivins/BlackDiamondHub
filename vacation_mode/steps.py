@@ -266,6 +266,45 @@ VACATION_STEPS = [
         ],
     },
     {
+        "alias": "Turn Off Fireplaces",
+        "icon": "fas fa-fire",
+        "actions": [
+            {
+                "action": "climate/set_hvac_mode",
+                "data": {
+                    "entity_id": "climate.master_bedroom_2",
+                    "hvac_mode": "off",
+                },
+                "description": "Master Bedroom fireplace heater → off",
+                "delay_after": 1,
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.master_bedroom_power",
+                },
+                "description": "Master Bedroom fireplace flames → off",
+                "delay_after": 1,
+            },
+            {
+                "action": "climate/set_hvac_mode",
+                "data": {
+                    "entity_id": "climate.living_room_fireplace",
+                    "hvac_mode": "off",
+                },
+                "description": "Living Room fireplace heater → off",
+                "delay_after": 1,
+            },
+            {
+                "action": "switch/turn_off",
+                "data": {
+                    "entity_id": "switch.living_room_fireplace_power",
+                },
+                "description": "Living Room fireplace flames → off",
+            },
+        ],
+    },
+    {
         "alias": "Enable Home Away Mode",
         "icon": "fas fa-plane-departure",
         "actions": [
