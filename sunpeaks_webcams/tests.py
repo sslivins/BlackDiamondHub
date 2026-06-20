@@ -87,6 +87,11 @@ class CheckForNewWebcamsTests(TestCase):
                 'location': 'Overlooking hole 17 on the left and hole 10 on the right',
                 'elevation': "Village Base, 1,255m (4,116')"
             },
+            'Crystal Bowl (Summer)': {
+                'static_image_url': 'https://www.sunpeaksresort.com/sites/default/files/spr_website_data/webcams/Wild flowers 1.jpg',
+                'location': 'Top of Burfield Chairlift',
+                'elevation': "2,080m (6,824')"
+            },
         }
         
         
