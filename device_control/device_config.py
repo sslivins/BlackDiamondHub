@@ -389,6 +389,21 @@ DECK_DEVICES = {
 }
 
 # ──────────────────────────────────────────────
+# Tab: Fireplace
+# ──────────────────────────────────────────────
+# The fireplace tab is NOT Home Assistant-backed. It is driven directly by the
+# Napoleon (Ayla) cloud via device_control.napoleon_client, and uses a bespoke
+# on-image control UI rather than the generic device grid. It therefore carries
+# no HA entities ("devices" is empty so get_all_entity_ids() is unaffected).
+#
+# Fireplaces are discovered dynamically from the Napoleon account. Optionally
+# override a fireplace's display name / room by DSN here; unknown DSNs fall back
+# to the name reported by the cloud.
+FIREPLACE_OVERRIDES = {
+    # "AC000W0000000000": {"name": "Living Room Fireplace", "room": "Living Room"},
+}
+
+# ──────────────────────────────────────────────
 # All tabs in display order
 # ──────────────────────────────────────────────
 TABS = [
@@ -399,6 +414,7 @@ TABS = [
     {"key": "deck", "label": "Deck", "icon": "fa-grip-lines", "devices": DECK_DEVICES},
     {"key": "tvs", "label": "TVs", "icon": "fa-tv", "devices": TV_DEVICES},
     {"key": "sonos", "label": "Sonos", "icon": "fa-music", "devices": SONOS_DEVICES},
+    {"key": "fireplace", "label": "Fireplace", "icon": "fa-fire", "devices": {}},
 ]
 
 

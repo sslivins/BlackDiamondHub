@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Device Control{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'device_control/fireplace.css' %}">
 <style>
     html, body {
         height: 100%;
@@ -653,7 +655,19 @@
 <!-- Content -->
 <div class="dc-container">
     {% for tab in tabs %}
-    <div id="panel-{{ tab.key }}" class="dc-panel{% if forloop.first %} active{% endif %}">
+    <div id="panel-{{ tab.key }}" class="dc-panel{% if forloop.first %} active{% endif %}"{% if tab.key == "fireplace" %}
+         data-states-url="{% url 'device_control_fireplace_states' %}"
+         data-action-url="{% url 'device_control_fireplace_action' %}"
+         data-csrf="{{ csrf_token }}"{% endif %}>
+        {% if tab.key == "fireplace" %}
+        <div class="fp-wrap">
+            <div class="fp-select" id="fpSelect"></div>
+            <div class="fp-detail">
+                <div class="preview-wrap" id="preview"></div>
+            </div>
+            <div class="presets-bar" id="presetsBar"></div>
+        </div>
+        {% else %}
         <div class="dc-loading" id="loading-{{ tab.key }}">
             <i class="fas fa-spinner"></i>
             <p>Loading devices...</p>
@@ -762,6 +776,7 @@
             </div>{# /dc-group-panel #}
             {% endfor %}
         </div>
+        {% endif %}
     </div>
     {% endfor %}
 
@@ -1362,4 +1377,5 @@
         });
     }
 </script>
+<script src="{% static 'device_control/fireplace.js' %}"></script>
 {% endblock %}

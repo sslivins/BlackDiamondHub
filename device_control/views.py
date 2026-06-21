@@ -14,8 +14,9 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
-from .device_config import TABS, get_all_entity_ids
+from .device_config import TABS, get_all_entity_ids, FIREPLACE_OVERRIDES
 from .ha_client import call_service, get_entity_states
+from . import napoleon_client
 
 logger = logging.getLogger(__name__)
 
@@ -134,3 +135,110 @@ def device_control_action(request):
         return JsonResponse({"ok": True, "entity_id": entity_id, "action": action})
     else:
         return JsonResponse({"ok": False, "error": error}, status=502)
+
+
+# ──────────────────────────────────────────────
+# Fireplace (Napoleon cloud) endpoints
+# ──────────────────────────────────────────────
+# These bypass Home Assistant entirely and talk to the Napoleon (Ayla) cloud
+# through device_control.napoleon_client. Validation of action names is done
+# against the bridge's own action map.
+
+# Action -> validator for the supplied value. Anything not listed is rejected.
+_FIREPLACE_ACTION_VALIDATORS = {
+    "power": lambda v: isinstance(v, bool),
+    "flame_speed": lambda v: isinstance(v, int) and 1 <= v <= 5,
+    "orange_flame": lambda v: isinstance(v, int) and 0 <= v <= 4,
+    "yellow_flame": lambda v: isinstance(v, int) and 0 <= v <= 4,
+    "heater": lambda v: v in (0, 1, 2),
+    "setpoint_c": lambda v: isinstance(v, int) and 18 <= v <= 30,
+    "eco_mode": lambda v: isinstance(v, bool),
+    "boost_mode": lambda v: isinstance(v, bool),
+    "ember_bed_rgb": lambda v: _is_rgb(v),
+    "ember_bed_brightness": lambda v: isinstance(v, int) and 0 <= v <= 4,
+    "ember_bed_cycling": lambda v: isinstance(v, bool),
+    "top_light_rgb": lambda v: _is_rgb(v),
+    "top_light_cycling": lambda v: isinstance(v, bool),
+    "favourite": lambda v: v in (
+        "partytime",
+        "campfirewarmth",
+        "summerday",
+        "glowingsunset",
+    ),
+}
+
+
+def _is_rgb(v):
+    return (
+        isinstance(v, (list, tuple))
+        and len(v) == 3
+        and all(isinstance(c, int) and 0 <= c <= 255 for c in v)
+    )
+
+
+def _apply_overrides(state):
+    """Apply optional name/room overrides from device_config to a state dict."""
+    override = FIREPLACE_OVERRIDES.get(state.get("dsn"))
+    if override:
+        if override.get("name"):
+            state["name"] = override["name"]
+        if override.get("room"):
+            state["room"] = override["room"]
+    return state
+
+
+def device_control_fireplace_states(request):
+    """AJAX endpoint: current state of every discovered fireplace.
+
+    Returns JSON: { "configured": bool, "fireplaces": [ {...}, ... ] }
+    """
+    if not napoleon_client.is_configured():
+        return JsonResponse({"configured": False, "fireplaces": []})
+
+    try:
+        states = napoleon_client.get_states()
+    except napoleon_client.FireplaceError as exc:
+        logger.warning("Fireplace states fetch failed: %s", exc)
+        return JsonResponse({"configured": True, "error": str(exc)}, status=502)
+
+    states = [_apply_overrides(s) for s in states]
+    return JsonResponse({"configured": True, "fireplaces": states})
+
+
+@require_POST
+def device_control_fireplace_action(request):
+    """AJAX endpoint: apply a control action to a fireplace.
+
+    Expects JSON body: { dsn, action, value }
+    Returns the refreshed fireplace state on success.
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    dsn = body.get("dsn", "")
+    action = body.get("action", "")
+    value = body.get("value")
+
+    if not dsn:
+        return JsonResponse({"error": "Missing dsn"}, status=400)
+
+    validator = _FIREPLACE_ACTION_VALIDATORS.get(action)
+    if validator is None:
+        return JsonResponse({"error": f"Unknown action: {action}"}, status=400)
+    if not validator(value):
+        return JsonResponse(
+            {"error": f"Invalid value for {action}: {value!r}"}, status=400
+        )
+
+    if not napoleon_client.is_configured():
+        return JsonResponse({"error": "Napoleon not configured"}, status=503)
+
+    try:
+        state = napoleon_client.apply_action(dsn, action, value)
+    except napoleon_client.FireplaceError as exc:
+        logger.warning("Fireplace action %s failed: %s", action, exc)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
+
+    return JsonResponse({"ok": True, "fireplace": _apply_overrides(state)})
