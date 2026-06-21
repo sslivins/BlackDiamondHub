@@ -51,6 +51,11 @@ services:
       # Sonos discovery interface (needed with host networking)
       SONOS_INTERFACE: ${SONOS_INTERFACE:-}
 
+      # Napoleon Fireplace (Ayla cloud)
+      NAPOLEON_EMAIL: ${NAPOLEON_EMAIL}
+      NAPOLEON_PASSWORD: ${NAPOLEON_PASSWORD}
+      NAPOLEON_EUROPE: ${NAPOLEON_EUROPE}
+
     network_mode: host
     
     restart: unless-stopped
