@@ -5,7 +5,11 @@
 
 #panel-fireplace * { box-sizing: border-box; }
 
-#panel-fireplace .fp-wrap { display: flex; flex-direction: column; min-height: 0; }
+/* Fill the viewport below the fixed header so the firebox always has height.
+   The parents (.dc-container/.dc-panel) are plain block flow with no height, so
+   without this the flex:1 chain collapses to ~0 and the firebox (whose children
+   are all position:absolute) disappears when there are no flames to look at. */
+#panel-fireplace .fp-wrap { display: flex; flex-direction: column; min-height: calc(100vh - 195px); }
 
 /* Fireplace selector pills (only shown when >1 fireplace) */
 #panel-fireplace .fp-select { display: flex; gap: 10px; justify-content: center; padding: 8px 20px; flex-shrink: 0; flex-wrap: wrap; }
@@ -26,7 +30,7 @@
 
 /* ---- PREVIEW with on-image hotspots ---- */
 #panel-fireplace .preview-wrap { background: #1a1a1a; border: 1px solid #444; border-radius: 12px; position: relative; overflow: hidden;
-                display: flex; flex-direction: column; }
+                display: flex; flex-direction: column; min-height: 360px; }
 #panel-fireplace .preview-top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; z-index: 6; }
 #panel-fireplace .preview-top .pt-name { font-size: 1.1rem; font-weight: 700; color: #fff; flex: 1; }
 #panel-fireplace .preview-top .pt-status { font-size: .8rem; color: #FFD700; font-weight: 600; }
@@ -96,7 +100,7 @@
 #panel-fireplace .preview-wrap.on .top-glow.lit { opacity: .85; }
 #panel-fireplace .preview-wrap.off .firebox { filter: grayscale(.4) brightness(.8); }
 #panel-fireplace .off-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #666;
-               font-size: .9rem; gap: 8px; z-index: 2; }
+               font-size: .9rem; gap: 8px; z-index: 2; pointer-events: none; }
 #panel-fireplace .preview-wrap.on .off-overlay { display: none; }
 
 /* Hotspots (pucks) */
