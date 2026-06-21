@@ -575,6 +575,29 @@ class GemstoneTabTests(TestCase):
         self.assertIn('gemstone.css', content)
 
 
+class GemstoneColorDecodeTests(TestCase):
+    """``_color_to_hex`` must honour Gemstone's little-endian (R-low) packing."""
+
+    def test_known_fixture_colors(self):
+        from .gemstone_client import _color_to_hex
+        # Values + names taken from pygemstone's own test fixtures.
+        self.assertEqual(_color_to_hex(255), "#ff0000")        # "Red"  0x000000FF
+        self.assertEqual(_color_to_hex(65280), "#00ff00")      # "Green" 0x0000FF00
+        self.assertEqual(_color_to_hex(16711680), "#0000ff")   # blue   0x00FF0000
+        self.assertEqual(_color_to_hex(16777215), "#ffffff")   # "Cool White" 0x00FFFFFF
+        self.assertEqual(_color_to_hex(4294967295), "#ffffff")  # white w/ alpha
+
+    def test_warm_white_channel(self):
+        from .gemstone_client import _color_to_hex
+        # White-LED channel sentinel (0xFF000000): no RGB, render warm white.
+        self.assertEqual(_color_to_hex(4278190080), "#fff1e0")
+
+    def test_bad_input_falls_back(self):
+        from .gemstone_client import _color_to_hex
+        self.assertEqual(_color_to_hex(None), "#000000")
+        self.assertEqual(_color_to_hex("nope"), "#000000")
+
+
 @tag('selenium')
 class DeviceControlShadesSliderTest(StaticLiveServerTestCase):
     """Ensure shade cards render a position slider that fits within the card."""
