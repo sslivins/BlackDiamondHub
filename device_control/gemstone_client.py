@@ -285,11 +285,38 @@ async def _apply_action(device_id: str, action: str, value: Any) -> dict[str, An
 
     try:
         await handler(dev, value)
-        # Reflect the change back to the caller.
-        await dev.refresh()
     except LibGemstoneError as exc:
         raise GemstoneError(f"{action} failed: {exc}") from exc
-    return _state_to_dict(dev)
+
+    # Return an OPTIMISTIC state built from the last-known cached state plus the
+    # change we just requested. We deliberately do NOT call ``dev.refresh()``
+    # here: the Gemstone cloud is eventually-consistent, so a refresh issued
+    # immediately after a toggle very often returns the *pre-toggle* state. That
+    # stale value would clobber the UI's optimistic flip and make the button
+    # look like it "did nothing for a bit". The periodic poll (``_get_states``)
+    # reconciles authoritative state a few seconds later.
+    return _optimistic_state(dev, action, value)
+
+
+def _optimistic_state(dev: Any, action: str, value: Any) -> dict[str, Any]:
+    """Last-known cached state, overlaid with the change we just requested."""
+    base = _state_to_dict(dev)
+    if action == "power":
+        base["power"] = bool(value)
+        if not base["power"]:
+            base["pattern_id"] = None
+            base["pattern_name"] = None
+            base["pattern_colors"] = []
+    elif action == "pattern":
+        base["power"] = True
+        pat = _patterns_by_id.get(str(value))
+        if pat is not None:
+            base["pattern_id"] = getattr(pat, "id", None)
+            base["pattern_name"] = getattr(pat, "name", None)
+            base["pattern_colors"] = [
+                _color_to_hex(c) for c in (getattr(pat, "colors", None) or [])
+            ]
+    return base
 
 
 # ---------------------------------------------------------------------------

@@ -68,7 +68,7 @@
                 }
             })
             .catch(err => console.error('gemstone action error', action, err))
-            .finally(() => { editing = false; });
+            .finally(() => { editing = false; render(); });
     }
 
     function fetchStates() {
@@ -186,6 +186,9 @@
             const next = !dev.power;
             dev.power = next;            // optimistic
             render();
+            // Show the click registered while the cloud round-trip is in flight.
+            const b = sels.detail.querySelector('[data-power]');
+            if (b) { b.disabled = true; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; }
             sendAction(id, 'power', next);
         };
 
