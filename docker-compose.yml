@@ -56,6 +56,10 @@ services:
       NAPOLEON_PASSWORD: ${NAPOLEON_PASSWORD}
       NAPOLEON_EUROPE: ${NAPOLEON_EUROPE}
 
+      # Gemstone Lights (AWS Amplify cloud)
+      GEMSTONE_EMAIL: ${GEMSTONE_EMAIL}
+      GEMSTONE_PASSWORD: ${GEMSTONE_PASSWORD}
+
     network_mode: host
     
     restart: unless-stopped
