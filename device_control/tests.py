@@ -569,7 +569,8 @@ class GemstoneTabTests(TestCase):
         resp = self.client.get(reverse("device_control"))
         content = resp.content.decode()
         self.assertIn('id="panel-gemstone"', content)
-        self.assertIn('id="gemDevices"', content)
+        self.assertIn('id="gemSelect"', content)
+        self.assertIn('id="gemDetail"', content)
         self.assertIn('gemstone.js', content)
         self.assertIn('gemstone.css', content)
 
