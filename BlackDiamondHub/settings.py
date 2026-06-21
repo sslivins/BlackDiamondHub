@@ -249,6 +249,15 @@ HOMEASSISTANT_ACCESS_TOKEN = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN')
 HOMEASSISTANT_URL_2 = os.environ.get('HOMEASSISTANT_URL_2', 'http://homeassistant.local:8123')
 HOMEASSISTANT_ACCESS_TOKEN_2 = os.environ.get('HOMEASSISTANT_ACCESS_TOKEN_2')
 
+#####################################
+### Napoleon Fireplace (Ayla) Settings ###
+#####################################
+# Cloud credentials for the Napoleon fireplace (pynapoleon / Ayla IoT).
+# Leave unset to hide the fireplace controls' live data.
+NAPOLEON_EMAIL = os.environ.get('NAPOLEON_EMAIL', '')
+NAPOLEON_PASSWORD = os.environ.get('NAPOLEON_PASSWORD', '')
+NAPOLEON_EUROPE = os.environ.get('NAPOLEON_EUROPE', 'false').lower() in ('1', 'true', 'yes')
+
 ###########################
 ### go2rtc Camera Settings ###
 ###########################

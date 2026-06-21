@@ -226,6 +226,183 @@ class ViewTests(TestCase):
         self.assertFalse(data["ok"])
 
 
+class FireplaceViewTests(TestCase):
+    """Tests for the Napoleon fireplace endpoints (mocked napoleon_client)."""
+
+    def _state(self, **over):
+        base = {
+            "dsn": "AC000W000000001",
+            "name": "Living Room Fireplace",
+            "online": None,
+            "power": True,
+            "flame_speed": 3,
+            "orange_flame": 2,
+            "yellow_flame": 1,
+            "heater": 1,
+            "setpoint_c": 21,
+            "eco_mode": False,
+            "boost_mode": False,
+            "ember_bed_rgb": [255, 120, 0],
+            "ember_bed_brightness": 3,
+            "ember_bed_cycling": False,
+            "top_light_rgb": [0, 0, 0],
+            "top_light_cycling": False,
+            "current_favourite": None,
+        }
+        base.update(over)
+        return base
+
+    # ----- states endpoint -----
+
+    @patch("device_control.views.napoleon_client.is_configured", return_value=False)
+    def test_states_not_configured(self, _cfg):
+        resp = self.client.get(reverse("device_control_fireplace_states"))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data["configured"])
+        self.assertEqual(data["fireplaces"], [])
+
+    @patch("device_control.views.napoleon_client.get_states")
+    @patch("device_control.views.napoleon_client.is_configured", return_value=True)
+    def test_states_success(self, _cfg, mock_states):
+        mock_states.return_value = [self._state()]
+        resp = self.client.get(reverse("device_control_fireplace_states"))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["configured"])
+        self.assertEqual(len(data["fireplaces"]), 1)
+        self.assertEqual(data["fireplaces"][0]["dsn"], "AC000W000000001")
+
+    @patch("device_control.views.napoleon_client.get_states")
+    @patch("device_control.views.napoleon_client.is_configured", return_value=True)
+    def test_states_cloud_error_returns_502(self, _cfg, mock_states):
+        mock_states.side_effect = views.napoleon_client.FireplaceError("cloud down")
+        resp = self.client.get(reverse("device_control_fireplace_states"))
+        self.assertEqual(resp.status_code, 502)
+        data = resp.json()
+        self.assertTrue(data["configured"])
+        self.assertIn("error", data)
+
+    # ----- action endpoint -----
+
+    def test_action_requires_post(self):
+        resp = self.client.get(reverse("device_control_fireplace_action"))
+        self.assertEqual(resp.status_code, 405)
+
+    def test_action_rejects_bad_json(self):
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data="not json",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_action_rejects_missing_dsn(self):
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"action": "power", "value": true}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_action_rejects_unknown_action(self):
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"dsn": "AC1", "action": "explode", "value": true}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_action_rejects_bad_value_type(self):
+        # flame_speed must be an int 1..5
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"dsn": "AC1", "action": "flame_speed", "value": 9}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_action_rejects_bad_rgb(self):
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"dsn": "AC1", "action": "ember_bed_rgb", "value": [300, 0, 0]}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    @patch("device_control.views.napoleon_client.is_configured", return_value=False)
+    def test_action_not_configured_returns_503(self, _cfg):
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"dsn": "AC1", "action": "power", "value": true}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 503)
+
+    @patch("device_control.views.napoleon_client.apply_action")
+    @patch("device_control.views.napoleon_client.is_configured", return_value=True)
+    def test_action_success(self, _cfg, mock_apply):
+        mock_apply.return_value = self._state(power=False)
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"dsn": "AC000W000000001", "action": "power", "value": false}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["ok"])
+        self.assertFalse(data["fireplace"]["power"])
+        mock_apply.assert_called_once_with("AC000W000000001", "power", False)
+
+    @patch("device_control.views.napoleon_client.apply_action")
+    @patch("device_control.views.napoleon_client.is_configured", return_value=True)
+    def test_action_favourite_valid(self, _cfg, mock_apply):
+        mock_apply.return_value = self._state(current_favourite="partytime")
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"dsn": "AC000W000000001", "action": "favourite", "value": "partytime"}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        mock_apply.assert_called_once_with("AC000W000000001", "favourite", "partytime")
+
+    def test_action_favourite_invalid_slot(self):
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"dsn": "AC1", "action": "favourite", "value": "disco"}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    @patch("device_control.views.napoleon_client.apply_action")
+    @patch("device_control.views.napoleon_client.is_configured", return_value=True)
+    def test_action_cloud_error_returns_502(self, _cfg, mock_apply):
+        mock_apply.side_effect = views.napoleon_client.FireplaceError("timeout")
+        resp = self.client.post(
+            reverse("device_control_fireplace_action"),
+            data='{"dsn": "AC1", "action": "power", "value": true}',
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 502)
+        self.assertFalse(resp.json()["ok"])
+
+
+class FireplaceTabTests(TestCase):
+    """The fireplace tab must render its dedicated panel structure."""
+
+    def test_fireplace_panel_rendered(self):
+        resp = self.client.get(reverse("device_control"))
+        content = resp.content.decode()
+        self.assertIn('id="panel-fireplace"', content)
+        self.assertIn('id="fpSelect"', content)
+        self.assertIn('id="preview"', content)
+        self.assertIn('id="presetsBar"', content)
+        self.assertIn('data-states-url', content)
+        self.assertIn('data-action-url', content)
+        self.assertIn('fireplace.js', content)
+        self.assertIn('fireplace.css', content)
+
+
 @tag('selenium')
 class DeviceControlShadesSliderTest(StaticLiveServerTestCase):
     """Ensure shade cards render a position slider that fits within the card."""
