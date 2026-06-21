@@ -107,12 +107,29 @@ def is_configured() -> bool:
 
 
 def _color_to_hex(c: Any) -> str:
-    """Best-effort conversion of a packed integer colour to ``#rrggbb``."""
+    """Convert a Gemstone packed integer colour to a CSS ``#rrggbb`` string.
+
+    Gemstone packs colours little-endian with **red in the lowest byte**
+    (``0xWWBBGGRR``), not ``0xRRGGBB``. e.g. the cloud's "Red" swatch is the
+    int ``255`` (``0x000000FF``) and "Green" is ``65280`` (``0x0000FF00``).
+    So we read R from the low byte and B from the third byte and swap them
+    into standard ``#rrggbb`` for the browser.
+
+    The top byte is a dedicated white-LED channel (RGBW strips). When it is
+    set while RGB is zero (e.g. "Warm White" == ``0xFF000000``) there is no
+    true RGB value, so we render a warm-white approximation for display.
+    """
     try:
         n = int(c)
     except (TypeError, ValueError):
         return "#000000"
-    return "#%06x" % (n & 0xFFFFFF)
+    r = n & 0xFF
+    g = (n >> 8) & 0xFF
+    b = (n >> 16) & 0xFF
+    w = (n >> 24) & 0xFF
+    if w and not (r or g or b):
+        return "#fff1e0"
+    return "#%02x%02x%02x" % (r, g, b)
 
 
 async def _ensure_client() -> None:
