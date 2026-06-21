@@ -8,8 +8,10 @@
 /* Fill the viewport below the fixed header so the firebox always has height.
    The parents (.dc-container/.dc-panel) are plain block flow with no height, so
    without this the flex:1 chain collapses to ~0 and the firebox (whose children
-   are all position:absolute) disappears when there are no flames to look at. */
-#panel-fireplace .fp-wrap { display: flex; flex-direction: column; min-height: calc(100vh - 195px); }
+   are all position:absolute) disappears when there are no flames to look at.
+   The 285px offset = fixed header + the presets bar that sits below the firebox
+   inside .fp-wrap, so a 1080p display fits without vertical scroll. */
+#panel-fireplace .fp-wrap { display: flex; flex-direction: column; min-height: calc(100vh - 285px); }
 
 /* Fireplace selector pills (only shown when >1 fireplace) */
 #panel-fireplace .fp-select { display: flex; gap: 10px; justify-content: center; padding: 8px 20px; flex-shrink: 0; flex-wrap: wrap; }
