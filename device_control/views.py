@@ -14,9 +14,10 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
-from .device_config import TABS, get_all_entity_ids, FIREPLACE_OVERRIDES
+from .device_config import TABS, get_all_entity_ids, FIREPLACE_OVERRIDES, GEMSTONE_OVERRIDES
 from .ha_client import call_service, get_entity_states
 from . import napoleon_client
+from . import gemstone_client
 
 logger = logging.getLogger(__name__)
 
@@ -242,3 +243,91 @@ def device_control_fireplace_action(request):
         return JsonResponse({"ok": False, "error": str(exc)}, status=502)
 
     return JsonResponse({"ok": True, "fireplace": _apply_overrides(state)})
+
+
+# ──────────────────────────────────────────────
+# Gemstone Lights (cloud) endpoints
+# ──────────────────────────────────────────────
+# These bypass Home Assistant entirely and talk to the Gemstone Lights cloud
+# through device_control.gemstone_client. The control surface is intentionally
+# small: power on/off and selecting one of the user's saved patterns.
+
+# Action -> validator for the supplied value. Anything not listed is rejected.
+_GEMSTONE_ACTION_VALIDATORS = {
+    "power": lambda v: isinstance(v, bool),
+    "pattern": lambda v: isinstance(v, str) and bool(v),
+}
+
+
+def _apply_gemstone_overrides(state):
+    """Apply optional name/room overrides from device_config to a state dict."""
+    override = GEMSTONE_OVERRIDES.get(state.get("id"))
+    if override:
+        if override.get("name"):
+            state["name"] = override["name"]
+        if override.get("room"):
+            state["room"] = override["room"]
+    return state
+
+
+def device_control_gemstone_states(request):
+    """AJAX endpoint: current state of every Gemstone device + saved patterns.
+
+    Returns JSON: { "configured": bool, "devices": [...], "patterns": [...] }
+    """
+    if not gemstone_client.is_configured():
+        return JsonResponse({"configured": False, "devices": [], "patterns": []})
+
+    try:
+        data = gemstone_client.get_states()
+    except gemstone_client.GemstoneError as exc:
+        logger.warning("Gemstone states fetch failed: %s", exc)
+        return JsonResponse({"configured": True, "error": str(exc)}, status=502)
+
+    devices = [_apply_gemstone_overrides(d) for d in data.get("devices", [])]
+    return JsonResponse(
+        {
+            "configured": True,
+            "devices": devices,
+            "patterns": data.get("patterns", []),
+        }
+    )
+
+
+@require_POST
+def device_control_gemstone_action(request):
+    """AJAX endpoint: apply a control action to a Gemstone device.
+
+    Expects JSON body: { device_id, action, value }
+    Returns the refreshed device state on success.
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    device_id = body.get("device_id", "")
+    action = body.get("action", "")
+    value = body.get("value")
+
+    if not device_id:
+        return JsonResponse({"error": "Missing device_id"}, status=400)
+
+    validator = _GEMSTONE_ACTION_VALIDATORS.get(action)
+    if validator is None:
+        return JsonResponse({"error": f"Unknown action: {action}"}, status=400)
+    if not validator(value):
+        return JsonResponse(
+            {"error": f"Invalid value for {action}: {value!r}"}, status=400
+        )
+
+    if not gemstone_client.is_configured():
+        return JsonResponse({"error": "Gemstone not configured"}, status=503)
+
+    try:
+        state = gemstone_client.apply_action(device_id, action, value)
+    except gemstone_client.GemstoneError as exc:
+        logger.warning("Gemstone action %s failed: %s", action, exc)
+        return JsonResponse({"ok": False, "error": str(exc)}, status=502)
+
+    return JsonResponse({"ok": True, "device": _apply_gemstone_overrides(state)})

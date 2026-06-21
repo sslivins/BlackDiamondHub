@@ -5,6 +5,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'device_control/fireplace.css' %}">
+<link rel="stylesheet" href="{% static 'device_control/gemstone.css' %}">
 <style>
     html, body {
         height: 100%;
@@ -658,6 +659,9 @@
     <div id="panel-{{ tab.key }}" class="dc-panel{% if forloop.first %} active{% endif %}"{% if tab.key == "fireplace" %}
          data-states-url="{% url 'device_control_fireplace_states' %}"
          data-action-url="{% url 'device_control_fireplace_action' %}"
+         data-csrf="{{ csrf_token }}"{% elif tab.key == "gemstone" %}
+         data-states-url="{% url 'device_control_gemstone_states' %}"
+         data-action-url="{% url 'device_control_gemstone_action' %}"
          data-csrf="{{ csrf_token }}"{% endif %}>
         {% if tab.key == "fireplace" %}
         <div class="fp-wrap">
@@ -666,6 +670,11 @@
                 <div class="preview-wrap" id="preview"></div>
             </div>
             <div class="presets-bar" id="presetsBar"></div>
+        </div>
+        {% elif tab.key == "gemstone" %}
+        <div class="gem-wrap">
+            <div class="gem-status" id="gemStatus"></div>
+            <div class="gem-devices" id="gemDevices"></div>
         </div>
         {% else %}
         <div class="dc-loading" id="loading-{{ tab.key }}">
@@ -1378,4 +1387,5 @@
     }
 </script>
 <script src="{% static 'device_control/fireplace.js' %}"></script>
+<script src="{% static 'device_control/gemstone.js' %}"></script>
 {% endblock %}
