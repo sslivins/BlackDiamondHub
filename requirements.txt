@@ -80,4 +80,4 @@ python-dateutil
 pytz
 websockets
 pynapoleon==0.0.2
-pygemstone==0.0.2
+pygemstone==0.0.3
