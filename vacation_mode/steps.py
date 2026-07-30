@@ -174,10 +174,12 @@ def _heatpump_setup_step(season, occupancy):
     else:  # cooling
         icon = "fas fa-snowflake"
         alias = "Heat Pump Setup — Cooling"
-        if occupancy == "home":
-            cold_target, cold_min, cold_max = "12", "10", "18"
-        else:  # away
-            cold_target, cold_min, cold_max = "18", "14", "20"
+        # Fixed cold-tank target: outdoor reset OFF so the tank holds a constant
+        # chilled-water temperature. The min/max entities only exist while
+        # outdoor reset is ON (they bound the reset curve), so we do NOT write
+        # them here — at a target this warm (12°C) a reset curve adds no value,
+        # and the dew-point mixer valve protects the floor.
+        cold_target = "12" if occupancy == "home" else "18"
         actions += [
             {
                 "action": "switch/turn_off",
@@ -192,24 +194,6 @@ def _heatpump_setup_step(season, occupancy):
                     "value": cold_target,
                 },
                 "description": f"Setting cold tank target to {cold_target}°C",
-                "verify_delay": 10,
-            },
-            {
-                "action": "number/set_value",
-                "data": {
-                    "entity_id": "number.aeco_1988_cold_tank_min_temperature",
-                    "value": cold_min,
-                },
-                "description": f"Setting cold tank min to {cold_min}°C",
-                "verify_delay": 10,
-            },
-            {
-                "action": "number/set_value",
-                "data": {
-                    "entity_id": "number.aeco_1988_cold_tank_max_temperature",
-                    "value": cold_max,
-                },
-                "description": f"Setting cold tank max to {cold_max}°C",
                 "verify_delay": 10,
             },
         ]

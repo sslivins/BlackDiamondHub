@@ -1472,8 +1472,10 @@ class SeasonStepBuilderTests(TestCase):
             for a in actions if a["action"] == "number/set_value"
         }
         self.assertEqual(by_ent["number.aeco_1988_cold_tank_target_temperature"], "12")
-        self.assertEqual(by_ent["number.aeco_1988_cold_tank_min_temperature"], "10")
-        self.assertEqual(by_ent["number.aeco_1988_cold_tank_max_temperature"], "18")
+        # Fixed target only: min/max are unavailable while reset is off, so we
+        # must NOT attempt to write them.
+        self.assertNotIn("number.aeco_1988_cold_tank_min_temperature", by_ent)
+        self.assertNotIn("number.aeco_1988_cold_tank_max_temperature", by_ent)
 
     def test_cooling_away_cold_tank_values(self):
         actions = _all_actions(build_vacation_steps(SEASON_COOLING))
@@ -1482,8 +1484,25 @@ class SeasonStepBuilderTests(TestCase):
             for a in actions if a["action"] == "number/set_value"
         }
         self.assertEqual(by_ent["number.aeco_1988_cold_tank_target_temperature"], "18")
-        self.assertEqual(by_ent["number.aeco_1988_cold_tank_min_temperature"], "14")
-        self.assertEqual(by_ent["number.aeco_1988_cold_tank_max_temperature"], "20")
+        self.assertNotIn("number.aeco_1988_cold_tank_min_temperature", by_ent)
+        self.assertNotIn("number.aeco_1988_cold_tank_max_temperature", by_ent)
+
+    def test_cooling_leaves_reset_off_no_minmax(self):
+        """Cooling holds a fixed target: reset off and no min/max writes."""
+        for build in (build_home_steps, build_vacation_steps):
+            actions = _all_actions(build(SEASON_COOLING))
+            reset_off = [
+                a for a in actions
+                if a["action"] == "switch/turn_off"
+                and a["data"].get("entity_id") == "switch.aeco_1988_cold_tank_outdoor_reset"
+            ]
+            self.assertEqual(len(reset_off), 1)
+            minmax = [
+                a for a in actions
+                if a["action"] == "number/set_value"
+                and a["data"].get("entity_id", "").endswith(("cold_tank_min_temperature", "cold_tank_max_temperature"))
+            ]
+            self.assertEqual(minmax, [])
 
 
 class StartExecutionSeasonTests(TestCase):
