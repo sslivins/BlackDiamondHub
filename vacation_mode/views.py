@@ -3,8 +3,14 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST, require_GET
 import json
 
-from .executor import get_away_mode_state, start_execution, get_run_status, get_active_run
-from .steps import VACATION_STEPS, HOME_STEPS
+from .executor import (
+    get_away_mode_state,
+    get_current_season,
+    start_execution,
+    get_run_status,
+    get_active_run,
+)
+from .steps import build_vacation_steps, build_home_steps, SEASON_COOLING
 
 
 def vacation_mode_view(request):
@@ -18,10 +24,16 @@ def vacation_mode_view(request):
         mode = active_run["mode"]
         steps = active_run["steps"]
         run_id = active_run["run_id"]
+        season = active_run.get("season")
+        season_avg = active_run.get("season_avg")
     else:
-        # Show the steps for the action they'd take next
+        # Show the steps for the action they'd take next, for the season the
+        # system would pick right now.
+        season, season_avg = get_current_season()
         mode = "home" if is_away else "vacation"
-        steps_def = HOME_STEPS if is_away else VACATION_STEPS
+        steps_def = (
+            build_home_steps(season) if is_away else build_vacation_steps(season)
+        )
         steps = [
             {"alias": s["alias"], "icon": s["icon"], "status": "pending", "attempt": 0, "error": None, "progress": None}
             for s in steps_def
@@ -34,6 +46,9 @@ def vacation_mode_view(request):
         "steps": json.dumps(steps),
         "run_id": run_id,
         "active_run": active_run is not None,
+        "season": season,
+        "season_is_cooling": season == SEASON_COOLING,
+        "season_avg": season_avg,
     }
     return render(request, "vacation_mode.html", context)
 

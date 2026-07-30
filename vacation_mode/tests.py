@@ -30,6 +30,7 @@ from .executor import (
     call_ha_service,
     execute_step,
     get_away_mode_state,
+    get_current_season,
     start_execution,
     get_run_status,
     get_active_run,
@@ -46,8 +47,16 @@ from .executor import (
     STATUS_FAILED,
     MAX_RETRIES,
     RETRY_DELAY,
+    SEASON_THRESHOLD_C,
 )
-from .steps import VACATION_STEPS, HOME_STEPS
+from .steps import (
+    VACATION_STEPS,
+    HOME_STEPS,
+    SEASON_HEATING,
+    SEASON_COOLING,
+    build_vacation_steps,
+    build_home_steps,
+)
 
 
 class GetAwayModeStateTests(TestCase):
@@ -471,6 +480,12 @@ class ViewTests(TestCase):
 
     def setUp(self):
         self.client = Client()
+        p = patch(
+            "vacation_mode.views.get_current_season",
+            return_value=("heating", 5.0),
+        )
+        self.mock_season = p.start()
+        self.addCleanup(p.stop)
 
     @patch("vacation_mode.views.get_away_mode_state")
     @patch("vacation_mode.views.get_active_run")
@@ -806,6 +821,13 @@ class StartExecutionTests(TestCase):
         if _execution_lock.locked():
             _execution_lock.release()
         _runs.clear()
+        # Avoid a live HA call for the season decision.
+        p = patch(
+            "vacation_mode.executor.get_current_season",
+            return_value=("heating", 5.0),
+        )
+        self.mock_season = p.start()
+        self.addCleanup(p.stop)
 
     def tearDown(self):
         # Wait for any background threads to finish
@@ -866,6 +888,12 @@ class AdditionalViewTests(TestCase):
 
     def setUp(self):
         self.client = Client()
+        p = patch(
+            "vacation_mode.views.get_current_season",
+            return_value=("heating", 5.0),
+        )
+        self.mock_season = p.start()
+        self.addCleanup(p.stop)
 
     def test_execute_get_not_allowed(self):
         """Execute endpoint should reject GET requests."""
@@ -972,6 +1000,14 @@ class AdditionalViewTests(TestCase):
 
 class TemplateRenderTests(TestCase):
     """Tests for template rendering correctness."""
+
+    def setUp(self):
+        p = patch(
+            "vacation_mode.views.get_current_season",
+            return_value=("heating", 5.0),
+        )
+        self.mock_season = p.start()
+        self.addCleanup(p.stop)
 
     @patch("vacation_mode.views.get_away_mode_state")
     @patch("vacation_mode.views.get_active_run")
@@ -1090,10 +1126,14 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
         from vacation_mode import views as vm_views
         self._original_get_away_mode_state = vm_views.get_away_mode_state
         vm_views.get_away_mode_state = lambda: False
+        # Avoid a live HA call for the season decision
+        self._original_get_current_season = vm_views.get_current_season
+        vm_views.get_current_season = lambda: ("heating", 5.0)
 
     def tearDown(self):
         from vacation_mode import views as vm_views
         vm_views.get_away_mode_state = self._original_get_away_mode_state
+        vm_views.get_current_season = self._original_get_current_season
 
     def _set_away_state(self, is_away):
         from vacation_mode import views as vm_views
@@ -1189,3 +1229,294 @@ class SeleniumVacationModeTests(StaticLiveServerTestCase):
             EC.presence_of_element_located((By.ID, "dry-run-checkbox"))
         )
         self.assertFalse(checkbox.is_selected())
+
+
+def _all_actions(steps):
+    """Flatten every action across a list of steps."""
+    actions = []
+    for step in steps:
+        actions.extend(step["actions"])
+    return actions
+
+
+def _entity_ids(steps):
+    """Collect every entity_id referenced across a list of steps (flattened)."""
+    ids = set()
+    for action in _all_actions(steps):
+        ent = action.get("data", {}).get("entity_id")
+        if isinstance(ent, list):
+            ids.update(ent)
+        elif ent:
+            ids.add(ent)
+    return ids
+
+
+class GetCurrentSeasonTests(TestCase):
+    """Tests for executor.get_current_season season selection."""
+
+    def _mock_response(self, status_code=200, state="20.0"):
+        resp = MagicMock()
+        resp.status_code = status_code
+        resp.json.return_value = {"state": state}
+        return resp
+
+    @patch("vacation_mode.executor.requests.get")
+    def test_warm_avg_selects_cooling(self, mock_get):
+        mock_get.return_value = self._mock_response(state="20.0")
+        season, avg = get_current_season()
+        self.assertEqual(season, SEASON_COOLING)
+        self.assertEqual(avg, 20.0)
+
+    @patch("vacation_mode.executor.requests.get")
+    def test_cold_avg_selects_heating(self, mock_get):
+        mock_get.return_value = self._mock_response(state="5.0")
+        season, avg = get_current_season()
+        self.assertEqual(season, SEASON_HEATING)
+        self.assertEqual(avg, 5.0)
+
+    @patch("vacation_mode.executor.requests.get")
+    def test_threshold_boundary_selects_cooling(self, mock_get):
+        """At exactly the threshold we cool (>= threshold)."""
+        mock_get.return_value = self._mock_response(state=str(SEASON_THRESHOLD_C))
+        season, avg = get_current_season()
+        self.assertEqual(season, SEASON_COOLING)
+        self.assertEqual(avg, SEASON_THRESHOLD_C)
+
+    @patch("vacation_mode.executor.requests.get")
+    def test_just_below_threshold_selects_heating(self, mock_get):
+        mock_get.return_value = self._mock_response(state=str(SEASON_THRESHOLD_C - 0.1))
+        season, _ = get_current_season()
+        self.assertEqual(season, SEASON_HEATING)
+
+    @patch("vacation_mode.executor.requests.get")
+    def test_http_error_defaults_to_heating(self, mock_get):
+        mock_get.return_value = self._mock_response(status_code=500)
+        season, avg = get_current_season()
+        self.assertEqual(season, SEASON_HEATING)
+        self.assertIsNone(avg)
+
+    @patch("vacation_mode.executor.requests.get")
+    def test_unparseable_state_defaults_to_heating(self, mock_get):
+        mock_get.return_value = self._mock_response(state="unavailable")
+        season, avg = get_current_season()
+        self.assertEqual(season, SEASON_HEATING)
+        self.assertIsNone(avg)
+
+    @patch("vacation_mode.executor.requests.get")
+    def test_request_exception_defaults_to_heating(self, mock_get):
+        mock_get.side_effect = requests_lib.RequestException("boom")
+        season, avg = get_current_season()
+        self.assertEqual(season, SEASON_HEATING)
+        self.assertIsNone(avg)
+
+
+class SeasonStepBuilderTests(TestCase):
+    """Tests for the season-aware step builders in steps.py."""
+
+    def test_heating_builders_match_module_defaults(self):
+        """Module-level constants must equal the heating variant (back-compat)."""
+        self.assertEqual(build_vacation_steps(SEASON_HEATING), VACATION_STEPS)
+        self.assertEqual(build_home_steps(SEASON_HEATING), HOME_STEPS)
+
+    def test_step_counts_match_across_seasons(self):
+        """Cooling must yield the same step count as heating (test invariant)."""
+        self.assertEqual(
+            len(build_vacation_steps(SEASON_COOLING)),
+            len(build_vacation_steps(SEASON_HEATING)),
+        )
+        self.assertEqual(
+            len(build_home_steps(SEASON_COOLING)),
+            len(build_home_steps(SEASON_HEATING)),
+        )
+
+    def test_vacation_step_count_is_ten(self):
+        self.assertEqual(len(build_vacation_steps(SEASON_HEATING)), 10)
+
+    def test_home_step_count_is_seven(self):
+        self.assertEqual(len(build_home_steps(SEASON_HEATING)), 7)
+
+    def test_heating_writes_hot_tank_not_cold(self):
+        ids = _entity_ids(build_vacation_steps(SEASON_HEATING))
+        self.assertTrue(any("hot_tank" in e for e in ids))
+        self.assertFalse(any("cold_tank" in e for e in ids))
+
+    def test_cooling_writes_cold_tank_not_hot(self):
+        ids = _entity_ids(build_vacation_steps(SEASON_COOLING))
+        self.assertTrue(any("cold_tank" in e for e in ids))
+        self.assertFalse(any("hot_tank" in e for e in ids))
+
+    def test_heating_sets_permanent_heat_demand_on(self):
+        actions = _all_actions(build_vacation_steps(SEASON_HEATING))
+        on_heat = [
+            a for a in actions
+            if a["action"] == "switch/turn_on"
+            and a["data"].get("entity_id") == "switch.aeco_1988_permanent_heat_demand"
+        ]
+        off_cool = [
+            a for a in actions
+            if a["action"] == "switch/turn_off"
+            and a["data"].get("entity_id") == "switch.aeco_1988_permanent_cool_demand"
+        ]
+        self.assertEqual(len(on_heat), 1)
+        self.assertEqual(len(off_cool), 1)
+
+    def test_cooling_sets_permanent_cool_demand_on(self):
+        actions = _all_actions(build_vacation_steps(SEASON_COOLING))
+        on_cool = [
+            a for a in actions
+            if a["action"] == "switch/turn_on"
+            and a["data"].get("entity_id") == "switch.aeco_1988_permanent_cool_demand"
+        ]
+        off_heat = [
+            a for a in actions
+            if a["action"] == "switch/turn_off"
+            and a["data"].get("entity_id") == "switch.aeco_1988_permanent_heat_demand"
+        ]
+        self.assertEqual(len(on_cool), 1)
+        self.assertEqual(len(off_heat), 1)
+
+    def test_changeover_precedes_tank_writes(self):
+        """The demand-on switch must be flipped before any tank number write."""
+        for season, tank in (
+            (SEASON_HEATING, "hot_tank"),
+            (SEASON_COOLING, "cold_tank"),
+        ):
+            steps = build_vacation_steps(season)
+            # find the heat-pump setup step (has the changeover switches)
+            hp_step = next(
+                s for s in steps
+                if any(
+                    "permanent_" in a["data"].get("entity_id", "")
+                    for a in s["actions"]
+                )
+            )
+            demand_on = "permanent_cool_demand" if season == SEASON_COOLING else "permanent_heat_demand"
+            actions = hp_step["actions"]
+            on_idx = next(
+                i for i, a in enumerate(actions)
+                if a["action"] == "switch/turn_on"
+                and demand_on in a["data"].get("entity_id", "")
+            )
+            tank_idx = next(
+                i for i, a in enumerate(actions)
+                if tank in a["data"].get("entity_id", "")
+            )
+            self.assertLess(on_idx, tank_idx, f"{season}: changeover must precede tank write")
+
+    def test_changeover_settle_delay(self):
+        """The demand-on flip must wait MODE_SWITCH_DELAY before tank writes."""
+        from vacation_mode.steps import MODE_SWITCH_DELAY
+        actions = _all_actions(build_vacation_steps(SEASON_COOLING))
+        on_cool = next(
+            a for a in actions
+            if a["action"] == "switch/turn_on"
+            and a["data"].get("entity_id") == "switch.aeco_1988_permanent_cool_demand"
+        )
+        self.assertEqual(on_cool.get("delay_after"), MODE_SWITCH_DELAY)
+
+    def test_cooling_thermostats_use_cool_mode(self):
+        actions = _all_actions(build_vacation_steps(SEASON_COOLING))
+        set_temp = [a for a in actions if a["action"] == "climate/set_temperature"
+                    and a["data"].get("entity_id", "").startswith("climate.")
+                    and "hvac_mode" in a["data"]]
+        self.assertTrue(set_temp)
+        self.assertTrue(all(a["data"]["hvac_mode"] == "cool" for a in set_temp))
+
+    def test_heating_thermostats_use_heat_mode(self):
+        actions = _all_actions(build_vacation_steps(SEASON_HEATING))
+        set_temp = [a for a in actions if a["action"] == "climate/set_temperature"
+                    and "hvac_mode" in a["data"]]
+        self.assertTrue(set_temp)
+        self.assertTrue(all(a["data"]["hvac_mode"] == "heat" for a in set_temp))
+
+    def test_cooling_away_thermostat_setpoint(self):
+        """Away/cooling zones target 28°C."""
+        actions = _all_actions(build_vacation_steps(SEASON_COOLING))
+        zone_sets = [
+            a for a in actions
+            if a["action"] == "climate/set_temperature"
+            and a["data"].get("hvac_mode") == "cool"
+        ]
+        self.assertTrue(zone_sets)
+        self.assertTrue(all(a["data"]["temperature"] == 28 for a in zone_sets))
+
+    def test_cooling_home_thermostat_setpoint(self):
+        """Home/cooling zones target 22°C."""
+        actions = _all_actions(build_home_steps(SEASON_COOLING))
+        zone_sets = [
+            a for a in actions
+            if a["action"] == "climate/set_temperature"
+            and a["data"].get("hvac_mode") == "cool"
+        ]
+        self.assertTrue(zone_sets)
+        self.assertTrue(all(a["data"]["temperature"] == 22 for a in zone_sets))
+
+    def test_nest_thermostats_set_individually(self):
+        """Each Nest zone is its own action (rate-limited, never batched)."""
+        actions = _all_actions(build_vacation_steps(SEASON_COOLING))
+        zone_sets = [
+            a for a in actions
+            if a["action"] == "climate/set_temperature"
+            and a["data"].get("hvac_mode") == "cool"
+        ]
+        for a in zone_sets:
+            self.assertNotIsInstance(
+                a["data"]["entity_id"], list,
+                "Nest thermostats must be set one entity at a time",
+            )
+
+    def test_cooling_home_cold_tank_values(self):
+        actions = _all_actions(build_home_steps(SEASON_COOLING))
+        by_ent = {
+            a["data"]["entity_id"]: a["data"]["value"]
+            for a in actions if a["action"] == "number/set_value"
+        }
+        self.assertEqual(by_ent["number.aeco_1988_cold_tank_target_temperature"], "12")
+        self.assertEqual(by_ent["number.aeco_1988_cold_tank_min_temperature"], "10")
+        self.assertEqual(by_ent["number.aeco_1988_cold_tank_max_temperature"], "18")
+
+    def test_cooling_away_cold_tank_values(self):
+        actions = _all_actions(build_vacation_steps(SEASON_COOLING))
+        by_ent = {
+            a["data"]["entity_id"]: a["data"]["value"]
+            for a in actions if a["action"] == "number/set_value"
+        }
+        self.assertEqual(by_ent["number.aeco_1988_cold_tank_target_temperature"], "18")
+        self.assertEqual(by_ent["number.aeco_1988_cold_tank_min_temperature"], "14")
+        self.assertEqual(by_ent["number.aeco_1988_cold_tank_max_temperature"], "20")
+
+
+class StartExecutionSeasonTests(TestCase):
+    """start_execution should record and honour the detected season."""
+
+    def setUp(self):
+        if _execution_lock.locked():
+            _execution_lock.release()
+        _runs.clear()
+
+    def tearDown(self):
+        time.sleep(0.2)
+        if _execution_lock.locked():
+            _execution_lock.release()
+        _runs.clear()
+
+    @patch("vacation_mode.executor.call_ha_service")
+    @patch("vacation_mode.executor.get_current_season", return_value=("cooling", 22.0))
+    def test_cooling_season_stored_and_builds_cooling_steps(self, mock_season, mock_call):
+        mock_call.return_value = (True, None)
+        run_id, error = start_execution("vacation", dry_run=True)
+        self.assertIsNone(error)
+        self.assertEqual(_runs[run_id]["season"], "cooling")
+        self.assertEqual(_runs[run_id]["season_avg"], 22.0)
+        aliases = [s["alias"] for s in _runs[run_id]["steps"]]
+        self.assertIn("Heat Pump Setup — Cooling", aliases)
+
+    @patch("vacation_mode.executor.call_ha_service")
+    @patch("vacation_mode.executor.get_current_season", return_value=("heating", 3.0))
+    def test_heating_season_stored_and_builds_heating_steps(self, mock_season, mock_call):
+        mock_call.return_value = (True, None)
+        run_id, error = start_execution("home", dry_run=True)
+        self.assertIsNone(error)
+        self.assertEqual(_runs[run_id]["season"], "heating")
+        aliases = [s["alias"] for s in _runs[run_id]["steps"]]
+        self.assertIn("Heat Pump Setup — Heating", aliases)
