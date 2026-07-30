@@ -258,6 +258,14 @@ NAPOLEON_EMAIL = os.environ.get('NAPOLEON_EMAIL', '')
 NAPOLEON_PASSWORD = os.environ.get('NAPOLEON_PASSWORD', '')
 NAPOLEON_EUROPE = os.environ.get('NAPOLEON_EUROPE', 'false').lower() in ('1', 'true', 'yes')
 
+#####################################
+### Gemstone Lights Settings ###
+#####################################
+# Cloud credentials for Gemstone Lights (pygemstone / AWS Amplify).
+# Leave unset to hide the Gemstone controls' live data.
+GEMSTONE_EMAIL = os.environ.get('GEMSTONE_EMAIL', '')
+GEMSTONE_PASSWORD = os.environ.get('GEMSTONE_PASSWORD', '')
+
 ###########################
 ### go2rtc Camera Settings ###
 ###########################

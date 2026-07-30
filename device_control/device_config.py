@@ -404,6 +404,22 @@ FIREPLACE_OVERRIDES = {
 }
 
 # ──────────────────────────────────────────────
+# Tab: Gemstone Lights
+# ──────────────────────────────────────────────
+# The gemstone tab is NOT Home Assistant-backed. It is driven directly by the
+# Gemstone Lights cloud via device_control.gemstone_client, and uses a bespoke
+# device-card UI (power toggle + saved-pattern picker) rather than the generic
+# device grid. It therefore carries no HA entities ("devices" is empty so
+# get_all_entity_ids() is unaffected).
+#
+# Devices are discovered dynamically from the Gemstone account. Optionally
+# override a device's display name / room by device id here; unknown ids fall
+# back to the name reported by the cloud.
+GEMSTONE_OVERRIDES = {
+    # "device-uuid": {"name": "Roofline", "room": "Exterior"},
+}
+
+# ──────────────────────────────────────────────
 # All tabs in display order
 # ──────────────────────────────────────────────
 TABS = [
@@ -415,6 +431,7 @@ TABS = [
     {"key": "tvs", "label": "TVs", "icon": "fa-tv", "devices": TV_DEVICES},
     {"key": "sonos", "label": "Sonos", "icon": "fa-music", "devices": SONOS_DEVICES},
     {"key": "fireplace", "label": "Fireplace", "icon": "fa-fire", "devices": {}},
+    {"key": "gemstone", "label": "Gemstone", "icon": "fa-gem", "devices": {}},
 ]
 
 

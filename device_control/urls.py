@@ -7,4 +7,6 @@ urlpatterns = [
     path('api/action/', views.device_control_action, name='device_control_action'),
     path('api/fireplace/states/', views.device_control_fireplace_states, name='device_control_fireplace_states'),
     path('api/fireplace/action/', views.device_control_fireplace_action, name='device_control_fireplace_action'),
+    path('api/gemstone/states/', views.device_control_gemstone_states, name='device_control_gemstone_states'),
+    path('api/gemstone/action/', views.device_control_gemstone_action, name='device_control_gemstone_action'),
 ]
