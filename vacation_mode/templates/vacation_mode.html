@@ -46,6 +46,25 @@
         color: #fff;
     }
 
+    .season-badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .season-badge.cooling {
+        background-color: #0d6efd;
+        color: #fff;
+    }
+
+    .season-badge.heating {
+        background-color: #fd7e14;
+        color: #fff;
+    }
+
     .controls-row {
         display: flex;
         flex-direction: column;
@@ -378,6 +397,16 @@
                 <i class="fas fa-plane"></i> Away Mode Active
             {% else %}
                 <i class="fas fa-house"></i> Home Mode Active
+            {% endif %}
+        </div>
+        <div id="season-badge" class="season-badge {% if season_is_cooling %}cooling{% else %}heating{% endif %}">
+            {% if season_is_cooling %}
+                <i class="fas fa-snowflake"></i> Cooling Season
+            {% else %}
+                <i class="fas fa-fire"></i> Heating Season
+            {% endif %}
+            {% if season_avg is not None %}
+                <span style="opacity: 0.85;">&middot; outdoor avg {{ season_avg|floatformat:1 }}&deg;C</span>
             {% endif %}
         </div>
     </div>

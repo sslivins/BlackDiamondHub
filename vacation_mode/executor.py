@@ -35,6 +35,12 @@ STATUS_SUCCESS = "success"
 STATUS_FAILED = "failed"
 STATUS_SKIPPED = "skipped"
 
+# Season selection: the AECO changeover (heating vs cooling) is chosen from the
+# daily-average outdoor temperature. At/above the threshold we cool, below it we
+# heat. On any error we default to heating (the freeze-safe mode).
+SEASON_OUTDOOR_AVG_ENTITY = "sensor.hvac_load_shift_metrics_outdoor_avg_day"
+SEASON_THRESHOLD_C = 15.0
+
 
 def get_ha_headers():
     """Get authorization headers for Home Assistant API."""
@@ -63,6 +69,36 @@ def get_away_mode_state():
     except requests.RequestException as e:
         logger.error(f"Failed to query away mode state: {e}")
     return False
+
+
+def get_current_season():
+    """
+    Decide the seasonal HVAC mode from the daily-average outdoor temperature.
+
+    Returns:
+        (season, avg) where season is "cooling" or "heating" and avg is the
+        outdoor daily-average temperature in °C (or None if it couldn't be
+        read). On any error we default to "heating" — the freeze-safe mode.
+    """
+    from .steps import SEASON_HEATING, SEASON_COOLING
+
+    url = urljoin(get_ha_base_url(), f"/api/states/{SEASON_OUTDOOR_AVG_ENTITY}")
+    try:
+        response = requests.get(url, headers=get_ha_headers(), timeout=10)
+        if response.status_code == 200:
+            avg = float(response.json().get("state"))
+            season = SEASON_COOLING if avg >= SEASON_THRESHOLD_C else SEASON_HEATING
+            logger.info(
+                f"Season decision: outdoor daily avg {avg}°C "
+                f"(threshold {SEASON_THRESHOLD_C}°C) → {season}"
+            )
+            return season, avg
+        logger.warning(
+            f"Season sensor returned HTTP {response.status_code}; defaulting to heating"
+        )
+    except (requests.RequestException, ValueError, TypeError) as e:
+        logger.warning(f"Failed to read season sensor ({e}); defaulting to heating")
+    return SEASON_HEATING, None
 
 
 def resolve_entity_id(device_id, domain, action_data):
@@ -452,18 +488,24 @@ def start_execution(mode, dry_run=False, skip_steps=None):
     Returns:
         (run_id, error_message) - error_message is None on success
     """
-    from .steps import VACATION_STEPS, HOME_STEPS
+    from .steps import build_vacation_steps, build_home_steps
 
     if not _execution_lock.acquire(blocking=False):
         return None, "An execution is already in progress"
 
-    steps = VACATION_STEPS if mode == "vacation" else HOME_STEPS
+    season, season_avg = get_current_season()
+    if mode == "vacation":
+        steps = build_vacation_steps(season)
+    else:
+        steps = build_home_steps(season)
     skip_set = set(skip_steps) if skip_steps else set()
     run_id = str(uuid.uuid4())[:8]
 
     _runs[run_id] = {
         "run_id": run_id,
         "mode": mode,
+        "season": season,
+        "season_avg": season_avg,
         "dry_run": dry_run,
         "status": "running",
         "started_at": time.time(),
