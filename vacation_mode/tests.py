@@ -1471,7 +1471,7 @@ class SeasonStepBuilderTests(TestCase):
             a["data"]["entity_id"]: a["data"]["value"]
             for a in actions if a["action"] == "number/set_value"
         }
-        self.assertEqual(by_ent["number.aeco_1988_cold_tank_target_temperature"], "12")
+        self.assertEqual(by_ent["number.aeco_1988_cold_tank_target_temperature"], "14.4")
         # Fixed target only: min/max are unavailable while reset is off, so we
         # must NOT attempt to write them.
         self.assertNotIn("number.aeco_1988_cold_tank_min_temperature", by_ent)

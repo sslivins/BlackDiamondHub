@@ -177,9 +177,14 @@ def _heatpump_setup_step(season, occupancy):
         # Fixed cold-tank target: outdoor reset OFF so the tank holds a constant
         # chilled-water temperature. The min/max entities only exist while
         # outdoor reset is ON (they bound the reset curve), so we do NOT write
-        # them here — at a target this warm (12°C) a reset curve adds no value,
-        # and the dew-point mixer valve protects the floor.
-        cold_target = "12" if occupancy == "home" else "18"
+        # them here — a reset curve adds no value at these warm targets, and the
+        # dew-point mixer valve protects the floor.
+        #
+        # The target must stay >= 13.5°C: the AECO clears cooling demand only
+        # once the tank reaches target - 1.5°C, but the heat pump's own floor is
+        # 12°C, so a target of 12 could never satisfy (demand would never clear).
+        # 14.4 (the system's original home setpoint) shuts off at ~12.9°C.
+        cold_target = "14.4" if occupancy == "home" else "18"
         actions += [
             {
                 "action": "switch/turn_off",
