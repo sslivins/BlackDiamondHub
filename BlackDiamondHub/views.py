@@ -9,6 +9,7 @@ from social_core.backends.spotify import SpotifyOAuth2
 
 def landing_page(request):
     url = 'https://www.sunpeaksresort.com/bike-hike/weather-webcams/weather'  # Replace with the URL you want to fetch
+    current_weather = None
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -20,7 +21,6 @@ def landing_page(request):
         current_weather = soup.find('div', {'class': 'weather current-conditions'})  # Adjust as needed        
     except RequestException as e:
         print(f"Failed to fetch content from {url}")
-        content = "Error Loading Weather"
         
     soup = BeautifulSoup(str(current_weather), 'html.parser')
     
