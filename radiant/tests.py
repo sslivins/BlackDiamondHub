@@ -33,7 +33,9 @@ def make_states(**overrides):
         _s(hp1["operation"], "heating"), _s(hp1["power"], "2350"), _s(hp1["thermal"], "7900"),
         _s(hp1["cop"], "unknown"), _s(hp1["connected"], "on"), _s(hp1["frequency"], "62"),
         _s(hp1["fault"], "ok"), _s(hp1["supply"], "43.1"),
+        _s(hp1["inlet"], "33.2"), _s(hp1["outlet"], "41.0"),
         _s(hp2["operation"], "idle"), _s(hp2["power"], "0"), _s(hp2["thermal"], "0"),
+        _s(hp2["inlet"], "-6.0"), _s(hp2["outlet"], "-5.5"),
         _s(hp2["connected"], "off"), _s(hp2["fault"], "ok"),
         # HP tank sensors are deliberately present but must never be used.
         _s("sensor.mechanical_room_macon_heat_pump_controller_fcec_hp_1_tank_temperature", "99"),
@@ -71,6 +73,11 @@ class BuildStateTests(TestCase):
         self.assertEqual(hp1["cop"], round(7900 / 2350, 2))  # derived when sensor unknown
         self.assertFalse(hp2["running"])
         self.assertEqual(hp2["op"], "offline")
+
+    def test_inlet_outlet_hidden_when_idle(self):
+        hp1, hp2 = build_state(make_states())["hp"]
+        self.assertEqual((hp1["inlet"], hp1["outlet"]), (33.2, 41.0))
+        self.assertEqual((hp2["inlet"], hp2["outlet"]), (None, None))
 
     def test_zones(self):
         zones = build_state(make_states())["zones"]

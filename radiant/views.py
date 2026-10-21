@@ -68,17 +68,19 @@ def _heat_pump(states, hp):
     cop = _num(states, hp["cop"])
     if cop is None and power > 0 and thermal > 0:
         cop = round(thermal / power, 2)
+    running = op in cfg.HP_RUNNING_OPS or _on(states, hp["compressor"])
+    # Inlet/outlet sensors sit outdoors, so they only read loop water while running.
     return {
         "key": hp["key"],
         "name": hp["name"],
         "op": op,
-        "running": op in cfg.HP_RUNNING_OPS or _on(states, hp["compressor"]),
+        "running": running,
         "hz": _num(states, hp["frequency"]) or 0,
         "w": power,
         "therm": thermal,
         "cop": cop,
-        "inlet": _num(states, hp["inlet"]),
-        "outlet": _num(states, hp["outlet"]),
+        "inlet": _num(states, hp["inlet"]) if running else None,
+        "outlet": _num(states, hp["outlet"]) if running else None,
         "flow": _num(states, hp["flow"]),
         "fault": _str(states, hp["fault"], "unknown"),
         "defrost": _on(states, hp["defrost"]),

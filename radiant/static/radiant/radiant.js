@@ -39,6 +39,7 @@
   // ── helpers ──────────────────────────────────────────────────────────
   const isNum = v => typeof v === 'number' && !isNaN(v);
   const f1 = v => isNum(v) ? v.toFixed(1) : '—';
+  const deg = v => isNum(v) ? `${v.toFixed(1)}°` : '—';
   const kw = v => isNum(v) ? (v / 1000).toFixed(2) : '—';
   function tcol(t, lo = 10, hi = 45) {
     if (!isNum(t)) return '#555';
@@ -199,7 +200,7 @@
         o += `<foreignObject x="${x + 120}" y="${y + 46}" width="235" height="30"><div xmlns="http://www.w3.org/1999/xhtml">${hpPill(P)} ${faultPill(P)} ${P.defrost ? '<span class="pill warn">defrost</span>' : ''}</div></foreignObject>`;
         o += `<text x="${x + 120}" y="${y + 100}" class="lbl">${Math.round(P.hz)} Hz · ${kw(P.w)} kW</text>`;
         o += `<text x="${x + 120}" y="${y + 124}" class="lbl">COP ${isNum(P.cop) ? P.cop.toFixed(2) : '—'} · ${(P.therm / 1000).toFixed(1)} kW th</text>`;
-        o += `<text x="${x + 20}" y="${y + 160}" class="lbl-s">in ${f1(P.inlet)}° → out ${f1(P.outlet)}° · ${isNum(P.flow) ? Math.round(P.flow) : '—'} L/min · ΔT ${f1(P.dT)}°</text>`;
+        o += `<text x="${x + 20}" y="${y + 160}" class="lbl-s">in ${deg(P.inlet)} → out ${deg(P.outlet)} · ${isNum(P.flow) ? Math.round(P.flow) : '—'} L/min · ΔT ${f1(P.dT)}°</text>`;
         const sy = y + 50, ry = y + 130;
         const lane = s.i === 0 ? 780 : 740, ent = s.i === 0 ? tankY + 60 : tankY + 110;
         o += pipe(`M${x + w},${sy} L${lane},${sy} L${lane},${ent} L${tankX},${ent}`, P.sup, run);
@@ -285,7 +286,7 @@
         <span>${hpPill(P)} ${faultPill(P)} ${P.defrost ? '<span class="pill warn">defrost</span>' : ''}</span></div>
         <div class="stats"><div><div class="l">Compressor</div><div class="v">${Math.round(P.hz)} Hz</div></div><div><div class="l">Power</div><div class="v">${kw(P.w)} kW</div></div>
         <div><div class="l">COP</div><div class="v">${isNum(P.cop) ? P.cop.toFixed(2) : '—'}</div></div><div><div class="l">Supply</div><div class="v">${f1(P.sup)}°</div></div>
-        <div><div class="l">In</div><div class="v">${f1(P.inlet)}°</div></div><div><div class="l">Out</div><div class="v">${f1(P.outlet)}°</div></div>
+        <div><div class="l">In</div><div class="v">${deg(P.inlet)}</div></div><div><div class="l">Out</div><div class="v">${deg(P.outlet)}</div></div>
         <div><div class="l">Flow</div><div class="v">${isNum(P.flow) ? Math.round(P.flow) : '—'} L/m</div></div><div><div class="l">ΔT</div><div class="v">${f1(P.dT)}°</div></div></div></div>`;
     }).join('') + `<div class="rad-hp d-flex justify-content-between align-items-center"><b>Backup heat</b><span>${S.backup ? '<span class="pill on">running</span>' : '<span class="pill idle">off</span>'} supply ${f1(S.backupSup)}°</span></div>`;
 
