@@ -70,6 +70,43 @@ def get_entity_states(entity_ids):
     return {}
 
 
+def get_history(entity_ids, start, end=None):
+    """
+    Fetch state history for the given entities between ``start`` and ``end``
+    (timezone-aware datetimes).
+
+    Returns a dict mapping entity_id -> list of (iso_timestamp, state) tuples,
+    oldest first. Returns {} on failure.
+    """
+    url = urljoin(_base_url(), f"/api/history/period/{start.isoformat()}")
+    params = {
+        "filter_entity_id": ",".join(entity_ids),
+        "minimal_response": "",
+        "no_attributes": "",
+    }
+    if end is not None:
+        params["end_time"] = end.isoformat()
+    try:
+        resp = requests.get(url, headers=_headers(), params=params, timeout=TIMEOUT)
+        if resp.status_code != 200:
+            logger.warning("HA returned %s fetching history", resp.status_code)
+            return {}
+        result = {}
+        for series in resp.json():
+            if not series:
+                continue
+            # With minimal_response only the first item carries entity_id.
+            eid = series[0].get("entity_id")
+            result[eid] = [
+                (item.get("last_changed") or item.get("last_updated"), item.get("state"))
+                for item in series
+            ]
+        return result
+    except (requests.RequestException, ValueError) as exc:
+        logger.error("Failed to fetch history: %s", exc)
+    return {}
+
+
 def call_service(domain, service, entity_id, extra_data=None):
     """
     Call a Home Assistant service.

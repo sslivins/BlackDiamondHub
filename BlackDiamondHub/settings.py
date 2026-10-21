@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'vacation_mode',
     'lift_status',
     'device_control',
+    'radiant',
 ]
 
 CHANNEL_LAYERS = {

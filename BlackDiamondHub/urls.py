@@ -38,6 +38,7 @@ urlpatterns = [
     path('vacation_mode/', include('vacation_mode.urls')),
     path('lift_status/', include('lift_status.urls')),
     path('device_control/', include('device_control.urls')),
+    path('radiant/', include('radiant.urls')),
 ]
 
 if settings.DEBUG:
