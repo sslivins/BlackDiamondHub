@@ -1,7 +1,8 @@
 """Pop-up alerts: the hub end of ``bdh_sdk.alerts``.
 
 Every hub page opens ``ws/hub/alerts/`` and joins :data:`GROUP`. Apps call
-``bdh_sdk.alerts.push``, which lands in :func:`send`, from any thread.
+``bdh_sdk.alerts.push``, which lands in :func:`send`, from any thread, and
+``bdh_sdk.alerts.dismiss``, which lands in :func:`dismiss`.
 
 ``InMemoryChannelLayer`` queues belong to the server's event loop, so a
 ``group_send`` from another loop (an app's worker thread) can sit unnoticed
@@ -39,14 +40,25 @@ class AlertConsumer(AsyncJsonWebsocketConsumer):
     async def hub_alert(self, event):
         await self.send_json({"type": "alert", **event["alert"]})
 
+    async def hub_dismiss(self, event):
+        await self.send_json({"type": "dismiss", "app": event["app"], "key": event["key"]})
+
 
 def send(alert):
     """``bdh_sdk.alerts`` sender: thread-safe and never blocks."""
+    _group_send({"type": "hub.alert", "alert": alert.as_dict()}, alert.key)
+
+
+def dismiss(app, key):
+    """``bdh_sdk.alerts`` dismisser: closes ``key`` on every screen."""
+    _group_send({"type": "hub.dismiss", "app": app, "key": key}, key)
+
+
+def _group_send(message, key):
     loop, layer = _loop, get_channel_layer()
     if loop is None or loop.is_closed() or layer is None:
-        log.debug("no screens connected; dropping alert %s", alert.key)
+        log.debug("no screens connected; dropping %s for %s", message["type"], key)
         return
-    message = {"type": "hub.alert", "alert": alert.as_dict()}
     future = asyncio.run_coroutine_threadsafe(layer.group_send(GROUP, message), loop)
     future.add_done_callback(_log_failure)
 

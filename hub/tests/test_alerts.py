@@ -4,7 +4,8 @@ import time
 from unittest import mock
 
 from asgiref.sync import async_to_sync
-from bdh_sdk.alerts import Alert, push
+from bdh_sdk import ha
+from bdh_sdk.alerts import Alert, dismiss, push
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase, tag
@@ -48,8 +49,19 @@ class AlertSocketTests(SimpleTestCase):
             self.assertEqual(msg, {
                 "type": "alert", "app": "cameras", "key": "doorbell:front", "title": "Front door",
                 "body": "Someone is at the door", "embed_url": "/cameras/popup/front/",
-                "ttl": 45, "wake": True, "sound": None,
+                "ttl": 45, "wake": True, "sound": None, "speak": "", "resound": False,
             })
+
+    def test_dismiss_reaches_connected_screens(self):
+        async def run():
+            comm = WebsocketCommunicator(self.application, "/ws/hub/alerts/", headers=HEADERS)
+            await comm.connect()
+            await asyncio.to_thread(dismiss, "timers", "timer:3")
+            msg = await comm.receive_json_from(timeout=2)
+            await comm.disconnect()
+            return msg
+
+        self.assertEqual(async_to_sync(run)(), {"type": "dismiss", "app": "timers", "key": "timer:3"})
 
     def test_push_with_no_screens_connected_is_dropped(self):
         alerts._loop = None
@@ -80,6 +92,21 @@ class AlertTestHookTests(TestCase):
         self.client.force_login(User.objects.create_user("owner", is_staff=True))
         response = self.client.get("/hub/api/alerts/test/?embed=//evil.example/")
         self.assertEqual(response.status_code, 400)
+
+
+class TtsTests(TestCase):
+    @mock.patch("bdh_sdk.speakers.tts_audio", return_value=(b"ID3audio", "audio/mpeg"))
+    def test_serves_spoken_audio(self, tts_audio):
+        response = self.client.get("/hub/api/tts/", {"text": "Egg timer has expired"})
+        self.assertEqual((response.status_code, response["Content-Type"], response.content),
+                         (200, "audio/mpeg", b"ID3audio"))
+        self.assertIn("max-age", response["Cache-Control"])
+        tts_audio.assert_called_once_with("Egg timer has expired", voice=None)
+
+    def test_bad_text_or_ha_down(self):
+        self.assertEqual(self.client.get("/hub/api/tts/", {"text": "x" * 301}).status_code, 400)
+        with mock.patch("bdh_sdk.speakers.tts_audio", side_effect=ha.HAError("down")):
+            self.assertEqual(self.client.get("/hub/api/tts/", {"text": "hi"}).status_code, 502)
 
 
 @tag("selenium")

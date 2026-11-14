@@ -102,17 +102,36 @@ Apps show live video or other content here.</small></div></body></html>"""
 @never_cache
 @staff_member_required
 def alert_test(request):
-    """Pushes a sample alert to every screen. ``?embed=/path/`` shows that page instead; ``?sound=`` picks the chime."""
+    """Pushes a sample alert to every screen. ``?embed=/path/`` shows that page instead; ``?sound=`` picks the chime
+    and ``?speak=`` has the screens say something."""
     from bdh_sdk.alerts import Alert, push
 
     try:
         alert = Alert(app="hub", key="hub:test", title="Test alert", body="Sent from the hub",
                       embed_url=request.GET.get("embed") or reverse("hub_alert_sample"),
-                      ttl=int(request.GET.get("ttl", 30)), sound=request.GET.get("sound") or None)
+                      ttl=int(request.GET.get("ttl", 30)), sound=request.GET.get("sound") or None,
+                      speak=request.GET.get("speak", ""))
     except ValueError as exc:
         return JsonResponse({"ok": False, "error": str(exc)}, status=400)
     push(alert)
     return JsonResponse({"ok": True})
+
+
+@require_GET
+def tts(request):
+    """``?text=`` spoken by Home Assistant, for alerts that speak (``Alert.speak``) on the screens."""
+    from bdh_sdk import ha, speakers
+
+    try:
+        audio, content_type = speakers.tts_audio(request.GET.get("text", ""), voice=request.GET.get("voice") or None)
+    except ValueError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+    except ha.HAError:
+        logger.warning("text-to-speech failed", exc_info=True)
+        return JsonResponse({"ok": False, "error": "text-to-speech unavailable"}, status=502)
+    response = HttpResponse(audio, content_type=content_type)
+    response["Cache-Control"] = "public, max-age=86400"
+    return response
 
 
 @require_GET
