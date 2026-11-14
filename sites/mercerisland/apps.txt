@@ -20,4 +20,4 @@ bdh-app-wifi @ https://github.com/blackdiamondlodge/bdh-app-wifi/releases/downlo
 bdh-app-weather @ https://github.com/blackdiamondlodge/bdh-app-weather/releases/download/v1.6.1/bdh_app_weather-1.6.1-py3-none-any.whl --hash=sha256:074a34ba2aaa7ab6185742fde2c253d35d17e600c94147dbcb9ffbd91d62b5af
 bdh-app-calendar @ https://github.com/blackdiamondlodge/bdh-app-calendar/releases/download/v1.0.4/bdh_app_calendar-1.0.4-py3-none-any.whl --hash=sha256:720110ad1b98f6440a314d91e40711baec1353288c9505e0301bd0e31023b598
 bdh-app-announcements @ https://github.com/blackdiamondlodge/bdh-app-announcements/releases/download/v1.0.1/bdh_app_announcements-1.0.1-py3-none-any.whl --hash=sha256:673b2659c2711b44e2057969bdc7f0bf0454b7cc7e1407a48294a8af1d9323b6
-bdh-app-timers @ https://github.com/blackdiamondlodge/bdh-app-timers/releases/download/v1.0.0/bdh_app_timers-1.0.0-py3-none-any.whl --hash=sha256:e815d2fa04dd267ced8997cf81e77c0208f7c183f613b46322974f9548b8d44a
+bdh-app-timers @ https://github.com/blackdiamondlodge/bdh-app-timers/releases/download/v1.1.0/bdh_app_timers-1.1.0-py3-none-any.whl --hash=sha256:9be65ad0bf3c6c54e42602b9d6415620731197ca8c0133c13470bb4b0282d119
