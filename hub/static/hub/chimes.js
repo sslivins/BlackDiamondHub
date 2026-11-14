@@ -1,6 +1,7 @@
 /* Built-in pop-up chimes, synthesised with Web Audio (no files to ship).
  * The ids match bdh_sdk.alerts.CHIMES. Pages use BDHChimes.play(id) to preview;
- * alerts.js plays an alert's sound. A path on the hub plays an audio file instead. */
+ * alerts.js plays an alert's sound. A path on the hub plays an audio file instead.
+ * BDHChimes.say(text, sound) plays the sound, then Home Assistant reading the text. */
 (function () {
     'use strict';
     let ctx = null;
@@ -111,8 +112,28 @@
         return true;
     }
 
+    // Roughly how long each chime rings before speech can start, in seconds.
+    const LENGTH = {'westminster': 2.6, 'ding-dong-ding': 2.2, 'soft-bell': 1.8, 'ding-dong': 1.6,
+        'knock-knock': .6, 'notify': .6, 'low-pulse': 1.2};
+
+    /* Play `sound` (as play()), then `text` spoken via /hub/api/tts/. Returns a
+     * function that stops it, or null if nothing will play. */
+    function say(text, sound, volume) {
+        const vol = volume == null ? defaultVolume() : Math.max(0, Math.min(1, Number(volume) || 0));
+        if (!text || vol <= 0) return play(sound, volume) ? () => {} : null;
+        const voice = new Audio('/hub/api/tts/?text=' + encodeURIComponent(text));
+        voice.preload = 'auto';
+        voice.volume = vol;
+        const id = sound == null || sound === '' ? DEFAULT : sound;
+        const chimed = play(sound, vol);
+        const wait = !chimed ? 0 : isPath(id) ? 2500 : (LENGTH[id] || 1.4) * 1000;
+        const timer = setTimeout(() => voice.play().catch(() => {}), wait);
+        return () => { clearTimeout(timer); voice.pause(); voice.removeAttribute('src'); voice.load(); };
+    }
+
     window.BDHChimes = {
         play,
+        say,
         DEFAULT,
         list: CHIMES.map(([id, label]) => ({id, label})),
     };

@@ -11,7 +11,7 @@ class HubConfig(AppConfig):
 
         from . import alerts
 
-        set_sender(alerts.send)
+        set_sender(alerts.send, alerts.dismiss)
 
         from django.conf import settings
 
