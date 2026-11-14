@@ -9,6 +9,7 @@ urlpatterns = [
     path("units/", views.set_units, name="hub_units"),
     path("alerts/test/", views.alert_test, name="hub_alert_test"),
     path("alerts/sample/", views.alert_sample, name="hub_alert_sample"),
+    path("tts/", views.tts, name="hub_tts"),
     path("remote/", remote.api, name="hub_remote"),
     path("events/hook/<slug:source>/<path:topic>", views.event_hook, name="hub_event_hook"),
 ]

@@ -1,14 +1,15 @@
 /* Pop-up alerts pushed by apps through bdh_sdk.alerts (see hub/alerts.py).
  * One alert at a time: the newest replaces the current one, and a repeat of the
  * same key just restarts its countdown (unless "Keep open" was tapped). A new
- * alert plays its sound (chimes.js) unless it's the night window.
- * Only the hub's own display listens. */
+ * alert plays its sound (chimes.js), then reads out `speak`, unless it's the
+ * night window; a repeat with `resound` plays them again. A "dismiss" message
+ * closes the alert wherever it is showing. Only the hub's own display listens. */
 (function () {
     'use strict';
     const isDisplay = () => window.innerWidth >= 1280;
     let ws = null, backoff = 1000, retry = null, resizeTimer = null;
     const KEEP_MAX_S = 600;
-    let root = null, current = null, closeTimer = null, kept = false;
+    let root = null, current = null, closeTimer = null, kept = false, stopVoice = null;
 
     function el(tag, cls) {
         const e = document.createElement(tag);
@@ -65,6 +66,19 @@
         bar.style.transform = 'scaleX(0)';
     }
 
+    function hush() {
+        if (stopVoice) stopVoice();
+        stopVoice = null;
+    }
+
+    function sound(alert) {
+        const chimes = window.BDHChimes;
+        if (!chimes) return;
+        hush();
+        if (alert.speak && chimes.say) stopVoice = chimes.say(alert.speak, alert.sound);
+        else chimes.play(alert.sound);
+    }
+
     function show(alert) {
         if (!root) build();
         const saver = window.BDHSaver;
@@ -74,10 +88,9 @@
         }
         const same = current && current.key === alert.key && current.embed_url === alert.embed_url;
         current = alert;
-        // A new alert chimes; repeats (another ring) and the night window stay quiet.
-        if (!same && window.BDHChimes && !(saver && saver.isNight && saver.isNight())) {
-            window.BDHChimes.play(alert.sound);
-        }
+        // A new alert chimes; repeats (another ring) stay quiet unless they ask to
+        // resound, and the night window is always quiet.
+        if ((!same || alert.resound) && !(saver && saver.isNight && saver.isNight())) sound(alert);
         if (!same) {
             const frame = root.querySelector('.hub-alert-frame');
             frame.textContent = '';
@@ -100,6 +113,7 @@
     function close() {
         if (!root || !current) return;
         clearTimeout(closeTimer);
+        hush();
         current = null;
         setKept(false);
         root.classList.remove('on');
@@ -120,6 +134,8 @@
             try { msg = JSON.parse(e.data); } catch (err) { return; }
             if (msg && msg.type === 'alert' && typeof msg.embed_url === 'string'
                 && msg.embed_url[0] === '/' && msg.embed_url[1] !== '/') show(msg);
+            else if (msg && msg.type === 'dismiss' && current
+                && current.app === msg.app && current.key === msg.key) close();
         };
         ws.onclose = () => {
             ws = null;
