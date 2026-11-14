@@ -25,3 +25,4 @@ bdh-app-inventory @ https://github.com/blackdiamondlodge/bdh-app-inventory/relea
 bdh-app-restaurants @ https://github.com/blackdiamondlodge/bdh-app-restaurants/releases/download/v1.2.1/bdh_app_restaurants-1.2.1-py3-none-any.whl --hash=sha256:7bfa64046054b2d0ba601d08a36b1770ea7737aa4fb49fe77bc9630480794fe6
 bdh-app-shuttle @ https://github.com/blackdiamondlodge/bdh-app-shuttle/releases/download/v1.0.1/bdh_app_shuttle-1.0.1-py3-none-any.whl --hash=sha256:a7969648baa2e97e75a90dd39e814c92452259891c1deb049f3534f1ab2388ab
 bdh-app-calendar @ https://github.com/blackdiamondlodge/bdh-app-calendar/releases/download/v1.0.4/bdh_app_calendar-1.0.4-py3-none-any.whl --hash=sha256:720110ad1b98f6440a314d91e40711baec1353288c9505e0301bd0e31023b598
+bdh-app-timers @ https://github.com/blackdiamondlodge/bdh-app-timers/releases/download/v1.0.0/bdh_app_timers-1.0.0-py3-none-any.whl --hash=sha256:e815d2fa04dd267ced8997cf81e77c0208f7c183f613b46322974f9548b8d44a
